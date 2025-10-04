@@ -23,6 +23,7 @@ interface Medication {
   dosage: string;
   times: string[];
   frequency: string;
+  lastTaken?: string;
 }
 
 interface SleepSchedule {
@@ -80,6 +81,18 @@ export default function Health() {
       setAlarmSound(schedule.alarmSound);
     }
     if (savedSleepLogs) setSleepLogs(JSON.parse(savedSleepLogs));
+
+    const handleMedicationCompleted = (event: any) => {
+      const savedMeds = localStorage.getItem("medications");
+      if (savedMeds) {
+        setMedications(JSON.parse(savedMeds));
+      }
+    };
+
+    window.addEventListener('medication-completed', handleMedicationCompleted);
+    return () => {
+      window.removeEventListener('medication-completed', handleMedicationCompleted);
+    };
   }, []);
 
   useEffect(() => {
@@ -403,6 +416,11 @@ export default function Health() {
                       <p className="text-xs text-muted-foreground">
                         {med.dosage} • {med.times.join(", ")} • {med.frequency}
                       </p>
+                      {med.lastTaken && (
+                        <p className="text-xs text-success mt-1">
+                          ✓ Last taken: {format(new Date(med.lastTaken), 'MMM d, h:mm a')}
+                        </p>
+                      )}
                     </div>
                     <Button
                       size="icon"

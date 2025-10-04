@@ -49,7 +49,21 @@ export default function Todo() {
   }, [tasks]);
 
   const handleToggleTask = (id: string) => {
+    const task = tasks.find(t => t.id === id);
     setTasks(tasks.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t)));
+    
+    if (task && task.source === 'medication' && !task.completed) {
+      const medications = JSON.parse(localStorage.getItem("medications") || "[]");
+      const medicationIndex = medications.findIndex((m: any) => m.id === task.medicationId);
+      if (medicationIndex !== -1) {
+        medications[medicationIndex].lastTaken = new Date().toISOString();
+        localStorage.setItem("medications", JSON.stringify(medications));
+        
+        window.dispatchEvent(new CustomEvent('medication-completed', { 
+          detail: { medicationId: task.medicationId } 
+        }));
+      }
+    }
   };
 
   const handleDeleteTask = (id: string) => {
