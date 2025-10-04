@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Input } from "@/components/ui/input";
 
 const themes = [
   { id: "blue", name: "Blue", primary: "59 91% 47%", primaryDark: "210 100% 60%" },
@@ -17,31 +18,76 @@ const themes = [
   { id: "purple", name: "Purple", primary: "271 81% 56%", primaryDark: "271 81% 66%" },
   { id: "orange", name: "Orange", primary: "24 80% 58%", primaryDark: "24 80% 68%" },
   { id: "pink", name: "Pink", primary: "330 81% 60%", primaryDark: "330 81% 70%" },
+  { id: "custom", name: "Custom", primary: "", primaryDark: "" },
 ];
 
 export default function Settings() {
   const [selectedTheme, setSelectedTheme] = useState("blue");
+  const [customColor, setCustomColor] = useState("#3b82f6");
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("colorTheme") || "blue";
+    const savedCustomColor = localStorage.getItem("customColor") || "#3b82f6";
     setSelectedTheme(savedTheme);
-    applyTheme(savedTheme);
+    setCustomColor(savedCustomColor);
+    applyTheme(savedTheme, savedCustomColor);
   }, []);
 
-  const applyTheme = (themeId: string) => {
+  const hexToHSL = (hex: string) => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    if (!result) return "210 100% 60%";
+
+    let r = parseInt(result[1], 16) / 255;
+    let g = parseInt(result[2], 16) / 255;
+    let b = parseInt(result[3], 16) / 255;
+
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    let h = 0, s = 0, l = (max + min) / 2;
+
+    if (max !== min) {
+      const d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      switch (max) {
+        case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+        case g: h = ((b - r) / d + 2) / 6; break;
+        case b: h = ((r - g) / d + 4) / 6; break;
+      }
+    }
+
+    h = Math.round(h * 360);
+    s = Math.round(s * 100);
+    l = Math.round(l * 100);
+
+    return `${h} ${s}% ${l}%`;
+  };
+
+  const applyTheme = (themeId: string, color?: string) => {
     const theme = themes.find((t) => t.id === themeId);
-    if (theme) {
-      const root = document.documentElement;
-      root.style.setProperty("--primary", theme.primary);
-      root.style.setProperty("--sidebar-primary", theme.primary);
-      root.style.setProperty("--ring", theme.primary);
-      root.style.setProperty("--sidebar-ring", theme.primary);
+    const root = document.documentElement;
+    
+    let primaryColor = theme?.primary || "";
+    let primaryDarkColor = theme?.primaryDark || "";
+
+    if (themeId === "custom" && color) {
+      const hsl = hexToHSL(color);
+      primaryColor = hsl;
+      const [h, s, l] = hsl.split(" ");
+      const lightness = parseInt(l);
+      primaryDarkColor = `${h} ${s} ${Math.min(lightness + 10, 90)}%`;
+    }
+
+    if (primaryColor) {
+      root.style.setProperty("--primary", primaryColor);
+      root.style.setProperty("--sidebar-primary", primaryColor);
+      root.style.setProperty("--ring", primaryColor);
+      root.style.setProperty("--sidebar-ring", primaryColor);
       
       if (document.documentElement.classList.contains("dark")) {
-        root.style.setProperty("--primary", theme.primaryDark);
-        root.style.setProperty("--sidebar-primary", theme.primaryDark);
-        root.style.setProperty("--ring", theme.primaryDark);
-        root.style.setProperty("--sidebar-ring", theme.primaryDark);
+        root.style.setProperty("--primary", primaryDarkColor);
+        root.style.setProperty("--sidebar-primary", primaryDarkColor);
+        root.style.setProperty("--ring", primaryDarkColor);
+        root.style.setProperty("--sidebar-ring", primaryDarkColor);
       }
     }
   };
@@ -49,7 +95,15 @@ export default function Settings() {
   const handleThemeChange = (themeId: string) => {
     setSelectedTheme(themeId);
     localStorage.setItem("colorTheme", themeId);
-    applyTheme(themeId);
+    applyTheme(themeId, customColor);
+  };
+
+  const handleCustomColorChange = (color: string) => {
+    setCustomColor(color);
+    localStorage.setItem("customColor", color);
+    if (selectedTheme === "custom") {
+      applyTheme("custom", color);
+    }
   };
 
   return (
@@ -79,10 +133,20 @@ export default function Settings() {
                       htmlFor={theme.id}
                       className="flex items-center gap-3 cursor-pointer flex-1"
                     >
-                      <div
-                        className="w-8 h-8 rounded-md border-2 border-border"
-                        style={{ backgroundColor: `hsl(${theme.primary})` }}
-                      />
+                      {theme.id === "custom" ? (
+                        <Input
+                          type="color"
+                          value={customColor}
+                          onChange={(e) => handleCustomColorChange(e.target.value)}
+                          className="w-8 h-8 rounded-md border-2 border-border cursor-pointer"
+                          data-testid="input-custom-color"
+                        />
+                      ) : (
+                        <div
+                          className="w-8 h-8 rounded-md border-2 border-border"
+                          style={{ backgroundColor: `hsl(${theme.primary})` }}
+                        />
+                      )}
                       <span>{theme.name}</span>
                     </Label>
                   </div>

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Edit } from "lucide-react";
 
 interface MacroResults {
   kcal: number;
@@ -24,6 +25,7 @@ export default function MacroCalculator({ onCalculate }: MacroCalculatorProps) {
   const [trainingDays, setTrainingDays] = useState("");
   const [goal, setGoal] = useState<"cutting" | "lean-bulk" | "bulking">("lean-bulk");
   const [results, setResults] = useState<MacroResults | null>(null);
+  const [showForm, setShowForm] = useState(true);
 
   const calculateAge = (dob: string) => {
     const birthDate = new Date(dob);
@@ -92,10 +94,53 @@ export default function MacroCalculator({ onCalculate }: MacroCalculatorProps) {
     };
 
     setResults(calculatedResults);
+    setShowForm(false);
     if (onCalculate) {
       onCalculate(calculatedResults);
     }
   };
+
+  const handleEdit = () => {
+    setShowForm(true);
+  };
+
+  if (results && !showForm) {
+    return (
+      <Card className="p-6 bg-gradient-to-br from-primary to-primary/80 text-primary-foreground">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold">Daily Targets</h2>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleEdit}
+            className="text-primary-foreground hover:bg-primary-foreground/20"
+            data-testid="button-edit-calculator"
+          >
+            <Edit className="w-4 h-4" />
+          </Button>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-4">
+          <div className="text-center">
+            <p className="text-3xl font-bold font-mono" data-testid="text-kcal-target">{results.kcal}</p>
+            <p className="text-sm text-primary-foreground/80 mt-1">Calories</p>
+          </div>
+          <div className="text-center">
+            <p className="text-3xl font-bold font-mono" data-testid="text-protein-target">{results.protein}g</p>
+            <p className="text-sm text-primary-foreground/80 mt-1">Protein</p>
+          </div>
+          <div className="text-center">
+            <p className="text-3xl font-bold font-mono" data-testid="text-carbs-target">{results.carbs}g</p>
+            <p className="text-sm text-primary-foreground/80 mt-1">Carbs</p>
+          </div>
+          <div className="text-center">
+            <p className="text-3xl font-bold font-mono" data-testid="text-fat-target">{results.fat}g</p>
+            <p className="text-sm text-primary-foreground/80 mt-1">Fat</p>
+          </div>
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <Card className="p-6 bg-gradient-to-br from-primary to-primary/80 text-primary-foreground">
@@ -203,30 +248,6 @@ export default function MacroCalculator({ onCalculate }: MacroCalculatorProps) {
         >
           Calculate
         </Button>
-
-        {results && (
-          <div className="pt-4 border-t border-primary-foreground/20 space-y-3">
-            <p className="text-sm text-primary-foreground/80 text-center mb-3">Daily Targets</p>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="text-center">
-                <p className="text-2xl font-bold font-mono" data-testid="text-kcal-target">{results.kcal}</p>
-                <p className="text-xs text-primary-foreground/80">Calories</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold font-mono" data-testid="text-protein-target">{results.protein}g</p>
-                <p className="text-xs text-primary-foreground/80">Protein</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold font-mono" data-testid="text-carbs-target">{results.carbs}g</p>
-                <p className="text-xs text-primary-foreground/80">Carbs</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold font-mono" data-testid="text-fat-target">{results.fat}g</p>
-                <p className="text-xs text-primary-foreground/80">Fat</p>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </Card>
   );

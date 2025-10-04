@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, Camera, Clock } from "lucide-react";
+import { Plus, Trash2, Camera } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import MacroProgress from "./MacroProgress";
 
 interface Meal {
   id: string;
@@ -16,7 +17,12 @@ interface Meal {
   carbs: number;
   fat: number;
   kcal: number;
-  isDaily?: boolean;
+  emoji: string;
+  schedule?: {
+    type: "now" | "day" | "weekly" | "biweekly";
+    day?: string;
+    time?: string;
+  };
 }
 
 interface EnhancedMealLogProps {
@@ -25,16 +31,27 @@ interface EnhancedMealLogProps {
   onAddMeal: (meal: Omit<Meal, "id">) => void;
   onDeleteMeal: (id: string) => void;
   onScanBarcode: () => void;
+  targets?: {
+    kcal: number;
+    protein: number;
+    carbs: number;
+    fat: number;
+  };
 }
 
-export default function EnhancedMealLog({ meals, previousMeals, onAddMeal, onDeleteMeal, onScanBarcode }: EnhancedMealLogProps) {
+const foodEmojis = ["🍗", "🥗", "🍳", "🥙", "🍕", "🍔", "🥩", "🍜", "🍛", "🥘", "🍲", "🍱", "🥪", "🌮", "🌯", "🥗", "🥑", "🍎", "🍌", "🥤", "☕", "🥛", "💊"];
+
+export default function EnhancedMealLog({ meals, previousMeals, onAddMeal, onDeleteMeal, onScanBarcode, targets }: EnhancedMealLogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [mealName, setMealName] = useState("");
   const [protein, setProtein] = useState("");
   const [carbs, setCarbs] = useState("");
   const [fat, setFat] = useState("");
   const [time, setTime] = useState("");
-  const [isDaily, setIsDaily] = useState(false);
+  const [selectedEmoji, setSelectedEmoji] = useState("🍗");
+  const [scheduleType, setScheduleType] = useState<"now" | "day" | "weekly" | "biweekly">("now");
+  const [scheduleDay, setScheduleDay] = useState("monday");
+  const [scheduleTime, setScheduleTime] = useState("");
 
   const calculateKcal = () => {
     const p = parseFloat(protein) || 0;
@@ -44,23 +61,33 @@ export default function EnhancedMealLog({ meals, previousMeals, onAddMeal, onDel
   };
 
   const handleSubmit = () => {
-    if (mealName && time) {
+    if (mealName) {
       const kcal = calculateKcal();
+      const schedule = scheduleType !== "now" ? {
+        type: scheduleType,
+        day: scheduleDay,
+        time: scheduleTime || time,
+      } : undefined;
+
       onAddMeal({
         name: mealName,
         protein: parseFloat(protein) || 0,
         carbs: parseFloat(carbs) || 0,
         fat: parseFloat(fat) || 0,
         kcal,
-        time,
-        isDaily,
+        time: scheduleType === "now" ? (time || new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })) : scheduleTime,
+        emoji: selectedEmoji,
+        schedule,
       });
       setMealName("");
       setProtein("");
       setCarbs("");
       setFat("");
       setTime("");
-      setIsDaily(false);
+      setSelectedEmoji("🍗");
+      setScheduleType("now");
+      setScheduleDay("monday");
+      setScheduleTime("");
       setIsOpen(false);
     }
   };
@@ -72,8 +99,8 @@ export default function EnhancedMealLog({ meals, previousMeals, onAddMeal, onDel
       carbs: meal.carbs,
       fat: meal.fat,
       kcal: meal.kcal,
+      emoji: meal.emoji,
       time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
-      isDaily: false,
     });
     setIsOpen(false);
   };
@@ -98,7 +125,7 @@ export default function EnhancedMealLog({ meals, previousMeals, onAddMeal, onDel
                 Log Food
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md">
+            <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Log a Meal</DialogTitle>
               </DialogHeader>
@@ -119,6 +146,28 @@ export default function EnhancedMealLog({ meals, previousMeals, onAddMeal, onDel
                       data-testid="input-meal-name"
                     />
                   </div>
+
+                  <div>
+                    <Label className="mb-2 block">Choose Emoji</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {foodEmojis.map((emoji) => (
+                        <button
+                          key={emoji}
+                          type="button"
+                          onClick={() => setSelectedEmoji(emoji)}
+                          className={`w-10 h-10 rounded-full flex items-center justify-center text-xl transition-all ${
+                            selectedEmoji === emoji
+                              ? "bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2"
+                              : "bg-muted hover-elevate"
+                          }`}
+                          data-testid={`button-emoji-${emoji}`}
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-3 gap-2">
                     <div>
                       <Label htmlFor="protein" className="text-sm">Protein (g)</Label>
@@ -154,16 +203,7 @@ export default function EnhancedMealLog({ meals, previousMeals, onAddMeal, onDel
                       />
                     </div>
                   </div>
-                  <div>
-                    <Label htmlFor="time">Time</Label>
-                    <Input
-                      id="time"
-                      type="time"
-                      value={time}
-                      onChange={(e) => setTime(e.target.value)}
-                      data-testid="input-meal-time"
-                    />
-                  </div>
+
                   {calculateKcal() > 0 && (
                     <div className="bg-muted p-3 rounded-md">
                       <p className="text-sm text-muted-foreground">Estimated Calories</p>
@@ -172,19 +212,69 @@ export default function EnhancedMealLog({ meals, previousMeals, onAddMeal, onDel
                       </p>
                     </div>
                   )}
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="daily"
-                      checked={isDaily}
-                      onCheckedChange={(checked) => setIsDaily(!!checked)}
-                      data-testid="checkbox-daily-meal"
-                    />
-                    <Label htmlFor="daily" className="text-sm cursor-pointer">
-                      Set as daily recurring meal (will appear in To Do)
-                    </Label>
+
+                  <div>
+                    <Label htmlFor="schedule-type">When to eat?</Label>
+                    <Select value={scheduleType} onValueChange={(v) => setScheduleType(v as typeof scheduleType)}>
+                      <SelectTrigger id="schedule-type" data-testid="select-schedule-type">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="now">Add now</SelectItem>
+                        <SelectItem value="day">Specific day</SelectItem>
+                        <SelectItem value="weekly">Weekly</SelectItem>
+                        <SelectItem value="biweekly">Every 2 weeks</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
+
+                  {scheduleType !== "now" && (
+                    <div className="space-y-3">
+                      <div>
+                        <Label htmlFor="schedule-day">Day</Label>
+                        <Select value={scheduleDay} onValueChange={setScheduleDay}>
+                          <SelectTrigger id="schedule-day" data-testid="select-schedule-day">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="monday">Monday</SelectItem>
+                            <SelectItem value="tuesday">Tuesday</SelectItem>
+                            <SelectItem value="wednesday">Wednesday</SelectItem>
+                            <SelectItem value="thursday">Thursday</SelectItem>
+                            <SelectItem value="friday">Friday</SelectItem>
+                            <SelectItem value="saturday">Saturday</SelectItem>
+                            <SelectItem value="sunday">Sunday</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label htmlFor="schedule-time">Time</Label>
+                        <Input
+                          id="schedule-time"
+                          type="time"
+                          value={scheduleTime}
+                          onChange={(e) => setScheduleTime(e.target.value)}
+                          data-testid="input-schedule-time"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {scheduleType === "now" && (
+                    <div>
+                      <Label htmlFor="time">Time (Optional)</Label>
+                      <Input
+                        id="time"
+                        type="time"
+                        value={time}
+                        onChange={(e) => setTime(e.target.value)}
+                        data-testid="input-meal-time"
+                      />
+                    </div>
+                  )}
+
                   <Button onClick={handleSubmit} className="w-full" data-testid="button-submit-meal">
-                    Add Meal
+                    {scheduleType === "now" ? "Add Meal" : "Schedule Meal"}
                   </Button>
                 </TabsContent>
 
@@ -202,12 +292,19 @@ export default function EnhancedMealLog({ meals, previousMeals, onAddMeal, onDel
                           onClick={() => handleQuickAdd(meal)}
                           data-testid={`card-quick-add-${meal.id}`}
                         >
-                          <p className="font-medium mb-1">{meal.name}</p>
-                          <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                            <span>{meal.kcal} kcal</span>
-                            <span>P: {meal.protein}g</span>
-                            <span>C: {meal.carbs}g</span>
-                            <span>F: {meal.fat}g</span>
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-xl flex-shrink-0">
+                              {meal.emoji}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium mb-1 truncate">{meal.name}</p>
+                              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                <span>{meal.kcal} kcal</span>
+                                <span>P: {meal.protein}g</span>
+                                <span>C: {meal.carbs}g</span>
+                                <span>F: {meal.fat}g</span>
+                              </div>
+                            </div>
                           </div>
                         </Card>
                       ))}
@@ -220,26 +317,14 @@ export default function EnhancedMealLog({ meals, previousMeals, onAddMeal, onDel
         </div>
       </div>
 
-      <Card className="p-4">
-        <div className="grid grid-cols-4 gap-2 text-center">
-          <div>
-            <p className="text-xs text-muted-foreground mb-1">Calories</p>
-            <p className="text-lg font-bold font-mono" data-testid="text-total-kcal">{totalKcal}</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground mb-1">Protein</p>
-            <p className="text-lg font-bold font-mono text-chart-1" data-testid="text-total-protein">{totalProtein}g</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground mb-1">Carbs</p>
-            <p className="text-lg font-bold font-mono text-chart-3" data-testid="text-total-carbs">{totalCarbs}g</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground mb-1">Fat</p>
-            <p className="text-lg font-bold font-mono text-chart-4" data-testid="text-total-fat">{totalFat}g</p>
-          </div>
-        </div>
-      </Card>
+      {targets && (
+        <Card className="p-4 space-y-4">
+          <MacroProgress current={totalKcal} target={targets.kcal} label="Calories" unit=" kcal" />
+          <MacroProgress current={totalProtein} target={targets.protein} label="Protein" unit="g" />
+          <MacroProgress current={totalCarbs} target={targets.carbs} label="Carbs" unit="g" />
+          <MacroProgress current={totalFat} target={targets.fat} label="Fat" unit="g" />
+        </Card>
+      )}
 
       <div className="space-y-3">
         {meals.length === 0 ? (
@@ -249,21 +334,28 @@ export default function EnhancedMealLog({ meals, previousMeals, onAddMeal, onDel
         ) : (
           meals.map((meal) => (
             <Card key={meal.id} className="p-4 hover-elevate" data-testid={`card-meal-${meal.id}`}>
-              <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center text-2xl flex-shrink-0">
+                  {meal.emoji}
+                </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-3 mb-2">
                     <p className="text-sm text-muted-foreground font-mono">{meal.time}</p>
                     <p className="font-medium truncate" data-testid={`text-meal-name-${meal.id}`}>{meal.name}</p>
-                    {meal.isDaily && (
-                      <Clock className="w-4 h-4 text-warning flex-shrink-0" />
-                    )}
                   </div>
-                  <div className="flex items-center gap-3 text-sm">
+                  <div className="flex items-center gap-3 text-sm flex-wrap">
                     <span className="font-semibold">{meal.kcal} kcal</span>
                     <span className="text-chart-1">P: {meal.protein}g</span>
                     <span className="text-chart-3">C: {meal.carbs}g</span>
                     <span className="text-chart-4">F: {meal.fat}g</span>
                   </div>
+                  {meal.schedule && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      {meal.schedule.type === "weekly" && `Weekly on ${meal.schedule.day}`}
+                      {meal.schedule.type === "biweekly" && `Every 2 weeks on ${meal.schedule.day}`}
+                      {meal.schedule.type === "day" && `Scheduled for ${meal.schedule.day}`}
+                    </p>
+                  )}
                 </div>
                 <Button
                   variant="ghost"

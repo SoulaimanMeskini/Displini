@@ -13,20 +13,26 @@ interface Meal {
   carbs: number;
   fat: number;
   kcal: number;
-  isDaily?: boolean;
+  emoji: string;
+  schedule?: {
+    type: "now" | "day" | "weekly" | "biweekly";
+    day?: string;
+    time?: string;
+  };
 }
 
 export default function Food() {
   const [currentWeight, setCurrentWeight] = useState(70);
+  const [targets, setTargets] = useState<{ kcal: number; protein: number; carbs: number; fat: number } | null>(null);
   const [meals, setMeals] = useState<Meal[]>([
-    { id: "1", time: "08:00", name: "Oatmeal with protein powder", protein: 25, carbs: 45, fat: 10, kcal: 350 },
-    { id: "2", time: "12:30", name: "Grilled chicken salad", protein: 35, carbs: 20, fat: 15, kcal: 355 },
+    { id: "1", time: "08:00", name: "Oatmeal with protein powder", protein: 25, carbs: 45, fat: 10, kcal: 350, emoji: "🥣" },
+    { id: "2", time: "12:30", name: "Grilled chicken salad", protein: 35, carbs: 20, fat: 15, kcal: 355, emoji: "🥗" },
   ]);
 
   const [previousMeals] = useState<Meal[]>([
-    { id: "p1", time: "08:00", name: "Protein shake", protein: 30, carbs: 10, fat: 5, kcal: 205 },
-    { id: "p2", time: "13:00", name: "Chicken and rice", protein: 40, carbs: 60, fat: 12, kcal: 508 },
-    { id: "p3", time: "19:00", name: "Salmon with vegetables", protein: 35, carbs: 25, fat: 20, kcal: 420 },
+    { id: "p1", time: "08:00", name: "Protein shake", protein: 30, carbs: 10, fat: 5, kcal: 205, emoji: "🥤" },
+    { id: "p2", time: "13:00", name: "Chicken and rice", protein: 40, carbs: 60, fat: 12, kcal: 508, emoji: "🍗" },
+    { id: "p3", time: "19:00", name: "Salmon with vegetables", protein: 35, carbs: 25, fat: 20, kcal: 420, emoji: "🐟" },
   ]);
 
   const handleAddMeal = (meal: Omit<Meal, "id">) => {
@@ -52,7 +58,7 @@ export default function Food() {
       </header>
 
       <main className="max-w-md mx-auto px-4 py-6 space-y-6">
-        <MacroCalculator />
+        <MacroCalculator onCalculate={setTargets} />
         <WeightGoalTracker currentWeight={currentWeight} onWeightUpdate={setCurrentWeight} />
         <EnhancedMealLog
           meals={meals}
@@ -60,6 +66,7 @@ export default function Food() {
           onAddMeal={handleAddMeal}
           onDeleteMeal={handleDeleteMeal}
           onScanBarcode={handleScanBarcode}
+          targets={targets || undefined}
         />
       </main>
     </div>
