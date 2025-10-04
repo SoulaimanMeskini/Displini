@@ -111,6 +111,12 @@ export default function Food() {
     localStorage.setItem('meals', JSON.stringify(updatedMeals));
   };
 
+  const handleUpdateMealEmoji = (id: string, emoji: string) => {
+    const updatedMeals = meals.map(m => m.id === id ? { ...m, emoji } : m);
+    setMeals(updatedMeals);
+    localStorage.setItem('meals', JSON.stringify(updatedMeals));
+  };
+
   const handleScanBarcode = () => {
     alert("Barcode scanning feature would open camera here. This requires camera permissions and a barcode scanning API.");
   };
@@ -129,23 +135,24 @@ export default function Food() {
     const dateStr = date.toISOString().split('T')[0];
     const dayName = daysOfWeek[date.getDay()].toLowerCase();
     
-    const directMeals = meals.filter(m => m.date === dateStr);
+    const directMeals = meals.filter(m => m.date === dateStr && !m.schedule);
     const scheduledMeals = meals.filter(m => 
       m.schedule && 
       m.schedule.day?.toLowerCase().includes(dayName.toLowerCase()) &&
       (m.schedule.type === "weekly" || m.schedule.type === "biweekly")
     );
     
-    return [...directMeals, ...scheduledMeals];
+    return { consumed: directMeals, scheduled: scheduledMeals };
   };
 
   const getDayStats = (date: Date) => {
-    const dayMeals = getMealsForDate(date);
+    const { consumed, scheduled } = getMealsForDate(date);
+    const allMeals = [...consumed, ...scheduled];
     return {
-      kcal: dayMeals.reduce((sum, m) => sum + m.kcal, 0),
-      protein: dayMeals.reduce((sum, m) => sum + m.protein, 0),
-      carbs: dayMeals.reduce((sum, m) => sum + m.carbs, 0),
-      fat: dayMeals.reduce((sum, m) => sum + m.fat, 0),
+      kcal: allMeals.reduce((sum, m) => sum + m.kcal, 0),
+      protein: allMeals.reduce((sum, m) => sum + m.protein, 0),
+      carbs: allMeals.reduce((sum, m) => sum + m.carbs, 0),
+      fat: allMeals.reduce((sum, m) => sum + m.fat, 0),
     };
   };
 
@@ -180,7 +187,7 @@ export default function Food() {
   };
 
   const weekDays = getWeekDays();
-  const selectedDayMeals = getMealsForDate(selectedDate);
+  const { consumed: selectedDayConsumed, scheduled: selectedDayScheduled } = getMealsForDate(selectedDate);
   const selectedDayStats = getDayStats(selectedDate);
 
   const monthlyStats: DayStats[] = [];
@@ -342,10 +349,12 @@ export default function Food() {
           )}
 
           <EnhancedMealLog
-            meals={selectedDayMeals}
+            meals={selectedDayConsumed}
+            scheduledMeals={selectedDayScheduled}
             previousMeals={previousMeals}
             onAddMeal={handleAddMeal}
             onDeleteMeal={handleDeleteMeal}
+            onUpdateMealEmoji={handleUpdateMealEmoji}
             onScanBarcode={handleScanBarcode}
             onConsumeMeal={handleConsumeScheduledMeal}
             targets={undefined}

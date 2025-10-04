@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import MacroProgress from "./MacroProgress";
 
 interface Meal {
   id: string;
@@ -27,9 +26,11 @@ interface Meal {
 
 interface EnhancedMealLogProps {
   meals: Meal[];
+  scheduledMeals?: Meal[];
   previousMeals: Meal[];
   onAddMeal: (meal: Omit<Meal, "id">) => void;
   onDeleteMeal: (id: string) => void;
+  onUpdateMealEmoji?: (id: string, emoji: string) => void;
   onScanBarcode: () => void;
   onConsumeMeal?: (id: string) => void;
   targets?: {
@@ -39,11 +40,24 @@ interface EnhancedMealLogProps {
     fat: number;
   };
   hideAddButton?: boolean;
+  showTitle?: string;
 }
 
 const foodEmojis = ["🍗", "🥗", "🍳", "🥙", "🍕", "🍔", "🥩", "🍜", "🍛", "🥘", "🍲", "🍱", "🥪", "🌮", "🌯", "🍣", "🥑", "🍎", "🍌", "🥤", "☕", "🥛", "💊"];
 
-export default function EnhancedMealLog({ meals, previousMeals, onAddMeal, onDeleteMeal, onScanBarcode, onConsumeMeal, targets, hideAddButton = false }: EnhancedMealLogProps) {
+export default function EnhancedMealLog({ 
+  meals, 
+  scheduledMeals = [],
+  previousMeals, 
+  onAddMeal, 
+  onDeleteMeal, 
+  onUpdateMealEmoji,
+  onScanBarcode, 
+  onConsumeMeal, 
+  targets, 
+  hideAddButton = false,
+  showTitle
+}: EnhancedMealLogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [mealName, setMealName] = useState("");
   const [protein, setProtein] = useState("");
@@ -54,6 +68,9 @@ export default function EnhancedMealLog({ meals, previousMeals, onAddMeal, onDel
   const [scheduleType, setScheduleType] = useState<"now" | "day" | "weekly" | "biweekly">("now");
   const [scheduleDay, setScheduleDay] = useState("monday");
   const [scheduleTime, setScheduleTime] = useState("");
+  
+  const [emojiPickerMealId, setEmojiPickerMealId] = useState<string | null>(null);
+  const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
 
   const calculateKcal = () => {
     const p = parseFloat(protein) || 0;
@@ -107,10 +124,66 @@ export default function EnhancedMealLog({ meals, previousMeals, onAddMeal, onDel
     setIsOpen(false);
   };
 
-  const totalKcal = meals.reduce((sum, meal) => sum + meal.kcal, 0);
-  const totalProtein = meals.reduce((sum, meal) => sum + meal.protein, 0);
-  const totalCarbs = meals.reduce((sum, meal) => sum + meal.carbs, 0);
-  const totalFat = meals.reduce((sum, meal) => sum + meal.fat, 0);
+  const handleEmojiChange = (emoji: string) => {
+    if (emojiPickerMealId && onUpdateMealEmoji) {
+      onUpdateMealEmoji(emojiPickerMealId, emoji);
+    }
+    setEmojiPickerOpen(false);
+    setEmojiPickerMealId(null);
+  };
+
+  const renderMealCard = (meal: Meal, isScheduled: boolean = false) => (
+    <Card 
+      key={meal.id} 
+      className={`p-4 ${isScheduled && onConsumeMeal ? 'hover-elevate cursor-pointer' : 'hover-elevate'}`}
+      onClick={() => isScheduled && onConsumeMeal ? onConsumeMeal(meal.id) : undefined}
+      data-testid={`card-meal-${meal.id}`}
+    >
+      <div className="flex items-start gap-4">
+        <button
+          className="w-20 h-20 rounded-full bg-muted flex items-center justify-center text-4xl flex-shrink-0 hover-elevate transition-transform active:scale-95"
+          onClick={(e) => {
+            e.stopPropagation();
+            setEmojiPickerMealId(meal.id);
+            setEmojiPickerOpen(true);
+          }}
+          data-testid={`button-emoji-${meal.id}`}
+        >
+          {meal.emoji}
+        </button>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-3 mb-2">
+            <p className="text-sm text-muted-foreground font-mono">{meal.time}</p>
+            <p className="font-medium truncate" data-testid={`text-meal-name-${meal.id}`}>{meal.name}</p>
+          </div>
+          <div className="flex items-center gap-3 text-sm flex-wrap">
+            <span className="font-semibold">{meal.kcal} kcal</span>
+            <span className="text-chart-1">P: {meal.protein}g</span>
+            <span className="text-chart-3">C: {meal.carbs}g</span>
+            <span className="text-chart-4">F: {meal.fat}g</span>
+          </div>
+          {meal.schedule && (
+            <p className="text-xs text-success mt-2">
+              Tap to consume • {meal.schedule.type === "weekly" && `Weekly on ${meal.schedule.day}`}
+              {meal.schedule.type === "biweekly" && `Every 2 weeks on ${meal.schedule.day}`}
+              {meal.schedule.type === "day" && `Scheduled for ${meal.schedule.day}`}
+            </p>
+          )}
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDeleteMeal(meal.id);
+          }}
+          data-testid={`button-delete-meal-${meal.id}`}
+        >
+          <Trash2 className="w-4 h-4" />
+        </Button>
+      </div>
+    </Card>
+  );
 
   return (
     <div className="space-y-4">
@@ -318,14 +391,7 @@ export default function EnhancedMealLog({ meals, previousMeals, onAddMeal, onDel
         </div>
       )}
 
-      {targets && (
-        <Card className="p-4 space-y-4">
-          <MacroProgress current={totalKcal} target={targets.kcal} label="Calories" unit=" kcal" />
-          <MacroProgress current={totalProtein} target={targets.protein} label="Protein" unit="g" />
-          <MacroProgress current={totalCarbs} target={targets.carbs} label="Carbs" unit="g" />
-          <MacroProgress current={totalFat} target={targets.fat} label="Fat" unit="g" />
-        </Card>
-      )}
+      {showTitle && <h4 className="text-sm font-semibold text-muted-foreground">{showTitle}</h4>}
 
       <div className="space-y-3">
         {meals.length === 0 ? (
@@ -333,52 +399,37 @@ export default function EnhancedMealLog({ meals, previousMeals, onAddMeal, onDel
             <p className="text-muted-foreground">No meals logged yet</p>
           </Card>
         ) : (
-          meals.map((meal) => (
-            <Card 
-              key={meal.id} 
-              className={`p-4 ${meal.schedule && onConsumeMeal ? 'hover-elevate cursor-pointer' : 'hover-elevate'}`}
-              onClick={() => meal.schedule && onConsumeMeal ? onConsumeMeal(meal.id) : undefined}
-              data-testid={`card-meal-${meal.id}`}
-            >
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center text-2xl flex-shrink-0">
-                  {meal.emoji}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-3 mb-2">
-                    <p className="text-sm text-muted-foreground font-mono">{meal.time}</p>
-                    <p className="font-medium truncate" data-testid={`text-meal-name-${meal.id}`}>{meal.name}</p>
-                  </div>
-                  <div className="flex items-center gap-3 text-sm flex-wrap">
-                    <span className="font-semibold">{meal.kcal} kcal</span>
-                    <span className="text-chart-1">P: {meal.protein}g</span>
-                    <span className="text-chart-3">C: {meal.carbs}g</span>
-                    <span className="text-chart-4">F: {meal.fat}g</span>
-                  </div>
-                  {meal.schedule && (
-                    <p className="text-xs text-success mt-2">
-                      Tap to consume • {meal.schedule.type === "weekly" && `Weekly on ${meal.schedule.day}`}
-                      {meal.schedule.type === "biweekly" && `Every 2 weeks on ${meal.schedule.day}`}
-                      {meal.schedule.type === "day" && `Scheduled for ${meal.schedule.day}`}
-                    </p>
-                  )}
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDeleteMeal(meal.id);
-                  }}
-                  data-testid={`button-delete-meal-${meal.id}`}
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              </div>
-            </Card>
-          ))
+          meals.map((meal) => renderMealCard(meal, false))
         )}
       </div>
+
+      {scheduledMeals.length > 0 && (
+        <div className="space-y-3 pt-4">
+          <h4 className="text-sm font-semibold text-muted-foreground">Scheduled Meals</h4>
+          {scheduledMeals.map((meal) => renderMealCard(meal, true))}
+        </div>
+      )}
+
+      <Dialog open={emojiPickerOpen} onOpenChange={setEmojiPickerOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Change Emoji</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-wrap gap-2 pt-4">
+            {foodEmojis.map((emoji, index) => (
+              <button
+                key={`picker-${emoji}-${index}`}
+                type="button"
+                onClick={() => handleEmojiChange(emoji)}
+                className="w-12 h-12 rounded-full flex items-center justify-center text-2xl bg-muted hover-elevate"
+                data-testid={`button-picker-emoji-${emoji}`}
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
