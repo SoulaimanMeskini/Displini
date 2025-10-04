@@ -46,6 +46,7 @@ export default function Todo() {
 
   useEffect(() => {
     localStorage.setItem('todos', JSON.stringify(tasks));
+    window.dispatchEvent(new Event('todosUpdated'));
   }, [tasks]);
 
   const handleToggleTask = (id: string) => {

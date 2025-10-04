@@ -7,6 +7,8 @@ This is a mobile-first habit tracking application built with React and Express. 
 The application uses a clean, distraction-free interface inspired by Apple Health, Linear, and Notion, with a focus on data clarity and quick task completion. An AI chat assistant powered by OpenAI enables natural language commands for rapid data entry across Food, Sport, and To Do tabs. The To Do page features a timeline view with all-day tasks displayed as circular buttons and timed tasks sorted chronologically.
 
 **Latest Updates:**
+- Sleep schedule views: Enhanced with 3 tabs - Schedule (wake/bedtime), Daily (today's tasks with completion status), Weekly (7-day quality grid with navigation)
+- Reactive todo sync: Sleep schedule daily view auto-updates when tasks completed in To Do page
 - Water tracking: New column in Food page with daily goals (ml/oz), progress bar, quick-add buttons, and 30-day history
 - Task notes: Tasks can now include optional notes displayed in timeline view
 - Meal scheduling: Added "Eat now", "Schedule for today", and "Monthly" options
@@ -14,7 +16,6 @@ The application uses a clean, distraction-free interface inspired by Apple Healt
 - All-day completion: Completed all-day tasks stay in place with green checkmark overlay (don't move to completed section)
 - Barcode scanner: Moved into log food dialog header for better accessibility
 - Unit conversion: Water tracking converts between ml/oz when switching units
-- Sleep schedule: Wake and bedtime settings with alarm customization (5 sounds) and quality tracking
 - Timeline view: To Do page displays all-day tasks as circles, timed tasks chronologically
 - Event-to-do sync: Calendar events create corresponding to-do items when toggled
 - Medication completion: Marking medication to-dos complete updates Health page with timestamp

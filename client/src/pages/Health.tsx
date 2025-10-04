@@ -7,8 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Trash2, Calendar as CalendarIcon, Moon, Sun, Bell } from "lucide-react";
-import { format, addDays, differenceInDays } from "date-fns";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Plus, Trash2, Calendar as CalendarIcon, Moon, Sun, Bell, ChevronLeft, ChevronRight } from "lucide-react";
+import { format, addDays, differenceInDays, startOfWeek, addWeeks, subWeeks, isToday } from "date-fns";
 
 interface CyclePeriod {
   id: string;
@@ -63,6 +64,17 @@ export default function Health() {
   const [sleepTime, setSleepTime] = useState("23:00");
   const [alarmEnabled, setAlarmEnabled] = useState(false);
   const [alarmSound, setAlarmSound] = useState("default");
+  const [sleepWeekStart, setSleepWeekStart] = useState(() => {
+    const weekStartDay = parseInt(localStorage.getItem("weekStartDay") || "0");
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    const diff = dayOfWeek - weekStartDay;
+    const adjustedDiff = diff < 0 ? diff + 7 : diff;
+    const start = new Date(today);
+    start.setDate(today.getDate() - adjustedDiff);
+    return start;
+  });
+  const [sleepTodos, setSleepTodos] = useState<any[]>([]);
 
   useEffect(() => {
     const savedCycles = localStorage.getItem("menstrualCycles");
@@ -112,6 +124,28 @@ export default function Health() {
   useEffect(() => {
     localStorage.setItem("sleepLogs", JSON.stringify(sleepLogs));
   }, [sleepLogs]);
+
+  useEffect(() => {
+    const updateSleepTodos = () => {
+      const todos = JSON.parse(localStorage.getItem("todos") || "[]");
+      const today = new Date().toISOString().split('T')[0];
+      const todaysSleepTodos = todos.filter((t: any) => 
+        t.source === 'sleep' && 
+        (!t.dueDate || new Date(t.dueDate).toISOString().split('T')[0] === today)
+      );
+      setSleepTodos(todaysSleepTodos);
+    };
+
+    updateSleepTodos();
+    
+    window.addEventListener('storage', updateSleepTodos);
+    window.addEventListener('todosUpdated', updateSleepTodos);
+    
+    return () => {
+      window.removeEventListener('storage', updateSleepTodos);
+      window.removeEventListener('todosUpdated', updateSleepTodos);
+    };
+  }, []);
 
   const handleAddPeriod = () => {
     if (newPeriodDate) {
@@ -282,44 +316,158 @@ export default function Health() {
           </CardHeader>
           <CardContent className="space-y-3">
             {sleepSchedule ? (
-              <>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="p-3 bg-muted/50 rounded-lg">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Sun className="w-4 h-4 text-warning" />
-                      <p className="text-xs font-medium text-muted-foreground">Wake Time</p>
-                    </div>
-                    <p className="text-lg font-semibold font-mono">{sleepSchedule.wakeTime}</p>
-                    {sleepSchedule.alarmEnabled && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        <Bell className="w-3 h-3 inline mr-1" />
-                        {alarmSounds.find(s => s.id === sleepSchedule.alarmSound)?.name}
-                      </p>
-                    )}
-                  </div>
-                  <div className="p-3 bg-muted/50 rounded-lg">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Moon className="w-4 h-4 text-primary" />
-                      <p className="text-xs font-medium text-muted-foreground">Bedtime</p>
-                    </div>
-                    <p className="text-lg font-semibold font-mono">{sleepSchedule.sleepTime}</p>
-                  </div>
-                </div>
+              <Tabs defaultValue="schedule" className="w-full">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="schedule" data-testid="tab-sleep-schedule">Schedule</TabsTrigger>
+                  <TabsTrigger value="daily" data-testid="tab-sleep-daily">Daily</TabsTrigger>
+                  <TabsTrigger value="weekly" data-testid="tab-sleep-weekly">Weekly</TabsTrigger>
+                </TabsList>
                 
-                {sleepLogs.length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-xs font-medium text-muted-foreground">Recent Sleep Quality</p>
-                    <div className="flex gap-2 overflow-x-auto">
-                      {sleepLogs.slice(0, 7).map((log) => (
-                        <div key={log.id} className="flex flex-col items-center gap-1 min-w-fit">
-                          <div className="text-2xl">{log.quality}</div>
-                          <p className="text-xs text-muted-foreground">{format(new Date(log.date), 'MMM d')}</p>
-                        </div>
-                      ))}
+                <TabsContent value="schedule" className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="p-3 bg-muted/50 rounded-lg">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Sun className="w-4 h-4 text-warning" />
+                        <p className="text-xs font-medium text-muted-foreground">Wake Time</p>
+                      </div>
+                      <p className="text-lg font-semibold font-mono">{sleepSchedule.wakeTime}</p>
+                      {sleepSchedule.alarmEnabled && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          <Bell className="w-3 h-3 inline mr-1" />
+                          {alarmSounds.find(s => s.id === sleepSchedule.alarmSound)?.name}
+                        </p>
+                      )}
+                    </div>
+                    <div className="p-3 bg-muted/50 rounded-lg">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Moon className="w-4 h-4 text-primary" />
+                        <p className="text-xs font-medium text-muted-foreground">Bedtime</p>
+                      </div>
+                      <p className="text-lg font-semibold font-mono">{sleepSchedule.sleepTime}</p>
                     </div>
                   </div>
-                )}
-              </>
+                </TabsContent>
+                
+                <TabsContent value="daily" className="space-y-3">
+                  {(() => {
+                    const today = new Date().toISOString().split('T')[0];
+                    const todayLog = sleepLogs.find(log => log.date === today);
+                    const wakeTodo = sleepTodos.find((t: any) => t.sleepAction === 'wake');
+                    const sleepTodo = sleepTodos.find((t: any) => t.sleepAction === 'sleep');
+                    
+                    return (
+                      <>
+                        <div className="space-y-2">
+                          <p className="text-xs font-medium text-muted-foreground">Today's Schedule</p>
+                          <div className="space-y-2">
+                            <div className={`p-3 rounded-lg border-2 ${wakeTodo?.completed ? 'bg-success/10 border-success' : 'bg-muted/50 border-border'}`}>
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <Sun className="w-4 h-4 text-warning" />
+                                  <span className="text-sm font-medium">Wake up</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm font-mono font-semibold">{sleepSchedule.wakeTime}</span>
+                                  {wakeTodo?.completed && <span className="text-success">✓</span>}
+                                </div>
+                              </div>
+                            </div>
+                            <div className={`p-3 rounded-lg border-2 ${sleepTodo?.completed ? 'bg-success/10 border-success' : 'bg-muted/50 border-border'}`}>
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <Moon className="w-4 h-4 text-primary" />
+                                  <span className="text-sm font-medium">Go to bed</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm font-mono font-semibold">{sleepSchedule.sleepTime}</span>
+                                  {sleepTodo?.completed && <span className="text-success">✓</span>}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        {todayLog && (
+                          <div className="p-3 bg-primary/10 rounded-lg">
+                            <p className="text-xs font-medium text-muted-foreground mb-2">Sleep Quality</p>
+                            <div className="flex items-center gap-3">
+                              <span className="text-3xl">{todayLog.quality}</span>
+                              {todayLog.wakeTime && (
+                                <div>
+                                  <p className="text-xs text-muted-foreground">Woke up at</p>
+                                  <p className="text-sm font-mono font-semibold">{todayLog.wakeTime}</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
+                </TabsContent>
+                
+                <TabsContent value="weekly" className="space-y-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => setSleepWeekStart(subWeeks(sleepWeekStart, 1))}
+                      data-testid="button-prev-sleep-week"
+                    >
+                      <ChevronLeft className="w-5 h-5" />
+                    </Button>
+                    <h3 className="text-sm font-medium">Week View</h3>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => setSleepWeekStart(addWeeks(sleepWeekStart, 1))}
+                      data-testid="button-next-sleep-week"
+                    >
+                      <ChevronRight className="w-5 h-5" />
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-7 gap-1">
+                    {Array.from({ length: 7 }).map((_, i) => {
+                      const date = addDays(sleepWeekStart, i);
+                      const dateStr = date.toISOString().split('T')[0];
+                      const log = sleepLogs.find(l => l.date === dateStr);
+                      const isTodayDate = isToday(date);
+                      const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                      
+                      return (
+                        <div 
+                          key={i} 
+                          className={`flex flex-col items-center p-2 rounded-lg ${isTodayDate ? 'bg-accent' : 'bg-muted/50'}`}
+                          data-testid={`sleep-day-${i}`}
+                        >
+                          <span className="text-xs font-medium mb-1">{dayNames[date.getDay()]}</span>
+                          <span className="text-sm font-bold mb-2">{date.getDate()}</span>
+                          {log ? (
+                            <div className="text-2xl">{log.quality}</div>
+                          ) : (
+                            <div className="w-6 h-6 rounded-full border-2 border-muted-foreground/20"></div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {sleepLogs.length > 0 && (
+                    <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground pt-2">
+                      <div className="flex items-center gap-1">
+                        <span className="text-xl">😴</span>
+                        <span>Poor</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="text-xl">😊</span>
+                        <span>Good</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="text-xl">🤩</span>
+                        <span>Excellent</span>
+                      </div>
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
             ) : (
               <p className="text-sm text-muted-foreground">
                 Set up your sleep schedule for better rest
