@@ -14,12 +14,19 @@ export default function Todo() {
     },
     {
       id: "2",
+      title: "Eat grilled chicken salad at 12:30",
+      completed: false,
+      source: "food",
+      dueDate: new Date(),
+    },
+    {
+      id: "3",
       title: "Team meeting prep",
       completed: false,
       source: "calendar",
     },
     {
-      id: "3",
+      id: "4",
       title: "Review project docs",
       completed: true,
       source: "manual",
