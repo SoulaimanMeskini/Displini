@@ -2,9 +2,9 @@
 
 ## Overview
 
-This is a mobile-first habit tracking application built with React and Express. The app helps users track daily habits across three main areas: nutrition/food intake, calendar events, and todo tasks. It features macro tracking, protein intake monitoring, weight goal tracking, calendar event management, and task organization with cross-functional integration between modules.
+This is a mobile-first habit tracking application built with React and Express. The app helps users track daily habits across five main areas: Health (menstrual cycle & medications), Food (nutrition & macros), Sport (fitness & workouts), Calendar (events), and To Do (task management). It features macro tracking, protein intake monitoring, weight goal tracking, menstrual cycle predictions, medication reminders, workout scheduling, and task organization with cross-functional integration between modules.
 
-The application uses a clean, distraction-free interface inspired by Apple Health, Linear, and Notion, with a focus on data clarity and quick task completion.
+The application uses a clean, distraction-free interface inspired by Apple Health, Linear, and Notion, with a focus on data clarity and quick task completion. An AI chat assistant powered by OpenAI enables natural language commands for rapid data entry across all tabs.
 
 ## User Preferences
 
@@ -20,6 +20,8 @@ Preferred communication style: Simple, everyday language.
 
 **Routing**: Wouter for lightweight client-side routing:
 - `/` - Landing page (logged out) or Food/Nutrition tracking page (logged in)
+- `/health` - Health tracking (menstrual cycle, medications) page (protected)
+- `/sport` - Sport & Fitness tracking page (protected)
 - `/calendar` - Calendar events page (protected)
 - `/todo` - Task management page (protected)
 - `/profile` - User profile settings page (protected)
@@ -31,11 +33,13 @@ Preferred communication style: Simple, everyday language.
 **Key Design Patterns**:
 - Component composition with reusable UI primitives
 - Mobile-first responsive design with fixed bottom navigation
-- Cross-module integration (meals can create todos, calendar events can create todos)
+- Cross-module integration (medications→todos, workouts→todos, cycle→calendar, scheduled meals→consumed)
 - Theme system with customizable colors stored in localStorage
 - Authentication-aware routing (landing page for logged out users)
 - Tap-to-consume for scheduled meals
 - Weekly view with circular goal indicators
+- AI-assisted data entry via floating chat bubble
+- Emoji customization for all tracked items (meals, tasks, medications, workouts)
 
 ### Backend Architecture
 
@@ -63,14 +67,19 @@ Preferred communication style: Simple, everyday language.
 **Data Models**:
 - Users: OAuth profile (id, email, firstName, lastName, profileImageUrl, dateOfBirth)
 - Sessions: Express session storage for authentication persistence
-- Meals: Tracked with protein, carbs, fat, kcal, scheduling options (localStorage)
+- Meals: Tracked with protein, carbs, fat, kcal, emoji, scheduling options (localStorage)
+- Medications: Name, emoji, frequency, time, auto-creates todos (localStorage)
+- Menstrual Cycle: Start date, duration, predictions, calendar integration (localStorage)
+- Workouts: Name, emoji, duration, type, frequency, days, time, auto-creates todos (localStorage)
 - Calendar Events: Date, time, title, optional todo conversion (localStorage)
-- Tasks: Title, completion status, due date, source tracking (localStorage)
+- Tasks: Title, emoji, completion status, due date, source tracking (localStorage)
+- Settings: Week start day preference (localStorage)
 
 **Persistence Strategy**: 
 - User authentication data: PostgreSQL database
-- Application data (meals, calendar, tasks): LocalStorage for quick access
+- Application data (meals, medications, cycle data, workouts, calendar, tasks): LocalStorage for quick access
 - Macro calculator settings: LocalStorage for persistence across visits
+- User preferences (week start day, theme): LocalStorage with cross-tab synchronization
 
 ### Authentication & Authorization
 
@@ -89,7 +98,8 @@ Preferred communication style: Simple, everyday language.
 **Protected Routes**:
 - `/api/auth/user` - Get current user profile
 - `/api/auth/user/profile` - Update user profile (dateOfBirth)
-- All app pages (Food, Calendar, Todo, Profile) require authentication
+- `/api/ai/parse` - Parse natural language commands using OpenAI (POST)
+- All app pages (Food, Health, Sport, Calendar, Todo, Profile) require authentication
 
 **Security Features**:
 - Session-based authentication with database persistence
@@ -143,3 +153,9 @@ Preferred communication style: Simple, everyday language.
 - **Replit Plugins**: Runtime error overlay, cartographer, dev banner for Replit environment
 - **tsx**: TypeScript execution for development
 - **drizzle-kit**: Database migrations and schema management
+
+### AI Integration
+
+- **OpenAI**: GPT-5 model for natural language command parsing via OpenAI SDK
+- **Features**: Meal logging, workout scheduling, task creation via conversational interface
+- **Error Handling**: Graceful rate limit handling with user-friendly fallback messages
