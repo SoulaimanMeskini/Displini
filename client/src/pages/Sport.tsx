@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import Settings from "@/components/Settings";
+import AIChatBubble from "@/components/AIChatBubble";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,27 +50,34 @@ export default function Sport() {
     localStorage.setItem("completedWorkouts", JSON.stringify(completedWorkouts));
   }, [completedWorkouts]);
 
-  const handleAddWorkout = () => {
-    if (newWorkoutName && newWorkoutDuration) {
+  const handleAddWorkout = (workout?: Omit<Workout, "id">) => {
+    const workoutData = workout || {
+      name: newWorkoutName,
+      emoji: newWorkoutEmoji,
+      duration: parseInt(newWorkoutDuration),
+      type: newWorkoutType,
+      frequency: newWorkoutFrequency,
+      days: newWorkoutDays,
+      time: newWorkoutTime,
+    };
+
+    if (workoutData.name && workoutData.duration) {
       const newWorkout: Workout = {
         id: Date.now().toString(),
-        name: newWorkoutName,
-        emoji: newWorkoutEmoji,
-        duration: parseInt(newWorkoutDuration),
-        type: newWorkoutType,
-        frequency: newWorkoutFrequency,
-        days: newWorkoutDays,
-        time: newWorkoutTime,
+        ...workoutData,
       };
       setWorkouts([...workouts, newWorkout]);
-      setNewWorkoutName("");
-      setNewWorkoutEmoji("🏃");
-      setNewWorkoutDuration("");
-      setNewWorkoutType("cardio");
-      setNewWorkoutFrequency("weekly");
-      setNewWorkoutDays(["monday"]);
-      setNewWorkoutTime("");
-      setIsAddWorkoutOpen(false);
+      
+      if (!workout) {
+        setNewWorkoutName("");
+        setNewWorkoutEmoji("🏃");
+        setNewWorkoutDuration("");
+        setNewWorkoutType("cardio");
+        setNewWorkoutFrequency("weekly");
+        setNewWorkoutDays(["monday"]);
+        setNewWorkoutTime("");
+        setIsAddWorkoutOpen(false);
+      }
       
       addWorkoutToTodo(newWorkout);
     }
@@ -324,12 +332,14 @@ export default function Sport() {
                 data-testid="input-workout-time"
               />
             </div>
-            <Button onClick={handleAddWorkout} className="w-full" data-testid="button-submit-workout">
+            <Button onClick={() => handleAddWorkout()} className="w-full" data-testid="button-submit-workout">
               Schedule Workout
             </Button>
           </div>
         </DialogContent>
       </Dialog>
+      
+      <AIChatBubble onWorkoutScheduled={handleAddWorkout} />
     </div>
   );
 }

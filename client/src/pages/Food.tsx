@@ -4,6 +4,7 @@ import WeightGoalTracker from "@/components/WeightGoalTracker";
 import EnhancedMealLog from "@/components/EnhancedMealLog";
 import ThemeToggle from "@/components/ThemeToggle";
 import Settings from "@/components/Settings";
+import AIChatBubble from "@/components/AIChatBubble";
 import { Card } from "@/components/ui/card";
 import MacroProgress from "@/components/MacroProgress";
 import { Button } from "@/components/ui/button";
@@ -376,6 +377,8 @@ export default function Food() {
           />
         </div>
       </main>
+      
+      <AIChatBubble onMealLogged={handleAddMeal} />
     </div>
   );
 }

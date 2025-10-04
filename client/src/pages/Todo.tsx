@@ -1,37 +1,52 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import TaskList, { Task } from "@/components/TaskList";
 import ThemeToggle from "@/components/ThemeToggle";
 import Settings from "@/components/Settings";
+import AIChatBubble from "@/components/AIChatBubble";
 
 export default function Todo() {
-  const [tasks, setTasks] = useState<Task[]>([
-    {
-      id: "1",
-      title: "Take morning vitamins",
-      completed: false,
-      source: "food",
-      dueDate: new Date(),
-    },
-    {
-      id: "2",
-      title: "Eat grilled chicken salad at 12:30",
-      completed: false,
-      source: "food",
-      dueDate: new Date(),
-    },
-    {
-      id: "3",
-      title: "Team meeting prep",
-      completed: false,
-      source: "calendar",
-    },
-    {
-      id: "4",
-      title: "Review project docs",
-      completed: true,
-      source: "manual",
-    },
-  ]);
+  const [tasks, setTasks] = useState<Task[]>(() => {
+    const saved = localStorage.getItem('todos');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return parsed.map((t: any) => ({
+        ...t,
+        dueDate: t.dueDate ? new Date(t.dueDate) : undefined,
+      }));
+    }
+    return [
+      {
+        id: "1",
+        title: "Take morning vitamins",
+        completed: false,
+        source: "food" as const,
+        dueDate: new Date(),
+      },
+      {
+        id: "2",
+        title: "Eat grilled chicken salad at 12:30",
+        completed: false,
+        source: "food" as const,
+        dueDate: new Date(),
+      },
+      {
+        id: "3",
+        title: "Team meeting prep",
+        completed: false,
+        source: "calendar" as const,
+      },
+      {
+        id: "4",
+        title: "Review project docs",
+        completed: true,
+        source: "manual" as const,
+      },
+    ];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('todos', JSON.stringify(tasks));
+  }, [tasks]);
 
   const handleToggleTask = (id: string) => {
     setTasks(tasks.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t)));
@@ -63,6 +78,8 @@ export default function Todo() {
           onAddTask={handleAddTask}
         />
       </main>
+      
+      <AIChatBubble onTaskAdded={handleAddTask} />
     </div>
   );
 }
