@@ -8,8 +8,11 @@ import AIChatBubble from "@/components/AIChatBubble";
 import { Card } from "@/components/ui/card";
 import MacroProgress from "@/components/MacroProgress";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, BarChart3 } from "lucide-react";
+import { ChevronLeft, ChevronRight, BarChart3, Edit2, Settings as SettingsIcon, GripVertical, ChevronUp, ChevronDown } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 
 interface Meal {
   id: string;
@@ -45,6 +48,24 @@ export default function Food() {
     return saved ? JSON.parse(saved) : null;
   });
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [isEditingGoals, setIsEditingGoals] = useState(false);
+  const [editedGoals, setEditedGoals] = useState({ kcal: 0, protein: 0, carbs: 0, fat: 0 });
+  
+  const [columnOrder, setColumnOrder] = useState<string[]>(() => {
+    const saved = localStorage.getItem('food_column_order');
+    return saved ? JSON.parse(saved) : ['calculator', 'weight', 'week', 'goals', 'meals'];
+  });
+  
+  const [columnVisibility, setColumnVisibility] = useState<Record<string, boolean>>(() => {
+    const saved = localStorage.getItem('food_column_visibility');
+    return saved ? JSON.parse(saved) : {
+      calculator: true,
+      weight: true,
+      week: true,
+      goals: true,
+      meals: true
+    };
+  });
   
   const getWeekStart = () => {
     const today = new Date();
@@ -94,6 +115,39 @@ export default function Food() {
     window.addEventListener('weekStartDayChanged', handleWeekStartChange);
     return () => window.removeEventListener('weekStartDayChanged', handleWeekStartChange);
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem('food_column_order', JSON.stringify(columnOrder));
+  }, [columnOrder]);
+
+  useEffect(() => {
+    localStorage.setItem('food_column_visibility', JSON.stringify(columnVisibility));
+  }, [columnVisibility]);
+
+  const handleSaveGoals = () => {
+    setTargets(editedGoals);
+    localStorage.setItem('calculator_results', JSON.stringify(editedGoals));
+    setIsEditingGoals(false);
+  };
+
+  const handleEditGoals = () => {
+    if (targets) {
+      setEditedGoals(targets);
+    }
+    setIsEditingGoals(true);
+  };
+
+  const toggleColumnVisibility = (columnId: string) => {
+    if (columnId === 'week' || columnId === 'meals') return;
+    setColumnVisibility(prev => ({ ...prev, [columnId]: !prev[columnId] }));
+  };
+
+  const moveColumn = (fromIndex: number, toIndex: number) => {
+    const newOrder = [...columnOrder];
+    const [movedColumn] = newOrder.splice(fromIndex, 1);
+    newOrder.splice(toIndex, 0, movedColumn);
+    setColumnOrder(newOrder);
+  };
 
   const handleAddMeal = (meal: Omit<Meal, "id">) => {
     const newMeal = { 
@@ -218,11 +272,178 @@ export default function Food() {
     });
   }
 
+  const renderColumn = (columnId: string) => {
+    if (!columnVisibility[columnId]) return null;
+
+    switch (columnId) {
+      case 'calculator':
+        return <MacroCalculator key="calculator" onCalculate={setTargets} />;
+      case 'weight':
+        return <WeightGoalTracker key="weight" currentWeight={currentWeight} onWeightUpdate={setCurrentWeight} />;
+      case 'week':
+        return (
+          <Card key="week" className="p-4">
+            <div className="flex items-center justify-between mb-4">
+              <Button variant="ghost" size="icon" onClick={() => navigateWeek("prev")} data-testid="button-prev-week">
+                <ChevronLeft className="w-5 h-5" />
+              </Button>
+              <h3 className="text-base font-semibold">Week View</h3>
+              <Button variant="ghost" size="icon" onClick={() => navigateWeek("next")} data-testid="button-next-week">
+                <ChevronRight className="w-5 h-5" />
+              </Button>
+            </div>
+
+            <div className="flex justify-between gap-1">
+              {weekDays.map((date, index) => {
+                const status = getGoalStatus(date);
+                const isTodayDate = isToday(date);
+                const isSelected = isSelectedDate(date);
+                
+                return (
+                  <button
+                    key={index}
+                    onClick={() => setSelectedDate(date)}
+                    className={`flex flex-col items-center p-2 rounded-lg transition-all flex-1 ${
+                      isSelected 
+                        ? "bg-primary text-primary-foreground" 
+                        : isTodayDate
+                        ? "bg-accent"
+                        : "hover-elevate"
+                    }`}
+                    data-testid={`button-day-${index}`}
+                  >
+                    <span className="text-xs font-medium mb-2">{daysOfWeek[date.getDay()]}</span>
+                    <span className="text-lg font-bold mb-2">{date.getDate()}</span>
+                    <div 
+                      className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                        status === "green" 
+                          ? "bg-success border-success" 
+                          : status === "yellow"
+                          ? "bg-warning border-warning"
+                          : status === "red"
+                          ? "bg-destructive border-destructive"
+                          : "border-muted-foreground/30"
+                      }`}
+                      data-testid={`indicator-${index}`}
+                    >
+                      {status !== "none" && <span className="text-xs">✓</span>}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </Card>
+        );
+      case 'goals':
+        return targets ? (
+          <Card key="goals" className="p-4 space-y-4">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-semibold">Today's Goals</h3>
+              <Button variant="ghost" size="icon" onClick={handleEditGoals} data-testid="button-edit-goals">
+                <Edit2 className="w-4 h-4" />
+              </Button>
+            </div>
+            <MacroProgress current={selectedDayStats.kcal} target={targets.kcal} label="Calories" unit=" kcal" />
+            <MacroProgress current={selectedDayStats.protein} target={targets.protein} label="Protein" unit="g" />
+            <MacroProgress current={selectedDayStats.carbs} target={targets.carbs} label="Carbs" unit="g" />
+            <MacroProgress current={selectedDayStats.fat} target={targets.fat} label="Fat" unit="g" />
+          </Card>
+        ) : null;
+      case 'meals':
+        return (
+          <div key="meals">
+            <h3 className="text-lg font-semibold mb-4">
+              {isToday(selectedDate) ? "Today's Meals" : `Meals for ${selectedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
+            </h3>
+            <EnhancedMealLog
+              meals={selectedDayConsumed}
+              scheduledMeals={selectedDayScheduled}
+              previousMeals={previousMeals}
+              onAddMeal={handleAddMeal}
+              onDeleteMeal={handleDeleteMeal}
+              onUpdateMealEmoji={handleUpdateMealEmoji}
+              onScanBarcode={handleScanBarcode}
+              onConsumeMeal={handleConsumeScheduledMeal}
+              targets={undefined}
+            />
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background pb-20">
       <header className="sticky top-0 z-40 bg-background border-b border-border px-4 py-3 flex items-center justify-between">
         <h1 className="text-xl font-bold">Food Tracking</h1>
         <div className="flex gap-2">
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="icon" data-testid="button-column-settings">
+                <SettingsIcon className="w-4 h-4" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Manage Columns</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 pt-4">
+                <div className="space-y-3">
+                  {columnOrder.map((columnId, index) => {
+                    const columnNames: Record<string, string> = {
+                      calculator: 'Macro Calculator',
+                      weight: 'Weight Tracker',
+                      week: 'Week View',
+                      goals: 'Today\'s Goals',
+                      meals: 'Food Log'
+                    };
+                    const isProtected = columnId === 'week' || columnId === 'meals';
+                    
+                    return (
+                      <div key={columnId} className="flex items-center justify-between gap-3 p-3 bg-muted rounded-md">
+                        <div className="flex items-center gap-2">
+                          <div className="flex flex-col gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() => moveColumn(index, Math.max(0, index - 1))}
+                              disabled={index === 0}
+                              data-testid={`button-move-up-${columnId}`}
+                            >
+                              <ChevronUp className="w-3 h-3" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() => moveColumn(index, Math.min(columnOrder.length - 1, index + 1))}
+                              disabled={index === columnOrder.length - 1}
+                              data-testid={`button-move-down-${columnId}`}
+                            >
+                              <ChevronDown className="w-3 h-3" />
+                            </Button>
+                          </div>
+                          <GripVertical className="w-4 h-4 text-muted-foreground" />
+                          <span className="font-medium">{columnNames[columnId]}</span>
+                          {isProtected && (
+                            <span className="text-xs text-muted-foreground">(required)</span>
+                          )}
+                        </div>
+                        <Switch
+                          checked={columnVisibility[columnId]}
+                          onCheckedChange={() => toggleColumnVisibility(columnId)}
+                          disabled={isProtected}
+                          data-testid={`switch-column-${columnId}`}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
           <Dialog>
             <DialogTrigger asChild>
               <Button variant="outline" size="sm" data-testid="button-monthly-stats">
@@ -295,88 +516,61 @@ export default function Food() {
       </header>
 
       <main className="max-w-md mx-auto px-4 py-6 space-y-6">
-        <MacroCalculator onCalculate={setTargets} />
-        <WeightGoalTracker currentWeight={currentWeight} onWeightUpdate={setCurrentWeight} />
-        
-        <Card className="p-4">
-          <div className="flex items-center justify-between mb-4">
-            <Button variant="ghost" size="icon" onClick={() => navigateWeek("prev")} data-testid="button-prev-week">
-              <ChevronLeft className="w-5 h-5" />
-            </Button>
-            <h3 className="text-base font-semibold">Week View</h3>
-            <Button variant="ghost" size="icon" onClick={() => navigateWeek("next")} data-testid="button-next-week">
-              <ChevronRight className="w-5 h-5" />
-            </Button>
-          </div>
-
-          <div className="flex justify-between gap-1">
-            {weekDays.map((date, index) => {
-              const status = getGoalStatus(date);
-              const isTodayDate = isToday(date);
-              const isSelected = isSelectedDate(date);
-              
-              return (
-                <button
-                  key={index}
-                  onClick={() => setSelectedDate(date)}
-                  className={`flex flex-col items-center p-2 rounded-lg transition-all flex-1 ${
-                    isSelected 
-                      ? "bg-primary text-primary-foreground" 
-                      : isTodayDate
-                      ? "bg-accent"
-                      : "hover-elevate"
-                  }`}
-                  data-testid={`button-day-${index}`}
-                >
-                  <span className="text-xs font-medium mb-2">{daysOfWeek[date.getDay()]}</span>
-                  <span className="text-lg font-bold mb-2">{date.getDate()}</span>
-                  <div 
-                    className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
-                      status === "green" 
-                        ? "bg-success border-success" 
-                        : status === "yellow"
-                        ? "bg-warning border-warning"
-                        : status === "red"
-                        ? "bg-destructive border-destructive"
-                        : "border-muted-foreground/30"
-                    }`}
-                    data-testid={`indicator-${index}`}
-                  >
-                    {status !== "none" && <span className="text-xs">✓</span>}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </Card>
-
-        <div>
-          <h3 className="text-lg font-semibold mb-4">
-            {isToday(selectedDate) ? "Today's Meals" : `Meals for ${selectedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
-          </h3>
-          
-          {targets && (
-            <Card className="p-4 mb-4 space-y-4">
-              <MacroProgress current={selectedDayStats.kcal} target={targets.kcal} label="Calories" unit=" kcal" />
-              <MacroProgress current={selectedDayStats.protein} target={targets.protein} label="Protein" unit="g" />
-              <MacroProgress current={selectedDayStats.carbs} target={targets.carbs} label="Carbs" unit="g" />
-              <MacroProgress current={selectedDayStats.fat} target={targets.fat} label="Fat" unit="g" />
-            </Card>
-          )}
-
-          <EnhancedMealLog
-            meals={selectedDayConsumed}
-            scheduledMeals={selectedDayScheduled}
-            previousMeals={previousMeals}
-            onAddMeal={handleAddMeal}
-            onDeleteMeal={handleDeleteMeal}
-            onUpdateMealEmoji={handleUpdateMealEmoji}
-            onScanBarcode={handleScanBarcode}
-            onConsumeMeal={handleConsumeScheduledMeal}
-            targets={undefined}
-          />
-        </div>
+        {columnOrder.map((columnId) => renderColumn(columnId))}
       </main>
+
+      <Dialog open={isEditingGoals} onOpenChange={setIsEditingGoals}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Daily Goals</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <div>
+              <Label htmlFor="edit-kcal">Calories (kcal)</Label>
+              <Input
+                id="edit-kcal"
+                type="number"
+                value={editedGoals.kcal}
+                onChange={(e) => setEditedGoals({ ...editedGoals, kcal: parseInt(e.target.value) || 0 })}
+                data-testid="input-edit-kcal"
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-protein">Protein (g)</Label>
+              <Input
+                id="edit-protein"
+                type="number"
+                value={editedGoals.protein}
+                onChange={(e) => setEditedGoals({ ...editedGoals, protein: parseInt(e.target.value) || 0 })}
+                data-testid="input-edit-protein"
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-carbs">Carbs (g)</Label>
+              <Input
+                id="edit-carbs"
+                type="number"
+                value={editedGoals.carbs}
+                onChange={(e) => setEditedGoals({ ...editedGoals, carbs: parseInt(e.target.value) || 0 })}
+                data-testid="input-edit-carbs"
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-fat">Fat (g)</Label>
+              <Input
+                id="edit-fat"
+                type="number"
+                value={editedGoals.fat}
+                onChange={(e) => setEditedGoals({ ...editedGoals, fat: parseInt(e.target.value) || 0 })}
+                data-testid="input-edit-fat"
+              />
+            </div>
+            <Button onClick={handleSaveGoals} className="w-full" data-testid="button-save-goals">
+              Save Goals
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
       
       <AIChatBubble onMealLogged={handleAddMeal} />
     </div>
