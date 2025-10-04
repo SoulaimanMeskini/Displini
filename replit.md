@@ -18,12 +18,13 @@ Preferred communication style: Simple, everyday language.
 
 **UI Component Library**: shadcn/ui components built on Radix UI primitives, providing accessible and customizable components with a "New York" design style.
 
-**Routing**: Wouter for lightweight client-side routing with three main routes:
-- `/` - Food/Nutrition tracking page
-- `/calendar` - Calendar events page  
-- `/todo` - Task management page
+**Routing**: Wouter for lightweight client-side routing:
+- `/` - Landing page (logged out) or Food/Nutrition tracking page (logged in)
+- `/calendar` - Calendar events page (protected)
+- `/todo` - Task management page (protected)
+- `/profile` - User profile settings page (protected)
 
-**State Management**: React hooks for local state management with @tanstack/react-query for server state and caching. The application currently uses in-memory state without persistence.
+**State Management**: React hooks for local state management with @tanstack/react-query for server state and caching. LocalStorage for macro calculator settings and meal data persistence.
 
 **Styling**: Tailwind CSS with custom design tokens following the design system defined in `design_guidelines.md`. Supports light/dark mode with theme customization capabilities.
 
@@ -32,14 +33,17 @@ Preferred communication style: Simple, everyday language.
 - Mobile-first responsive design with fixed bottom navigation
 - Cross-module integration (meals can create todos, calendar events can create todos)
 - Theme system with customizable colors stored in localStorage
+- Authentication-aware routing (landing page for logged out users)
+- Tap-to-consume for scheduled meals
+- Weekly view with circular goal indicators
 
 ### Backend Architecture
 
 **Server Framework**: Express.js with TypeScript running on Node.js.
 
-**API Architecture**: RESTful API with routes prefixed with `/api`. Currently implements a minimal server with placeholder routes in `server/routes.ts`.
+**API Architecture**: RESTful API with routes prefixed with `/api`. Includes authentication routes and protected endpoints.
 
-**Storage Interface**: Abstract storage interface (`IStorage`) with in-memory implementation (`MemStorage`). Designed to be swapped with database implementations without changing business logic.
+**Storage Interface**: Abstract storage interface (`IStorage`) with PostgreSQL database implementation (`DatabaseStorage`). Uses Drizzle ORM for type-safe database operations.
 
 **Build System**: 
 - Development: tsx for TypeScript execution
@@ -48,29 +52,51 @@ Preferred communication style: Simple, everyday language.
 
 ### Data Storage Solutions
 
-**Current Implementation**: In-memory storage using JavaScript Maps for development/testing.
+**Current Implementation**: PostgreSQL database using Neon serverless adapter with Drizzle ORM.
 
 **Database Schema** (Drizzle ORM): 
 - Configured for PostgreSQL with Neon serverless adapter
-- Single `users` table defined with id, username, password fields
+- Tables: `users` (authentication), `sessions` (session storage)
 - Schema location: `shared/schema.ts`
-- Migrations output: `migrations/` directory
+- Database changes pushed via: `npm run db:push`
 
 **Data Models**:
-- Users: Basic authentication schema
-- Meals: Tracked with protein, carbs, fat, kcal, scheduling options
-- Calendar Events: Date, time, title, optional todo conversion
-- Tasks: Title, completion status, due date, source tracking (manual/food/calendar)
+- Users: OAuth profile (id, email, firstName, lastName, profileImageUrl, dateOfBirth)
+- Sessions: Express session storage for authentication persistence
+- Meals: Tracked with protein, carbs, fat, kcal, scheduling options (localStorage)
+- Calendar Events: Date, time, title, optional todo conversion (localStorage)
+- Tasks: Title, completion status, due date, source tracking (localStorage)
 
-**Persistence Strategy**: Application data currently held in component state. Future implementation will use PostgreSQL with Drizzle ORM based on existing configuration.
+**Persistence Strategy**: 
+- User authentication data: PostgreSQL database
+- Application data (meals, calendar, tasks): LocalStorage for quick access
+- Macro calculator settings: LocalStorage for persistence across visits
 
 ### Authentication & Authorization
 
-**Current State**: Basic user schema exists in database schema but no authentication is implemented.
+**Implementation**: Replit Auth (OpenID Connect) integrated with support for:
+- Google sign-in
+- Apple sign-in  
+- GitHub sign-in
+- Email/password accounts
 
-**Planned Architecture**: Username/password authentication with session management using connect-pg-simple for PostgreSQL session store.
+**Session Management**: 
+- PostgreSQL session store via connect-pg-simple
+- 7-day session TTL
+- Environment-aware secure cookies (secure in production, http-only in dev)
+- Automatic session refresh via refresh tokens
 
-**Security Considerations**: Environment-based database credentials, session-based authentication ready to implement.
+**Protected Routes**:
+- `/api/auth/user` - Get current user profile
+- `/api/auth/user/profile` - Update user profile (dateOfBirth)
+- All app pages (Food, Calendar, Todo, Profile) require authentication
+
+**Security Features**:
+- Session-based authentication with database persistence
+- HTTP-only cookies to prevent XSS attacks
+- Secure cookies in production
+- Input validation for profile updates
+- Automatic token refresh for expired sessions
 
 ## External Dependencies
 
