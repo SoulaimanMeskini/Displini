@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import CalendarView from "@/components/CalendarView";
 import EventList from "@/components/EventList";
-import ThemeToggle from "@/components/ThemeToggle";
-import Settings from "@/components/Settings";
+import PageHeader from "@/components/PageHeader";
+import MonthlyStatsModal from "@/components/MonthlyStatsModal";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,6 +28,7 @@ interface CyclePeriod {
 }
 
 export default function Calendar() {
+  const [showStats, setShowStats] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -154,13 +155,7 @@ export default function Calendar() {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <header className="sticky top-0 z-40 bg-background border-b border-border px-4 py-3 flex items-center justify-between">
-        <h1 className="text-xl font-bold">Calendar</h1>
-        <div className="flex gap-2">
-          <Settings />
-          <ThemeToggle />
-        </div>
-      </header>
+      <PageHeader title="Calendar" onStatsClick={() => setShowStats(true)} />
 
       <main className="max-w-md mx-auto px-4 py-6 space-y-6">
         <CalendarView
@@ -240,6 +235,8 @@ export default function Calendar() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <MonthlyStatsModal open={showStats} onOpenChange={setShowStats} />
     </div>
   );
 }

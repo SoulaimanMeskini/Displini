@@ -1,15 +1,15 @@
 import { useState, useEffect } from "react";
+import PageHeader from "@/components/PageHeader";
+import MonthlyStatsModal from "@/components/MonthlyStatsModal";
 import MacroCalculator from "@/components/MacroCalculator";
 import WeightGoalTracker from "@/components/WeightGoalTracker";
 import WaterTracker from "@/components/WaterTracker";
 import EnhancedMealLog from "@/components/EnhancedMealLog";
-import ThemeToggle from "@/components/ThemeToggle";
-import Settings from "@/components/Settings";
 import AIChatBubble from "@/components/AIChatBubble";
 import { Card } from "@/components/ui/card";
 import MacroProgress from "@/components/MacroProgress";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, BarChart3, Edit2, Columns, GripVertical, ChevronUp, ChevronDown } from "lucide-react";
+import { ChevronLeft, ChevronRight, Edit2, Columns, GripVertical, ChevronUp, ChevronDown } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -43,6 +43,7 @@ interface DayStats {
 const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export default function Food() {
+  const [showStats, setShowStats] = useState(false);
   const [currentWeight, setCurrentWeight] = useState(70);
   const [targets, setTargets] = useState<{ kcal: number; protein: number; carbs: number; fat: number } | null>(() => {
     const saved = localStorage.getItem('calculator_results');
@@ -379,9 +380,10 @@ export default function Food() {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <header className="sticky top-0 z-40 bg-background border-b border-border px-4 py-3 flex items-center justify-between">
-        <h1 className="text-xl font-bold">Food Tracking</h1>
-        <div className="flex gap-2">
+      <PageHeader 
+        title="Food Tracking" 
+        onStatsClick={() => setShowStats(true)}
+        additionalButtons={
           <Dialog>
             <DialogTrigger asChild>
               <Button variant="outline" size="icon" data-testid="button-column-settings">
@@ -449,76 +451,8 @@ export default function Food() {
               </div>
             </DialogContent>
           </Dialog>
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm" data-testid="button-monthly-stats">
-                <BarChart3 className="w-4 h-4 mr-2" />
-                Monthly Stats
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Last 30 Days Stats</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-3 pt-4">
-                {targets && (
-                  <div className="grid grid-cols-4 gap-2 p-3 bg-muted rounded-md mb-4">
-                    <div className="text-center">
-                      <p className="text-xs text-muted-foreground">Daily Target</p>
-                      <p className="font-bold text-sm">{targets.kcal} kcal</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-xs text-muted-foreground">Protein</p>
-                      <p className="font-bold text-sm">{targets.protein}g</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-xs text-muted-foreground">Carbs</p>
-                      <p className="font-bold text-sm">{targets.carbs}g</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-xs text-muted-foreground">Fat</p>
-                      <p className="font-bold text-sm">{targets.fat}g</p>
-                    </div>
-                  </div>
-                )}
-                {monthlyStats.map((stat, index) => {
-                  const date = new Date(stat.date);
-                  const proteinStatus = targets 
-                    ? stat.protein >= targets.protein * 0.95 && stat.protein <= targets.protein * 1.05 
-                      ? "✓" : stat.protein < targets.protein * 0.95 ? "✗" : "⚠"
-                    : "-";
-                  const fatStatus = targets 
-                    ? stat.fat >= targets.fat * 0.95 && stat.fat <= targets.fat * 1.05 
-                      ? "✓" : stat.fat < targets.fat * 0.95 ? "✗" : "⚠"
-                    : "-";
-                  
-                  return (
-                    <div 
-                      key={stat.date} 
-                      className="flex items-center justify-between p-3 bg-muted rounded-md"
-                      data-testid={`monthly-stat-${index}`}
-                    >
-                      <div className="flex-1">
-                        <p className="font-medium text-sm">{date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
-                        <div className="flex gap-3 text-xs text-muted-foreground mt-1">
-                          <span>P: {stat.protein}g {proteinStatus}</span>
-                          <span>C: {stat.carbs}g</span>
-                          <span>F: {stat.fat}g {fatStatus}</span>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-bold text-sm">{stat.kcal} kcal</p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </DialogContent>
-          </Dialog>
-          <Settings />
-          <ThemeToggle />
-        </div>
-      </header>
+        }
+      />
 
       <main className="max-w-md mx-auto px-4 py-6 space-y-6">
         {columnOrder.map((columnId) => renderColumn(columnId))}
@@ -576,7 +510,8 @@ export default function Food() {
           </div>
         </DialogContent>
       </Dialog>
-      
+
+      <MonthlyStatsModal open={showStats} onOpenChange={setShowStats} />
       <AIChatBubble onMealLogged={handleAddMeal} />
     </div>
   );

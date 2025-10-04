@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import Settings from "@/components/Settings";
+import PageHeader from "@/components/PageHeader";
+import MonthlyStatsModal from "@/components/MonthlyStatsModal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,6 +44,7 @@ interface SleepLog {
 }
 
 export default function Health() {
+  const [showStats, setShowStats] = useState(false);
   const [cycles, setCycles] = useState<CyclePeriod[]>([]);
   const [medications, setMedications] = useState<Medication[]>([]);
   const [sleepSchedule, setSleepSchedule] = useState<SleepSchedule | null>(null);
@@ -282,12 +284,7 @@ export default function Health() {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <header className="sticky top-0 z-40 bg-card border-b border-border">
-        <div className="flex items-center justify-between px-4 py-3">
-          <h1 className="text-xl font-semibold" data-testid="text-page-title">Health</h1>
-          <Settings />
-        </div>
-      </header>
+      <PageHeader title="Health" onStatsClick={() => setShowStats(true)} />
 
       <main className="p-4 space-y-4">
         <Card>
@@ -767,6 +764,8 @@ export default function Health() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <MonthlyStatsModal open={showStats} onOpenChange={setShowStats} />
     </div>
   );
 }

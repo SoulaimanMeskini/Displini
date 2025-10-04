@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import TaskList, { Task } from "@/components/TaskList";
-import ThemeToggle from "@/components/ThemeToggle";
-import Settings from "@/components/Settings";
+import PageHeader from "@/components/PageHeader";
+import MonthlyStatsModal from "@/components/MonthlyStatsModal";
 import AIChatBubble from "@/components/AIChatBubble";
 
 export default function Todo() {
+  const [showStats, setShowStats] = useState(false);
   const [tasks, setTasks] = useState<Task[]>(() => {
     const saved = localStorage.getItem('todos');
     if (saved) {
@@ -77,13 +78,7 @@ export default function Todo() {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <header className="sticky top-0 z-40 bg-background border-b border-border px-4 py-3 flex items-center justify-between">
-        <h1 className="text-xl font-bold">To Do</h1>
-        <div className="flex gap-2">
-          <Settings />
-          <ThemeToggle />
-        </div>
-      </header>
+      <PageHeader title="To Do" onStatsClick={() => setShowStats(true)} />
 
       <main className="max-w-md mx-auto px-4 py-6">
         <TaskList
@@ -94,6 +89,7 @@ export default function Todo() {
         />
       </main>
       
+      <MonthlyStatsModal open={showStats} onOpenChange={setShowStats} />
       <AIChatBubble onTaskAdded={handleAddTask} />
     </div>
   );
