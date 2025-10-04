@@ -4,7 +4,13 @@
 
 This is a mobile-first habit tracking application built with React and Express. The app helps users track daily habits across five main areas: Health (menstrual cycle & medications), Food (nutrition & macros), Sport (fitness & workouts), Calendar (events), and To Do (task management). It features macro tracking, protein intake monitoring, weight goal tracking, menstrual cycle predictions, medication reminders, workout scheduling, and task organization with cross-functional integration between modules.
 
-The application uses a clean, distraction-free interface inspired by Apple Health, Linear, and Notion, with a focus on data clarity and quick task completion. An AI chat assistant powered by OpenAI enables natural language commands for rapid data entry across all tabs.
+The application uses a clean, distraction-free interface inspired by Apple Health, Linear, and Notion, with a focus on data clarity and quick task completion. An AI chat assistant powered by OpenAI enables natural language commands for rapid data entry across Food, Sport, and To Do tabs.
+
+**Latest Updates:**
+- Editable meal goals: Users can manually edit daily macro targets without using the calculator
+- Column management: Customizable Food page layout with reorderable sections and visibility toggles
+- Protected columns: Week View and Food Log are essential and cannot be hidden
+- Persistent preferences: Column order and visibility settings saved to localStorage
 
 ## User Preferences
 
@@ -38,8 +44,10 @@ Preferred communication style: Simple, everyday language.
 - Authentication-aware routing (landing page for logged out users)
 - Tap-to-consume for scheduled meals
 - Weekly view with circular goal indicators
-- AI-assisted data entry via floating chat bubble
+- AI-assisted data entry via floating chat bubble (bottom-24 right-4 positioning)
 - Emoji customization for all tracked items (meals, tasks, medications, workouts)
+- Customizable page layouts with column reordering and visibility controls
+- Editable macro goals independent of calculator
 
 ### Backend Architecture
 
@@ -74,12 +82,14 @@ Preferred communication style: Simple, everyday language.
 - Calendar Events: Date, time, title, optional todo conversion (localStorage)
 - Tasks: Title, emoji, completion status, due date, source tracking (localStorage)
 - Settings: Week start day preference (localStorage)
+- Food Page Preferences: Column order and visibility settings (localStorage keys: 'food_column_order', 'food_column_visibility')
 
 **Persistence Strategy**: 
 - User authentication data: PostgreSQL database
 - Application data (meals, medications, cycle data, workouts, calendar, tasks): LocalStorage for quick access
-- Macro calculator settings: LocalStorage for persistence across visits
-- User preferences (week start day, theme): LocalStorage with cross-tab synchronization
+- Macro calculator settings and editable goals: LocalStorage (key: 'calculator_results')
+- User preferences (week start day, theme, column order/visibility): LocalStorage with cross-tab synchronization
+- Food page layout: Column order ('food_column_order') and visibility ('food_column_visibility')
 
 ### Authentication & Authorization
 
