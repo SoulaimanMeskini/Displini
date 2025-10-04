@@ -37,11 +37,12 @@ interface EnhancedMealLogProps {
     carbs: number;
     fat: number;
   };
+  hideAddButton?: boolean;
 }
 
-const foodEmojis = ["🍗", "🥗", "🍳", "🥙", "🍕", "🍔", "🥩", "🍜", "🍛", "🥘", "🍲", "🍱", "🥪", "🌮", "🌯", "🥗", "🥑", "🍎", "🍌", "🥤", "☕", "🥛", "💊"];
+const foodEmojis = ["🍗", "🥗", "🍳", "🥙", "🍕", "🍔", "🥩", "🍜", "🍛", "🥘", "🍲", "🍱", "🥪", "🌮", "🌯", "🍣", "🥑", "🍎", "🍌", "🥤", "☕", "🥛", "💊"];
 
-export default function EnhancedMealLog({ meals, previousMeals, onAddMeal, onDeleteMeal, onScanBarcode, targets }: EnhancedMealLogProps) {
+export default function EnhancedMealLog({ meals, previousMeals, onAddMeal, onDeleteMeal, onScanBarcode, targets, hideAddButton = false }: EnhancedMealLogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [mealName, setMealName] = useState("");
   const [protein, setProtein] = useState("");
@@ -112,9 +113,8 @@ export default function EnhancedMealLog({ meals, previousMeals, onAddMeal, onDel
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Today's Meals</h3>
-        <div className="flex gap-2">
+      {!hideAddButton && (
+        <div className="flex items-center justify-end gap-2">
           <Button size="sm" variant="outline" onClick={onScanBarcode} data-testid="button-scan-barcode">
             <Camera className="w-4 h-4" />
           </Button>
@@ -150,9 +150,9 @@ export default function EnhancedMealLog({ meals, previousMeals, onAddMeal, onDel
                   <div>
                     <Label className="mb-2 block">Choose Emoji</Label>
                     <div className="flex flex-wrap gap-2">
-                      {foodEmojis.map((emoji) => (
+                      {foodEmojis.map((emoji, index) => (
                         <button
-                          key={emoji}
+                          key={`${emoji}-${index}`}
                           type="button"
                           onClick={() => setSelectedEmoji(emoji)}
                           className={`w-10 h-10 rounded-full flex items-center justify-center text-xl transition-all ${
@@ -315,7 +315,7 @@ export default function EnhancedMealLog({ meals, previousMeals, onAddMeal, onDel
             </DialogContent>
           </Dialog>
         </div>
-      </div>
+      )}
 
       {targets && (
         <Card className="p-4 space-y-4">
