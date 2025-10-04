@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { addDays, isSameDay, isWithinInterval } from "date-fns";
 
 interface CalendarEvent {
@@ -14,6 +15,8 @@ interface CalendarEvent {
   date: Date;
   title: string;
   time: string;
+  allDay?: boolean;
+  emoji?: string;
   addToTodo?: boolean;
   type?: 'event' | 'period';
 }
@@ -30,6 +33,8 @@ export default function Calendar() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [newEventTitle, setNewEventTitle] = useState("");
   const [newEventTime, setNewEventTime] = useState("");
+  const [newEventAllDay, setNewEventAllDay] = useState(false);
+  const [newEventEmoji, setNewEventEmoji] = useState("📅");
 
   useEffect(() => {
     const savedEvents = localStorage.getItem("calendarEvents");
@@ -96,20 +101,22 @@ export default function Calendar() {
   };
 
   const handleSubmitEvent = () => {
-    if (newEventTitle && newEventTime) {
-      setEvents([
-        ...events,
-        {
-          id: Date.now().toString(),
-          date: selectedDate,
-          title: newEventTitle,
-          time: newEventTime,
-          addToTodo: false,
-          type: 'event',
-        },
-      ]);
+    if (newEventTitle && (newEventTime || newEventAllDay)) {
+      const newEvent = {
+        id: Date.now().toString(),
+        date: selectedDate,
+        title: newEventTitle,
+        time: newEventAllDay ? "" : newEventTime,
+        allDay: newEventAllDay,
+        emoji: newEventEmoji,
+        addToTodo: false,
+        type: 'event' as const,
+      };
+      setEvents([...events, newEvent]);
       setNewEventTitle("");
       setNewEventTime("");
+      setNewEventAllDay(false);
+      setNewEventEmoji("📅");
       setIsAddDialogOpen(false);
     }
   };
@@ -120,6 +127,28 @@ export default function Calendar() {
 
   const handleToggleTodo = (id: string, addToTodo: boolean) => {
     setEvents(events.map((e) => (e.id === id ? { ...e, addToTodo } : e)));
+    
+    if (addToTodo) {
+      const event = events.find(e => e.id === id);
+      if (event) {
+        const todos = JSON.parse(localStorage.getItem("todos") || "[]");
+        const newTodo = {
+          id: `cal-${event.id}`,
+          title: `${event.emoji || '📅'} ${event.title}`,
+          completed: false,
+          dueDate: event.date.toISOString(),
+          time: event.allDay ? undefined : event.time,
+          allDay: event.allDay,
+          source: 'calendar',
+        };
+        todos.push(newTodo);
+        localStorage.setItem("todos", JSON.stringify(todos));
+      }
+    } else {
+      const todos = JSON.parse(localStorage.getItem("todos") || "[]");
+      const filteredTodos = todos.filter((t: any) => t.id !== `cal-${id}`);
+      localStorage.setItem("todos", JSON.stringify(filteredTodos));
+    }
   };
 
   return (
@@ -154,6 +183,26 @@ export default function Calendar() {
           </DialogHeader>
           <div className="space-y-4 pt-4">
             <div>
+              <Label>Choose Emoji</Label>
+              <div className="flex gap-2 mt-2">
+                {['📅', '🎉', '🎯', '💼', '🏋️', '🎓', '✈️', '🎂'].map((emoji) => (
+                  <button
+                    key={emoji}
+                    type="button"
+                    onClick={() => setNewEventEmoji(emoji)}
+                    className={`w-10 h-10 rounded-full flex items-center justify-center text-xl transition-all ${
+                      newEventEmoji === emoji
+                        ? "bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2"
+                        : "bg-muted hover-elevate"
+                    }`}
+                    data-testid={`button-event-emoji-${emoji}`}
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
               <Label htmlFor="event-title">Event Title</Label>
               <Input
                 id="event-title"
@@ -163,16 +212,27 @@ export default function Calendar() {
                 data-testid="input-event-title"
               />
             </div>
-            <div>
-              <Label htmlFor="event-time">Time</Label>
-              <Input
-                id="event-time"
-                type="time"
-                value={newEventTime}
-                onChange={(e) => setNewEventTime(e.target.value)}
-                data-testid="input-event-time"
+            <div className="flex items-center justify-between">
+              <Label htmlFor="event-all-day">All Day Event</Label>
+              <Switch
+                id="event-all-day"
+                checked={newEventAllDay}
+                onCheckedChange={setNewEventAllDay}
+                data-testid="switch-event-all-day"
               />
             </div>
+            {!newEventAllDay && (
+              <div>
+                <Label htmlFor="event-time">Time</Label>
+                <Input
+                  id="event-time"
+                  type="time"
+                  value={newEventTime}
+                  onChange={(e) => setNewEventTime(e.target.value)}
+                  data-testid="input-event-time"
+                />
+              </div>
+            )}
             <Button onClick={handleSubmitEvent} className="w-full" data-testid="button-submit-event">
               Add Event
             </Button>
