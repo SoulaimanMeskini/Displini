@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Settings as SettingsIcon } from "lucide-react";
+import { Settings as SettingsIcon, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,6 +11,9 @@ import {
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Input } from "@/components/ui/input";
+import { useAuth } from "@/hooks/useAuth";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { useLocation } from "wouter";
 
 const themes = [
   { id: "blue", name: "Blue", primary: "59 91% 47%", primaryDark: "210 100% 60%" },
@@ -24,6 +27,8 @@ const themes = [
 export default function Settings() {
   const [selectedTheme, setSelectedTheme] = useState("blue");
   const [customColor, setCustomColor] = useState("#3b82f6");
+  const { user } = useAuth();
+  const [, setLocation] = useLocation();
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("colorTheme") || "blue";
@@ -106,6 +111,10 @@ export default function Settings() {
     }
   };
 
+  const initials = user 
+    ? `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`.toUpperCase() || user.email?.[0]?.toUpperCase() || '?'
+    : '?';
+
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -118,6 +127,35 @@ export default function Settings() {
           <DialogTitle>Settings</DialogTitle>
         </DialogHeader>
         <div className="space-y-6 pt-4">
+          {user && (
+            <div>
+              <Label className="text-base font-semibold mb-3 block">Profile</Label>
+              <Button 
+                variant="outline" 
+                className="w-full justify-start gap-3 h-auto py-3"
+                onClick={() => setLocation("/profile")}
+                data-testid="button-profile"
+              >
+                <Avatar className="w-10 h-10">
+                  <AvatarImage 
+                    src={user.profileImageUrl || undefined} 
+                    alt={`${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'User'}
+                    className="object-cover"
+                  />
+                  <AvatarFallback>{initials}</AvatarFallback>
+                </Avatar>
+                <div className="flex flex-col items-start">
+                  <span className="font-medium">
+                    {user.firstName || user.lastName 
+                      ? `${user.firstName || ''} ${user.lastName || ''}`.trim() 
+                      : user.email || 'User'}
+                  </span>
+                  <span className="text-xs text-muted-foreground">View profile settings</span>
+                </div>
+              </Button>
+            </div>
+          )}
+          
           <div>
             <Label className="text-base font-semibold mb-4 block">Color Theme</Label>
             <RadioGroup value={selectedTheme} onValueChange={handleThemeChange}>
