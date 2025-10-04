@@ -8,7 +8,7 @@ import AIChatBubble from "@/components/AIChatBubble";
 import { Card } from "@/components/ui/card";
 import MacroProgress from "@/components/MacroProgress";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, BarChart3, Edit2, Settings as SettingsIcon, GripVertical, ChevronUp, ChevronDown } from "lucide-react";
+import { ChevronLeft, ChevronRight, BarChart3, Edit2, Columns, GripVertical, ChevronUp, ChevronDown } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -381,7 +381,7 @@ export default function Food() {
           <Dialog>
             <DialogTrigger asChild>
               <Button variant="outline" size="icon" data-testid="button-column-settings">
-                <SettingsIcon className="w-4 h-4" />
+                <Columns className="w-4 h-4" />
               </Button>
             </DialogTrigger>
             <DialogContent>
