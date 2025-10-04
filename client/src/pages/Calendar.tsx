@@ -9,17 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { addDays, isSameDay, isWithinInterval } from "date-fns";
-
-interface CalendarEvent {
-  id: string;
-  date: Date;
-  title: string;
-  time: string;
-  allDay?: boolean;
-  emoji?: string;
-  addToTodo?: boolean;
-  type?: 'event' | 'period';
-}
+import type { CalendarEvent } from "@/types/calendar";
 
 interface CyclePeriod {
   id: string;
@@ -33,7 +23,8 @@ export default function Calendar() {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [newEventTitle, setNewEventTitle] = useState("");
-  const [newEventTime, setNewEventTime] = useState("");
+  const [newEventStartTime, setNewEventStartTime] = useState("");
+  const [newEventEndTime, setNewEventEndTime] = useState("");
   const [newEventAllDay, setNewEventAllDay] = useState(false);
   const [newEventEmoji, setNewEventEmoji] = useState("📅");
 
@@ -102,12 +93,13 @@ export default function Calendar() {
   };
 
   const handleSubmitEvent = () => {
-    if (newEventTitle && (newEventTime || newEventAllDay)) {
+    if (newEventTitle && (newEventStartTime || newEventAllDay)) {
       const newEvent = {
         id: Date.now().toString(),
         date: selectedDate,
         title: newEventTitle,
-        time: newEventAllDay ? "" : newEventTime,
+        startTime: newEventAllDay ? undefined : newEventStartTime,
+        endTime: newEventAllDay ? undefined : newEventEndTime,
         allDay: newEventAllDay,
         emoji: newEventEmoji,
         addToTodo: false,
@@ -115,7 +107,8 @@ export default function Calendar() {
       };
       setEvents([...events, newEvent]);
       setNewEventTitle("");
-      setNewEventTime("");
+      setNewEventStartTime("");
+      setNewEventEndTime("");
       setNewEventAllDay(false);
       setNewEventEmoji("📅");
       setIsAddDialogOpen(false);
@@ -139,7 +132,7 @@ export default function Calendar() {
           emoji: event.emoji || '📅',
           completed: false,
           dueDate: event.date.toISOString(),
-          time: event.allDay ? undefined : event.time,
+          time: event.allDay ? undefined : (event.startTime || event.time),
           allDay: event.allDay,
           source: 'calendar',
         };
@@ -218,16 +211,28 @@ export default function Calendar() {
               />
             </div>
             {!newEventAllDay && (
-              <div>
-                <Label htmlFor="event-time">Time</Label>
-                <Input
-                  id="event-time"
-                  type="time"
-                  value={newEventTime}
-                  onChange={(e) => setNewEventTime(e.target.value)}
-                  data-testid="input-event-time"
-                />
-              </div>
+              <>
+                <div>
+                  <Label htmlFor="event-start-time">Start Time</Label>
+                  <Input
+                    id="event-start-time"
+                    type="time"
+                    value={newEventStartTime}
+                    onChange={(e) => setNewEventStartTime(e.target.value)}
+                    data-testid="input-event-start-time"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="event-end-time">End Time (optional)</Label>
+                  <Input
+                    id="event-end-time"
+                    type="time"
+                    value={newEventEndTime}
+                    onChange={(e) => setNewEventEndTime(e.target.value)}
+                    data-testid="input-event-end-time"
+                  />
+                </div>
+              </>
             )}
             <Button onClick={handleSubmitEvent} className="w-full" data-testid="button-submit-event">
               Add Event

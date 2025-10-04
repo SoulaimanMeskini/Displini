@@ -3,13 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths } from "date-fns";
-
-interface CalendarEvent {
-  id: string;
-  date: Date;
-  title: string;
-  time: string;
-}
+import type { CalendarEvent } from "@/types/calendar";
 
 interface CalendarViewProps {
   events: CalendarEvent[];

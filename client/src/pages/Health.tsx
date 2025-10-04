@@ -30,8 +30,20 @@ interface Medication {
 
 interface SleepSchedule {
   id: string;
-  wakeTime: string;
-  sleepTime: string;
+  mode: 'daily' | 'weekly';
+  daily?: {
+    wakeTime: string;
+    sleepTime: string;
+  };
+  weekly?: {
+    sunday: { wakeTime: string; sleepTime: string };
+    monday: { wakeTime: string; sleepTime: string };
+    tuesday: { wakeTime: string; sleepTime: string };
+    wednesday: { wakeTime: string; sleepTime: string };
+    thursday: { wakeTime: string; sleepTime: string };
+    friday: { wakeTime: string; sleepTime: string };
+    saturday: { wakeTime: string; sleepTime: string };
+  };
   alarmEnabled: boolean;
   alarmSound: string;
 }
@@ -62,8 +74,18 @@ export default function Health() {
   const [newMedTime, setNewMedTime] = useState("");
   const [newMedFrequency, setNewMedFrequency] = useState("daily");
   
-  const [wakeTime, setWakeTime] = useState("07:00");
-  const [sleepTime, setSleepTime] = useState("23:00");
+  const [scheduleMode, setScheduleMode] = useState<'daily' | 'weekly'>('daily');
+  const [dailyWakeTime, setDailyWakeTime] = useState("07:00");
+  const [dailySleepTime, setDailySleepTime] = useState("23:00");
+  const [weeklySchedule, setWeeklySchedule] = useState({
+    sunday: { wakeTime: "07:00", sleepTime: "23:00" },
+    monday: { wakeTime: "07:00", sleepTime: "23:00" },
+    tuesday: { wakeTime: "07:00", sleepTime: "23:00" },
+    wednesday: { wakeTime: "07:00", sleepTime: "23:00" },
+    thursday: { wakeTime: "07:00", sleepTime: "23:00" },
+    friday: { wakeTime: "08:00", sleepTime: "00:00" },
+    saturday: { wakeTime: "08:00", sleepTime: "00:00" },
+  });
   const [alarmEnabled, setAlarmEnabled] = useState(false);
   const [alarmSound, setAlarmSound] = useState("default");
   const [sleepWeekStart, setSleepWeekStart] = useState(() => {
@@ -88,11 +110,41 @@ export default function Health() {
     if (savedMeds) setMedications(JSON.parse(savedMeds));
     if (savedSleepSchedule) {
       const schedule = JSON.parse(savedSleepSchedule);
-      setSleepSchedule(schedule);
-      setWakeTime(schedule.wakeTime);
-      setSleepTime(schedule.sleepTime);
-      setAlarmEnabled(schedule.alarmEnabled);
-      setAlarmSound(schedule.alarmSound);
+      
+      // Check if this is legacy format (has wakeTime/sleepTime at root level)
+      if (!schedule.mode && schedule.wakeTime && schedule.sleepTime) {
+        // Migrate legacy format to new daily format
+        const migratedSchedule: SleepSchedule = {
+          id: schedule.id || Date.now().toString(),
+          mode: 'daily',
+          daily: {
+            wakeTime: schedule.wakeTime,
+            sleepTime: schedule.sleepTime,
+          },
+          alarmEnabled: schedule.alarmEnabled || false,
+          alarmSound: schedule.alarmSound || 'default',
+        };
+        setSleepSchedule(migratedSchedule);
+        setScheduleMode('daily');
+        setDailyWakeTime(schedule.wakeTime);
+        setDailySleepTime(schedule.sleepTime);
+        setAlarmEnabled(schedule.alarmEnabled || false);
+        setAlarmSound(schedule.alarmSound || 'default');
+        // Save migrated format immediately
+        localStorage.setItem("sleepSchedule", JSON.stringify(migratedSchedule));
+      } else {
+        // New format
+        setSleepSchedule(schedule);
+        setScheduleMode(schedule.mode || 'daily');
+        if (schedule.mode === 'daily' && schedule.daily) {
+          setDailyWakeTime(schedule.daily.wakeTime);
+          setDailySleepTime(schedule.daily.sleepTime);
+        } else if (schedule.mode === 'weekly' && schedule.weekly) {
+          setWeeklySchedule(schedule.weekly);
+        }
+        setAlarmEnabled(schedule.alarmEnabled || false);
+        setAlarmSound(schedule.alarmSound || 'default');
+      }
     }
     if (savedSleepLogs) setSleepLogs(JSON.parse(savedSleepLogs));
 
@@ -203,8 +255,12 @@ export default function Health() {
   const handleSaveSleepSchedule = () => {
     const schedule: SleepSchedule = {
       id: sleepSchedule?.id || Date.now().toString(),
-      wakeTime,
-      sleepTime,
+      mode: scheduleMode,
+      daily: scheduleMode === 'daily' ? {
+        wakeTime: dailyWakeTime,
+        sleepTime: dailySleepTime,
+      } : undefined,
+      weekly: scheduleMode === 'weekly' ? weeklySchedule : undefined,
       alarmEnabled,
       alarmSound,
     };
@@ -215,16 +271,31 @@ export default function Health() {
 
   const addSleepToTodos = (schedule: SleepSchedule) => {
     const todos = JSON.parse(localStorage.getItem("todos") || "[]");
-    
-    const existingSleepTodos = todos.filter((t: any) => t.source === 'sleep');
     const filteredTodos = todos.filter((t: any) => t.source !== 'sleep');
+    
+    const today = new Date();
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
+    const dayName = dayNames[today.getDay()];
+    
+    let wakeTime: string;
+    let sleepTime: string;
+    
+    if (schedule.mode === 'daily' && schedule.daily) {
+      wakeTime = schedule.daily.wakeTime;
+      sleepTime = schedule.daily.sleepTime;
+    } else if (schedule.mode === 'weekly' && schedule.weekly && schedule.weekly[dayName]) {
+      wakeTime = schedule.weekly[dayName].wakeTime;
+      sleepTime = schedule.weekly[dayName].sleepTime;
+    } else {
+      return; // Invalid schedule
+    }
     
     const wakeTodo = {
       id: `sleep-wake-${schedule.id}`,
       title: `${schedule.alarmEnabled ? '⏰' : '🌅'} Wake up`,
       completed: false,
       dueDate: new Date().toISOString(),
-      time: schedule.wakeTime,
+      time: wakeTime,
       source: 'sleep',
       sleepAction: 'wake',
     };
@@ -234,7 +305,7 @@ export default function Health() {
       title: '🌙 Go to bed',
       completed: false,
       dueDate: new Date().toISOString(),
-      time: schedule.sleepTime,
+      time: sleepTime,
       source: 'sleep',
       sleepAction: 'sleep',
     };
@@ -271,6 +342,21 @@ export default function Health() {
 
   const nextPeriod = getNextPeriodDate();
   const daysUntilNext = nextPeriod ? differenceInDays(nextPeriod, new Date()) : null;
+
+  const getCurrentDaySchedule = () => {
+    if (!sleepSchedule) return null;
+    const today = new Date();
+    const dayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][today.getDay()] as keyof typeof sleepSchedule.weekly;
+    
+    if (sleepSchedule.mode === 'daily' && sleepSchedule.daily) {
+      return sleepSchedule.daily;
+    } else if (sleepSchedule.mode === 'weekly' && sleepSchedule.weekly) {
+      return sleepSchedule.weekly[dayName];
+    }
+    return null;
+  };
+
+  const currentDaySchedule = getCurrentDaySchedule();
 
   const emojiOptions = ["💊", "💉", "🩺", "🧪", "⚕️", "💝", "🌡️"];
   const alarmSounds = [
@@ -327,7 +413,7 @@ export default function Health() {
                         <Sun className="w-4 h-4 text-warning" />
                         <p className="text-xs font-medium text-muted-foreground">Wake Time</p>
                       </div>
-                      <p className="text-lg font-semibold font-mono">{sleepSchedule.wakeTime}</p>
+                      <p className="text-lg font-semibold font-mono">{currentDaySchedule?.wakeTime || '--:--'}</p>
                       {sleepSchedule.alarmEnabled && (
                         <p className="text-xs text-muted-foreground mt-1">
                           <Bell className="w-3 h-3 inline mr-1" />
@@ -340,7 +426,7 @@ export default function Health() {
                         <Moon className="w-4 h-4 text-primary" />
                         <p className="text-xs font-medium text-muted-foreground">Bedtime</p>
                       </div>
-                      <p className="text-lg font-semibold font-mono">{sleepSchedule.sleepTime}</p>
+                      <p className="text-lg font-semibold font-mono">{currentDaySchedule?.sleepTime || '--:--'}</p>
                     </div>
                   </div>
                 </TabsContent>
@@ -364,7 +450,7 @@ export default function Health() {
                                   <span className="text-sm font-medium">Wake up</span>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                  <span className="text-sm font-mono font-semibold">{sleepSchedule.wakeTime}</span>
+                                  <span className="text-sm font-mono font-semibold">{currentDaySchedule?.wakeTime || '--:--'}</span>
                                   {wakeTodo?.completed && <span className="text-success">✓</span>}
                                 </div>
                               </div>
@@ -376,7 +462,7 @@ export default function Health() {
                                   <span className="text-sm font-medium">Go to bed</span>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                  <span className="text-sm font-mono font-semibold">{sleepSchedule.sleepTime}</span>
+                                  <span className="text-sm font-mono font-semibold">{currentDaySchedule?.sleepTime || '--:--'}</span>
                                   {sleepTodo?.completed && <span className="text-success">✓</span>}
                                 </div>
                               </div>
@@ -679,31 +765,82 @@ export default function Health() {
       </Dialog>
 
       <Dialog open={isSleepScheduleOpen} onOpenChange={setIsSleepScheduleOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{sleepSchedule ? 'Update' : 'Set'} Sleep Schedule</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-4">
             <div>
-              <Label htmlFor="wake-time">Wake Time</Label>
-              <Input
-                id="wake-time"
-                type="time"
-                value={wakeTime}
-                onChange={(e) => setWakeTime(e.target.value)}
-                data-testid="input-wake-time"
-              />
+              <Label>Schedule Type</Label>
+              <Tabs value={scheduleMode} onValueChange={(v) => setScheduleMode(v as 'daily' | 'weekly')} className="mt-2">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="daily" data-testid="tab-daily-schedule">Same Every Day</TabsTrigger>
+                  <TabsTrigger value="weekly" data-testid="tab-weekly-schedule">Different Per Day</TabsTrigger>
+                </TabsList>
+              </Tabs>
             </div>
-            <div>
-              <Label htmlFor="sleep-time">Bedtime</Label>
-              <Input
-                id="sleep-time"
-                type="time"
-                value={sleepTime}
-                onChange={(e) => setSleepTime(e.target.value)}
-                data-testid="input-sleep-time"
-              />
-            </div>
+
+            {scheduleMode === 'daily' ? (
+              <>
+                <div>
+                  <Label htmlFor="daily-wake-time">Wake Time</Label>
+                  <Input
+                    id="daily-wake-time"
+                    type="time"
+                    value={dailyWakeTime}
+                    onChange={(e) => setDailyWakeTime(e.target.value)}
+                    data-testid="input-daily-wake-time"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="daily-sleep-time">Bedtime</Label>
+                  <Input
+                    id="daily-sleep-time"
+                    type="time"
+                    value={dailySleepTime}
+                    onChange={(e) => setDailySleepTime(e.target.value)}
+                    data-testid="input-daily-sleep-time"
+                  />
+                </div>
+              </>
+            ) : (
+              <div className="space-y-3">
+                {(['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const).map((day) => (
+                  <div key={day} className="p-3 border rounded-md space-y-2">
+                    <p className="font-medium text-sm capitalize">{day}</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <Label htmlFor={`${day}-wake`} className="text-xs">Wake</Label>
+                        <Input
+                          id={`${day}-wake`}
+                          type="time"
+                          value={weeklySchedule[day].wakeTime}
+                          onChange={(e) => setWeeklySchedule({
+                            ...weeklySchedule,
+                            [day]: { ...weeklySchedule[day], wakeTime: e.target.value }
+                          })}
+                          data-testid={`input-${day}-wake`}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor={`${day}-sleep`} className="text-xs">Sleep</Label>
+                        <Input
+                          id={`${day}-sleep`}
+                          type="time"
+                          value={weeklySchedule[day].sleepTime}
+                          onChange={(e) => setWeeklySchedule({
+                            ...weeklySchedule,
+                            [day]: { ...weeklySchedule[day], sleepTime: e.target.value }
+                          })}
+                          data-testid={`input-${day}-sleep`}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            
             <div className="flex items-center justify-between">
               <Label htmlFor="alarm-enabled">Enable Alarm</Label>
               <Switch

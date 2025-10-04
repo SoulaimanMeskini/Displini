@@ -3,14 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Clock, Trash2 } from "lucide-react";
 import { format } from "date-fns";
-
-interface CalendarEvent {
-  id: string;
-  date: Date;
-  title: string;
-  time: string;
-  addToTodo?: boolean;
-}
+import type { CalendarEvent } from "@/types/calendar";
 
 interface EventListProps {
   events: CalendarEvent[];
@@ -40,10 +33,22 @@ export default function EventList({ events, selectedDate, onDeleteEvent, onToggl
             <Card key={event.id} className="p-4 hover-elevate" data-testid={`card-event-${event.id}`}>
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Clock className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm font-mono text-muted-foreground">{event.time}</span>
-                  </div>
+                  {!event.allDay && (event.startTime || event.time) && (
+                    <div className="flex items-center gap-2 mb-2">
+                      <Clock className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm font-mono text-muted-foreground">
+                        {event.startTime || event.time}
+                        {event.endTime && ` - ${event.endTime}`}
+                      </span>
+                    </div>
+                  )}
+                  {event.allDay && (
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-xs px-2 py-1 bg-muted rounded-md text-muted-foreground font-medium">
+                        All Day
+                      </span>
+                    </div>
+                  )}
                   <p className="font-medium mb-3" data-testid={`text-event-title-${event.id}`}>{event.title}</p>
                   
                   <div className="flex items-center gap-2">

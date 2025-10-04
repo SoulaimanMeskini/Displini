@@ -7,9 +7,11 @@ This is a mobile-first habit tracking application built with React and Express. 
 The application uses a clean, distraction-free interface inspired by Apple Health, Linear, and Notion, with a focus on data clarity and quick task completion. An AI chat assistant powered by OpenAI enables natural language commands for rapid data entry across Food, Sport, and To Do tabs. The To Do page features a timeline view with all-day tasks displayed as circular buttons and timed tasks sorted chronologically.
 
 **Latest Updates:**
+- Sleep schedule flexibility: Weekly mode allows different wake/bedtime for each day of the week; daily mode for consistent schedule across all days
+- Calendar time ranges: Events now support start time and end time fields (replacing single time field) with backward compatibility
 - Unified header: All tabs now share consistent PageHeader with monthly stats button, Settings, and ThemeToggle (Food page preserves Column Settings button)
 - Monthly statistics: New modal with Overview tab and per-module breakdowns (Food, Health, Sport, Calendar, To Do, Water) showing current month metrics
-- Sleep schedule views: Enhanced with 3 tabs - Schedule (wake/bedtime), Daily (today's tasks with completion status), Weekly (7-day quality grid with navigation)
+- Sleep schedule views: Enhanced with 3 tabs - Schedule (wake/bedtime with daily/weekly mode selector), Daily (today's tasks with completion status), Weekly (7-day quality grid with navigation)
 - Reactive todo sync: Sleep schedule daily view auto-updates when tasks completed in To Do page
 - Water tracking: New column in Food page with daily goals (ml/oz), progress bar, quick-add buttons, and 30-day history
 - Task notes: Tasks can now include optional notes displayed in timeline view
@@ -90,10 +92,10 @@ Preferred communication style: Simple, everyday language.
 - Meals: Tracked with protein, carbs, fat, kcal, emoji, scheduling options (now/today/day/weekly/biweekly/monthly) (localStorage)
 - Medications: Name, emoji, dosage, times, frequency, lastTaken timestamp, auto-creates todos (localStorage)
 - Menstrual Cycle: Start date, duration, predictions, calendar integration (localStorage)
-- Sleep Schedule: Wake time, sleep time, alarm enabled, alarm sound selection (localStorage)
+- Sleep Schedule: Mode (daily/weekly), daily schedule (wake/sleep times for all days), weekly schedule (different wake/sleep times per day), alarm enabled, alarm sound selection, legacy migration support (localStorage)
 - Sleep Logs: Date, quality rating (3 emojis), wake time (localStorage)
 - Workouts: Name, emoji, duration, type, frequency, days, time, auto-creates todos (localStorage)
-- Calendar Events: Date, time, title, emoji, allDay flag, optional todo conversion (localStorage)
+- Calendar Events: Date, startTime, endTime (with legacy time field for backward compatibility), title, emoji, allDay flag, optional todo conversion, type (event/period) (localStorage)
 - Tasks: Title, emoji, completion status, due date, time, allDay flag, notes (optional), source tracking (manual/food/calendar/medication/workout/sleep), medicationId, sleepAction (localStorage)
 - Water Intake: Daily goal (ml/oz), entries with amount/unit/time/date, auto-purges entries >30 days (localStorage: 'water_settings', 'water_entries')
 - Settings: Week start day preference, temperature units, measurement system (localStorage)
