@@ -7,14 +7,17 @@ This is a mobile-first habit tracking application built with React and Express. 
 The application uses a clean, distraction-free interface inspired by Apple Health, Linear, and Notion, with a focus on data clarity and quick task completion. An AI chat assistant powered by OpenAI enables natural language commands for rapid data entry across Food, Sport, and To Do tabs. The To Do page features a timeline view with all-day tasks displayed as circular buttons and timed tasks sorted chronologically.
 
 **Latest Updates:**
+- Water tracking: New column in Food page with daily goals (ml/oz), progress bar, quick-add buttons, and 30-day history
+- Task notes: Tasks can now include optional notes displayed in timeline view
+- Meal scheduling: Added "Eat now", "Schedule for today", and "Monthly" options
+- Calendar emoji sync: Calendar event emojis now display in corresponding all-day to-do circles
+- All-day completion: Completed all-day tasks stay in place with green checkmark overlay (don't move to completed section)
+- Barcode scanner: Moved into log food dialog header for better accessibility
+- Unit conversion: Water tracking converts between ml/oz when switching units
 - Sleep schedule: Wake and bedtime settings with alarm customization (5 sounds) and quality tracking
-- Sleep to-dos: Automatically creates wake-up and bedtime tasks in To Do timeline
-- Timeline view: To Do page now displays all-day tasks as circles, timed tasks chronologically
-- All-day tasks: Support for tasks without specific times, shown as circular buttons
-- Calendar all-day events: Events can be all-day with emoji selection
+- Timeline view: To Do page displays all-day tasks as circles, timed tasks chronologically
 - Event-to-do sync: Calendar events create corresponding to-do items when toggled
 - Medication completion: Marking medication to-dos complete updates Health page with timestamp
-- Time-based sorting: Tasks intelligently sorted by all-day → timed → completed
 
 ## User Preferences
 
@@ -81,24 +84,26 @@ Preferred communication style: Simple, everyday language.
 **Data Models**:
 - Users: OAuth profile (id, email, firstName, lastName, profileImageUrl, dateOfBirth)
 - Sessions: Express session storage for authentication persistence
-- Meals: Tracked with protein, carbs, fat, kcal, emoji, scheduling options (localStorage)
+- Meals: Tracked with protein, carbs, fat, kcal, emoji, scheduling options (now/today/day/weekly/biweekly/monthly) (localStorage)
 - Medications: Name, emoji, dosage, times, frequency, lastTaken timestamp, auto-creates todos (localStorage)
 - Menstrual Cycle: Start date, duration, predictions, calendar integration (localStorage)
 - Sleep Schedule: Wake time, sleep time, alarm enabled, alarm sound selection (localStorage)
 - Sleep Logs: Date, quality rating (3 emojis), wake time (localStorage)
 - Workouts: Name, emoji, duration, type, frequency, days, time, auto-creates todos (localStorage)
 - Calendar Events: Date, time, title, emoji, allDay flag, optional todo conversion (localStorage)
-- Tasks: Title, emoji, completion status, due date, time, allDay flag, source tracking (manual/food/calendar/medication/workout/sleep), medicationId, sleepAction (localStorage)
+- Tasks: Title, emoji, completion status, due date, time, allDay flag, notes (optional), source tracking (manual/food/calendar/medication/workout/sleep), medicationId, sleepAction (localStorage)
+- Water Intake: Daily goal (ml/oz), entries with amount/unit/time/date, auto-purges entries >30 days (localStorage: 'water_settings', 'water_entries')
 - Settings: Week start day preference, temperature units, measurement system (localStorage)
 - Food Page Preferences: Column order and visibility settings (localStorage keys: 'food_column_order', 'food_column_visibility')
 
 **Persistence Strategy**: 
 - User authentication data: PostgreSQL database
-- Application data (meals, medications, cycle data, workouts, calendar, tasks, sleep): LocalStorage for quick access
+- Application data (meals, medications, cycle data, workouts, calendar, tasks, sleep, water): LocalStorage for quick access
 - Macro calculator settings and editable goals: LocalStorage (key: 'calculator_results')
 - User preferences (week start day, theme, column order/visibility, temperature/measurement units): LocalStorage with cross-tab synchronization
 - Food page layout: Column order ('food_column_order') and visibility ('food_column_visibility')
 - Sleep data: Schedule ('sleepSchedule') and quality logs ('sleepLogs')
+- Water tracking: Settings ('water_settings') and entries ('water_entries') with automatic 30-day cleanup
 - Cross-component sync: CustomEvents for medication completion tracking
 
 ### Authentication & Authorization

@@ -195,9 +195,6 @@ export default function EnhancedMealLog({
     <div className="space-y-4">
       {!hideAddButton && (
         <div className="flex items-center justify-end gap-2">
-          <Button size="sm" variant="outline" onClick={onScanBarcode} data-testid="button-scan-barcode">
-            <Camera className="w-4 h-4" />
-          </Button>
           <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
               <Button size="sm" data-testid="button-add-meal">
@@ -207,7 +204,18 @@ export default function EnhancedMealLog({
             </DialogTrigger>
             <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Log a Meal</DialogTitle>
+                <div className="flex items-center justify-between">
+                  <DialogTitle>Log a Meal</DialogTitle>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="icon"
+                    onClick={onScanBarcode} 
+                    data-testid="button-scan-barcode"
+                  >
+                    <Camera className="w-4 h-4" />
+                  </Button>
+                </div>
               </DialogHeader>
               <Tabs defaultValue="manual" className="pt-4">
                 <TabsList className="grid w-full grid-cols-2">

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import MacroCalculator from "@/components/MacroCalculator";
 import WeightGoalTracker from "@/components/WeightGoalTracker";
+import WaterTracker from "@/components/WaterTracker";
 import EnhancedMealLog from "@/components/EnhancedMealLog";
 import ThemeToggle from "@/components/ThemeToggle";
 import Settings from "@/components/Settings";
@@ -25,7 +26,7 @@ interface Meal {
   emoji: string;
   date?: string;
   schedule?: {
-    type: "now" | "day" | "weekly" | "biweekly";
+    type: "now" | "today" | "day" | "weekly" | "biweekly" | "monthly";
     day?: string;
     time?: string;
   };
@@ -53,7 +54,7 @@ export default function Food() {
   
   const [columnOrder, setColumnOrder] = useState<string[]>(() => {
     const saved = localStorage.getItem('food_column_order');
-    return saved ? JSON.parse(saved) : ['calculator', 'weight', 'week', 'goals', 'meals'];
+    return saved ? JSON.parse(saved) : ['calculator', 'weight', 'water', 'week', 'goals', 'meals'];
   });
   
   const [columnVisibility, setColumnVisibility] = useState<Record<string, boolean>>(() => {
@@ -61,6 +62,7 @@ export default function Food() {
     return saved ? JSON.parse(saved) : {
       calculator: true,
       weight: true,
+      water: true,
       week: true,
       goals: true,
       meals: true
@@ -280,6 +282,8 @@ export default function Food() {
         return <MacroCalculator key="calculator" onCalculate={setTargets} />;
       case 'weight':
         return <WeightGoalTracker key="weight" currentWeight={currentWeight} onWeightUpdate={setCurrentWeight} />;
+      case 'water':
+        return <WaterTracker key="water" />;
       case 'week':
         return (
           <Card key="week" className="p-4">
@@ -394,6 +398,7 @@ export default function Food() {
                     const columnNames: Record<string, string> = {
                       calculator: 'Macro Calculator',
                       weight: 'Weight Tracker',
+                      water: 'Water Intake',
                       week: 'Week View',
                       goals: 'Today\'s Goals',
                       meals: 'Food Log'
