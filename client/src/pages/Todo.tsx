@@ -1,6 +1,7 @@
 import { useState } from "react";
 import TaskList, { Task } from "@/components/TaskList";
 import ThemeToggle from "@/components/ThemeToggle";
+import Settings from "@/components/Settings";
 
 export default function Todo() {
   const [tasks, setTasks] = useState<Task[]>([
@@ -41,7 +42,10 @@ export default function Todo() {
     <div className="min-h-screen bg-background pb-20">
       <header className="sticky top-0 z-40 bg-background border-b border-border px-4 py-3 flex items-center justify-between">
         <h1 className="text-xl font-bold">To Do</h1>
-        <ThemeToggle />
+        <div className="flex gap-2">
+          <Settings />
+          <ThemeToggle />
+        </div>
       </header>
 
       <main className="max-w-md mx-auto px-4 py-6">

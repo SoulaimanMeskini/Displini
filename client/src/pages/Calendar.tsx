@@ -2,6 +2,7 @@ import { useState } from "react";
 import CalendarView from "@/components/CalendarView";
 import EventList from "@/components/EventList";
 import ThemeToggle from "@/components/ThemeToggle";
+import Settings from "@/components/Settings";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -59,7 +60,10 @@ export default function Calendar() {
     <div className="min-h-screen bg-background pb-20">
       <header className="sticky top-0 z-40 bg-background border-b border-border px-4 py-3 flex items-center justify-between">
         <h1 className="text-xl font-bold">Calendar</h1>
-        <ThemeToggle />
+        <div className="flex gap-2">
+          <Settings />
+          <ThemeToggle />
+        </div>
       </header>
 
       <main className="max-w-md mx-auto px-4 py-6 space-y-6">
