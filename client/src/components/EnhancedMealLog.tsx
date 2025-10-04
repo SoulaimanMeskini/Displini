@@ -18,7 +18,7 @@ interface Meal {
   kcal: number;
   emoji: string;
   schedule?: {
-    type: "now" | "day" | "weekly" | "biweekly";
+    type: "now" | "today" | "day" | "weekly" | "biweekly" | "monthly";
     day?: string;
     time?: string;
   };
@@ -65,7 +65,7 @@ export default function EnhancedMealLog({
   const [fat, setFat] = useState("");
   const [time, setTime] = useState("");
   const [selectedEmoji, setSelectedEmoji] = useState("🍗");
-  const [scheduleType, setScheduleType] = useState<"now" | "day" | "weekly" | "biweekly">("now");
+  const [scheduleType, setScheduleType] = useState<"now" | "today" | "day" | "weekly" | "biweekly" | "monthly">("now");
   const [scheduleDay, setScheduleDay] = useState("monday");
   const [scheduleTime, setScheduleTime] = useState("");
   
@@ -82,11 +82,15 @@ export default function EnhancedMealLog({
   const handleSubmit = () => {
     if (mealName) {
       const kcal = calculateKcal();
-      const schedule = scheduleType !== "now" ? {
+      const schedule = scheduleType !== "now" && scheduleType !== "today" ? {
         type: scheduleType,
         day: scheduleDay,
         time: scheduleTime || time,
-      } : undefined;
+      } : (scheduleType === "today" ? {
+        type: "today" as const,
+        day: new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase(),
+        time: scheduleTime || time,
+      } : undefined);
 
       onAddMeal({
         name: mealName,
@@ -94,7 +98,7 @@ export default function EnhancedMealLog({
         carbs: parseFloat(carbs) || 0,
         fat: parseFloat(fat) || 0,
         kcal,
-        time: scheduleType === "now" ? (time || new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })) : scheduleTime,
+        time: scheduleType === "now" || scheduleType === "today" ? (time || new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })) : scheduleTime,
         emoji: selectedEmoji,
         schedule,
       });
@@ -164,8 +168,10 @@ export default function EnhancedMealLog({
           </div>
           {meal.schedule && (
             <p className="text-xs text-success mt-2">
-              Tap to consume • {meal.schedule.type === "weekly" && `Weekly on ${meal.schedule.day}`}
+              Tap to consume • {meal.schedule.type === "today" && `Scheduled for today`}
+              {meal.schedule.type === "weekly" && `Weekly on ${meal.schedule.day}`}
               {meal.schedule.type === "biweekly" && `Every 2 weeks on ${meal.schedule.day}`}
+              {meal.schedule.type === "monthly" && `Monthly on ${meal.schedule.day}`}
               {meal.schedule.type === "day" && `Scheduled for ${meal.schedule.day}`}
             </p>
           )}
@@ -294,15 +300,17 @@ export default function EnhancedMealLog({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="now">Add now</SelectItem>
+                        <SelectItem value="now">Eat now</SelectItem>
+                        <SelectItem value="today">Schedule for today</SelectItem>
                         <SelectItem value="day">Specific day</SelectItem>
                         <SelectItem value="weekly">Weekly</SelectItem>
                         <SelectItem value="biweekly">Every 2 weeks</SelectItem>
+                        <SelectItem value="monthly">Monthly</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
-                  {scheduleType !== "now" && (
+                  {scheduleType !== "now" && scheduleType !== "today" && (
                     <div className="space-y-3">
                       <div>
                         <Label htmlFor="schedule-day">Day</Label>

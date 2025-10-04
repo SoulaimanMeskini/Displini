@@ -18,6 +18,7 @@ export interface Task {
   dueDate?: Date | string;
   time?: string;
   allDay?: boolean;
+  notes?: string;
   source: "manual" | "food" | "calendar" | "medication" | "workout" | "sleep";
   medicationId?: string;
   sleepAction?: string;
@@ -38,6 +39,7 @@ export default function TaskList({ tasks, onToggleTask, onDeleteTask, onAddTask 
   const [dueDate, setDueDate] = useState("");
   const [time, setTime] = useState("");
   const [allDay, setAllDay] = useState(false);
+  const [notes, setNotes] = useState("");
   const [selectedEmoji, setSelectedEmoji] = useState("✅");
 
   const completedCount = tasks.filter((t) => t.completed).length;
@@ -52,12 +54,14 @@ export default function TaskList({ tasks, onToggleTask, onDeleteTask, onAddTask 
         dueDate: dueDate ? new Date(dueDate).toISOString() : new Date().toISOString(),
         time: allDay ? undefined : (time || undefined),
         allDay,
+        notes: notes || undefined,
         source: "manual",
       });
       setTitle("");
       setDueDate("");
       setTime("");
       setAllDay(false);
+      setNotes("");
       setSelectedEmoji("✅");
       setIsOpen(false);
     }
@@ -100,9 +104,9 @@ export default function TaskList({ tasks, onToggleTask, onDeleteTask, onAddTask 
     return 0;
   });
 
-  const allDayTasks = sortedTasks.filter(t => t.allDay && !t.completed);
+  const allDayTasks = sortedTasks.filter(t => t.allDay);
   const timedTasks = sortedTasks.filter(t => !t.allDay && !t.completed);
-  const completedTasks = sortedTasks.filter(t => t.completed);
+  const completedTasks = sortedTasks.filter(t => t.completed && !t.allDay);
 
   return (
     <div className="space-y-4">
@@ -187,6 +191,16 @@ export default function TaskList({ tasks, onToggleTask, onDeleteTask, onAddTask 
                     />
                   </div>
                 )}
+                <div>
+                  <Label htmlFor="task-notes">Notes (Optional)</Label>
+                  <Input
+                    id="task-notes"
+                    placeholder="Additional details..."
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    data-testid="input-task-notes"
+                  />
+                </div>
                 <Button onClick={handleSubmit} className="w-full" data-testid="button-submit-task">
                   Add Task
                 </Button>
@@ -213,12 +227,23 @@ export default function TaskList({ tasks, onToggleTask, onDeleteTask, onAddTask 
                       <div key={task.id} className="flex flex-col items-center gap-2 min-w-fit" data-testid={`card-task-${task.id}`}>
                         <button
                           onClick={() => onToggleTask(task.id)}
-                          className="w-20 h-20 rounded-full bg-primary/10 hover-elevate flex items-center justify-center text-3xl transition-transform active:scale-95"
+                          className={`relative w-20 h-20 rounded-full flex items-center justify-center text-3xl transition-all ${
+                            task.completed 
+                              ? 'bg-success/20 opacity-80' 
+                              : 'bg-primary/10 hover-elevate active:scale-95'
+                          }`}
                           data-testid={`checkbox-task-${task.id}`}
                         >
                           {task.emoji || '✅'}
+                          {task.completed && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-success/30 rounded-full">
+                              <svg className="w-10 h-10 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                              </svg>
+                            </div>
+                          )}
                         </button>
-                        <p className="text-xs font-medium text-center max-w-20 truncate" data-testid={`text-task-title-${task.id}`}>
+                        <p className={`text-xs font-medium text-center max-w-20 truncate ${task.completed ? 'line-through opacity-60' : ''}`} data-testid={`text-task-title-${task.id}`}>
                           {task.title}
                         </p>
                         <Button
@@ -263,6 +288,11 @@ export default function TaskList({ tasks, onToggleTask, onDeleteTask, onAddTask 
                         />
                         <div className="flex-1 min-w-0">
                           <p className="font-medium mb-2" data-testid={`text-task-title-${task.id}`}>{task.title}</p>
+                          {task.notes && (
+                            <p className="text-sm text-muted-foreground mb-2" data-testid={`text-task-notes-${task.id}`}>
+                              {task.notes}
+                            </p>
+                          )}
                           <div className="flex items-center gap-2 flex-wrap">
                             <Badge variant="secondary" className={badge.className}>
                               {badge.label}

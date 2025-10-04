@@ -134,7 +134,8 @@ export default function Calendar() {
         const todos = JSON.parse(localStorage.getItem("todos") || "[]");
         const newTodo = {
           id: `cal-${event.id}`,
-          title: `${event.emoji || '📅'} ${event.title}`,
+          title: event.title,
+          emoji: event.emoji || '📅',
           completed: false,
           dueDate: event.date.toISOString(),
           time: event.allDay ? undefined : event.time,
