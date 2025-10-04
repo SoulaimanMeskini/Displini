@@ -18,14 +18,20 @@ interface MacroCalculatorProps {
 }
 
 export default function MacroCalculator({ onCalculate }: MacroCalculatorProps) {
-  const [weight, setWeight] = useState("");
-  const [height, setHeight] = useState("");
-  const [dateOfBirth, setDateOfBirth] = useState("");
-  const [gender, setGender] = useState<"male" | "female">("male");
-  const [trainingDays, setTrainingDays] = useState("");
-  const [goal, setGoal] = useState<"cutting" | "lean-bulk" | "bulking">("lean-bulk");
-  const [results, setResults] = useState<MacroResults | null>(null);
-  const [showForm, setShowForm] = useState(true);
+  const [weight, setWeight] = useState(() => localStorage.getItem('calculator_weight') || "");
+  const [height, setHeight] = useState(() => localStorage.getItem('calculator_height') || "");
+  const [dateOfBirth, setDateOfBirth] = useState(() => localStorage.getItem('calculator_dob') || "");
+  const [gender, setGender] = useState<"male" | "female">(() => (localStorage.getItem('calculator_gender') as "male" | "female") || "male");
+  const [trainingDays, setTrainingDays] = useState(() => localStorage.getItem('calculator_training') || "");
+  const [goal, setGoal] = useState<"cutting" | "lean-bulk" | "bulking">(() => (localStorage.getItem('calculator_goal') as "cutting" | "lean-bulk" | "bulking") || "lean-bulk");
+  const [results, setResults] = useState<MacroResults | null>(() => {
+    const saved = localStorage.getItem('calculator_results');
+    return saved ? JSON.parse(saved) : null;
+  });
+  const [showForm, setShowForm] = useState(() => {
+    const saved = localStorage.getItem('calculator_results');
+    return !saved;
+  });
 
   const calculateAge = (dob: string) => {
     const birthDate = new Date(dob);
@@ -44,6 +50,13 @@ export default function MacroCalculator({ onCalculate }: MacroCalculatorProps) {
     const trainingNum = parseFloat(trainingDays);
     
     if (!weightNum || !heightNum || !dateOfBirth || !trainingNum) return;
+
+    localStorage.setItem('calculator_weight', weight);
+    localStorage.setItem('calculator_height', height);
+    localStorage.setItem('calculator_dob', dateOfBirth);
+    localStorage.setItem('calculator_gender', gender);
+    localStorage.setItem('calculator_training', trainingDays);
+    localStorage.setItem('calculator_goal', goal);
 
     const age = calculateAge(dateOfBirth);
     
@@ -94,6 +107,7 @@ export default function MacroCalculator({ onCalculate }: MacroCalculatorProps) {
     };
 
     setResults(calculatedResults);
+    localStorage.setItem('calculator_results', JSON.stringify(calculatedResults));
     setShowForm(false);
     if (onCalculate) {
       onCalculate(calculatedResults);

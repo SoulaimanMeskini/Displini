@@ -39,7 +39,10 @@ const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export default function Food() {
   const [currentWeight, setCurrentWeight] = useState(70);
-  const [targets, setTargets] = useState<{ kcal: number; protein: number; carbs: number; fat: number } | null>(null);
+  const [targets, setTargets] = useState<{ kcal: number; protein: number; carbs: number; fat: number } | null>(() => {
+    const saved = localStorage.getItem('calculator_results');
+    return saved ? JSON.parse(saved) : null;
+  });
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [weekStart, setWeekStart] = useState(() => {
     const today = new Date();
@@ -48,21 +51,27 @@ export default function Food() {
     return new Date(today.setDate(diff));
   });
 
-  const [meals, setMeals] = useState<Meal[]>([
-    { id: "1", time: "08:00", name: "Oatmeal with protein powder", protein: 25, carbs: 45, fat: 10, kcal: 350, emoji: "🥣", date: new Date().toISOString().split('T')[0] },
-    { id: "2", time: "12:30", name: "Grilled chicken salad", protein: 35, carbs: 20, fat: 15, kcal: 355, emoji: "🥗", date: new Date().toISOString().split('T')[0] },
-    { 
-      id: "3", 
-      time: "18:00", 
-      name: "Protein pasta", 
-      protein: 30, 
-      carbs: 50, 
-      fat: 12, 
-      kcal: 428, 
-      emoji: "🍝",
-      schedule: { type: "weekly", day: "tuesday", time: "18:00" }
-    },
-  ]);
+  const [meals, setMeals] = useState<Meal[]>(() => {
+    const saved = localStorage.getItem('meals');
+    if (saved) {
+      return JSON.parse(saved);
+    }
+    return [
+      { id: "1", time: "08:00", name: "Oatmeal with protein powder", protein: 25, carbs: 45, fat: 10, kcal: 350, emoji: "🥣", date: new Date().toISOString().split('T')[0] },
+      { id: "2", time: "12:30", name: "Grilled chicken salad", protein: 35, carbs: 20, fat: 15, kcal: 355, emoji: "🥗", date: new Date().toISOString().split('T')[0] },
+      { 
+        id: "3", 
+        time: "18:00", 
+        name: "Protein pasta", 
+        protein: 30, 
+        carbs: 50, 
+        fat: 12, 
+        kcal: 428, 
+        emoji: "🍝",
+        schedule: { type: "weekly", day: "tuesday", time: "18:00" }
+      },
+    ];
+  });
 
   const [previousMeals] = useState<Meal[]>([
     { id: "p1", time: "08:00", name: "Protein shake", protein: 30, carbs: 10, fat: 5, kcal: 205, emoji: "🥤" },
@@ -71,15 +80,35 @@ export default function Food() {
   ]);
 
   const handleAddMeal = (meal: Omit<Meal, "id">) => {
-    setMeals([...meals, { 
+    const newMeal = { 
       ...meal, 
       id: Date.now().toString(),
       date: selectedDate.toISOString().split('T')[0]
-    }]);
+    };
+    const updatedMeals = [...meals, newMeal];
+    setMeals(updatedMeals);
+    localStorage.setItem('meals', JSON.stringify(updatedMeals));
+  };
+
+  const handleConsumeScheduledMeal = (scheduledMealId: string) => {
+    const scheduledMeal = meals.find(m => m.id === scheduledMealId);
+    if (scheduledMeal && scheduledMeal.schedule) {
+      const consumedMeal: Meal = {
+        ...scheduledMeal,
+        id: Date.now().toString(),
+        date: selectedDate.toISOString().split('T')[0],
+        schedule: undefined,
+      };
+      const updatedMeals = [...meals, consumedMeal];
+      setMeals(updatedMeals);
+      localStorage.setItem('meals', JSON.stringify(updatedMeals));
+    }
   };
 
   const handleDeleteMeal = (id: string) => {
-    setMeals(meals.filter((m) => m.id !== id));
+    const updatedMeals = meals.filter((m) => m.id !== id);
+    setMeals(updatedMeals);
+    localStorage.setItem('meals', JSON.stringify(updatedMeals));
   };
 
   const handleScanBarcode = () => {
@@ -318,6 +347,7 @@ export default function Food() {
             onAddMeal={handleAddMeal}
             onDeleteMeal={handleDeleteMeal}
             onScanBarcode={handleScanBarcode}
+            onConsumeMeal={handleConsumeScheduledMeal}
             targets={undefined}
           />
         </div>

@@ -31,6 +31,7 @@ interface EnhancedMealLogProps {
   onAddMeal: (meal: Omit<Meal, "id">) => void;
   onDeleteMeal: (id: string) => void;
   onScanBarcode: () => void;
+  onConsumeMeal?: (id: string) => void;
   targets?: {
     kcal: number;
     protein: number;
@@ -42,7 +43,7 @@ interface EnhancedMealLogProps {
 
 const foodEmojis = ["🍗", "🥗", "🍳", "🥙", "🍕", "🍔", "🥩", "🍜", "🍛", "🥘", "🍲", "🍱", "🥪", "🌮", "🌯", "🍣", "🥑", "🍎", "🍌", "🥤", "☕", "🥛", "💊"];
 
-export default function EnhancedMealLog({ meals, previousMeals, onAddMeal, onDeleteMeal, onScanBarcode, targets, hideAddButton = false }: EnhancedMealLogProps) {
+export default function EnhancedMealLog({ meals, previousMeals, onAddMeal, onDeleteMeal, onScanBarcode, onConsumeMeal, targets, hideAddButton = false }: EnhancedMealLogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [mealName, setMealName] = useState("");
   const [protein, setProtein] = useState("");
@@ -333,7 +334,12 @@ export default function EnhancedMealLog({ meals, previousMeals, onAddMeal, onDel
           </Card>
         ) : (
           meals.map((meal) => (
-            <Card key={meal.id} className="p-4 hover-elevate" data-testid={`card-meal-${meal.id}`}>
+            <Card 
+              key={meal.id} 
+              className={`p-4 ${meal.schedule && onConsumeMeal ? 'hover-elevate cursor-pointer' : 'hover-elevate'}`}
+              onClick={() => meal.schedule && onConsumeMeal ? onConsumeMeal(meal.id) : undefined}
+              data-testid={`card-meal-${meal.id}`}
+            >
               <div className="flex items-start gap-4">
                 <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center text-2xl flex-shrink-0">
                   {meal.emoji}
@@ -350,8 +356,8 @@ export default function EnhancedMealLog({ meals, previousMeals, onAddMeal, onDel
                     <span className="text-chart-4">F: {meal.fat}g</span>
                   </div>
                   {meal.schedule && (
-                    <p className="text-xs text-muted-foreground mt-2">
-                      {meal.schedule.type === "weekly" && `Weekly on ${meal.schedule.day}`}
+                    <p className="text-xs text-success mt-2">
+                      Tap to consume • {meal.schedule.type === "weekly" && `Weekly on ${meal.schedule.day}`}
                       {meal.schedule.type === "biweekly" && `Every 2 weeks on ${meal.schedule.day}`}
                       {meal.schedule.type === "day" && `Scheduled for ${meal.schedule.day}`}
                     </p>
@@ -360,7 +366,10 @@ export default function EnhancedMealLog({ meals, previousMeals, onAddMeal, onDel
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => onDeleteMeal(meal.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDeleteMeal(meal.id);
+                  }}
                   data-testid={`button-delete-meal-${meal.id}`}
                 >
                   <Trash2 className="w-4 h-4" />
