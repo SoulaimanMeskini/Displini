@@ -12,9 +12,10 @@ import { format } from "date-fns";
 export interface Task {
   id: string;
   title: string;
+  emoji?: string;
   completed: boolean;
   dueDate?: Date;
-  source: "manual" | "food" | "calendar";
+  source: "manual" | "food" | "calendar" | "medication" | "workout";
 }
 
 interface TaskListProps {
@@ -24,10 +25,13 @@ interface TaskListProps {
   onAddTask: (task: Omit<Task, "id">) => void;
 }
 
+const taskEmojis = ["✅", "📝", "🎯", "💡", "🚀", "⭐", "🔥", "💪", "📱", "💼", "🏠", "🛒", "📚", "✉️", "📞"];
+
 export default function TaskList({ tasks, onToggleTask, onDeleteTask, onAddTask }: TaskListProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [dueDate, setDueDate] = useState("");
+  const [selectedEmoji, setSelectedEmoji] = useState("✅");
 
   const completedCount = tasks.filter((t) => t.completed).length;
   const totalCount = tasks.length;
@@ -36,12 +40,14 @@ export default function TaskList({ tasks, onToggleTask, onDeleteTask, onAddTask 
     if (title) {
       onAddTask({
         title,
+        emoji: selectedEmoji,
         completed: false,
         dueDate: dueDate ? new Date(dueDate) : undefined,
         source: "manual",
       });
       setTitle("");
       setDueDate("");
+      setSelectedEmoji("✅");
       setIsOpen(false);
     }
   };
@@ -51,6 +57,8 @@ export default function TaskList({ tasks, onToggleTask, onDeleteTask, onAddTask 
       manual: { label: "Manual", className: "bg-muted text-muted-foreground" },
       food: { label: "Food", className: "bg-chart-2/20 text-chart-2" },
       calendar: { label: "Calendar", className: "bg-chart-1/20 text-chart-1" },
+      medication: { label: "Health", className: "bg-destructive/20 text-destructive" },
+      workout: { label: "Sport", className: "bg-success/20 text-success" },
     };
     return config[source];
   };
@@ -77,6 +85,26 @@ export default function TaskList({ tasks, onToggleTask, onDeleteTask, onAddTask 
                 <DialogTitle>Add New Task</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 pt-4">
+                <div>
+                  <Label>Choose Emoji</Label>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {taskEmojis.map((emoji) => (
+                      <button
+                        key={emoji}
+                        type="button"
+                        onClick={() => setSelectedEmoji(emoji)}
+                        className={`w-10 h-10 rounded-full flex items-center justify-center text-xl transition-all ${
+                          selectedEmoji === emoji
+                            ? "bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2"
+                            : "bg-muted hover-elevate"
+                        }`}
+                        data-testid={`button-emoji-${emoji}`}
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <div>
                   <Label htmlFor="task-title">Task Title</Label>
                   <Input
@@ -123,6 +151,9 @@ export default function TaskList({ tasks, onToggleTask, onDeleteTask, onAddTask 
                     return (
                       <Card key={task.id} className="p-4 hover-elevate" data-testid={`card-task-${task.id}`}>
                         <div className="flex items-start gap-3">
+                          {task.emoji && (
+                            <div className="text-2xl mt-1">{task.emoji}</div>
+                          )}
                           <Checkbox
                             checked={task.completed}
                             onCheckedChange={() => onToggleTask(task.id)}
@@ -168,6 +199,9 @@ export default function TaskList({ tasks, onToggleTask, onDeleteTask, onAddTask 
                     return (
                       <Card key={task.id} className="p-4 hover-elevate opacity-60" data-testid={`card-task-${task.id}`}>
                         <div className="flex items-start gap-3">
+                          {task.emoji && (
+                            <div className="text-2xl mt-1">{task.emoji}</div>
+                          )}
                           <Checkbox
                             checked={task.completed}
                             onCheckedChange={() => onToggleTask(task.id)}

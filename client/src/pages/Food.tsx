@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import MacroCalculator from "@/components/MacroCalculator";
 import WeightGoalTracker from "@/components/WeightGoalTracker";
 import EnhancedMealLog from "@/components/EnhancedMealLog";
@@ -44,12 +44,19 @@ export default function Food() {
     return saved ? JSON.parse(saved) : null;
   });
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [weekStart, setWeekStart] = useState(() => {
+  
+  const getWeekStart = () => {
     const today = new Date();
     const day = today.getDay();
-    const diff = today.getDate() - day;
-    return new Date(today.setDate(diff));
-  });
+    const weekStartDay = parseInt(localStorage.getItem("weekStartDay") || "0");
+    const diff = day - weekStartDay;
+    const adjustedDiff = diff < 0 ? diff + 7 : diff;
+    const startDate = new Date(today);
+    startDate.setDate(today.getDate() - adjustedDiff);
+    return startDate;
+  };
+  
+  const [weekStart, setWeekStart] = useState(getWeekStart);
 
   const [meals, setMeals] = useState<Meal[]>(() => {
     const saved = localStorage.getItem('meals');
@@ -78,6 +85,14 @@ export default function Food() {
     { id: "p2", time: "13:00", name: "Chicken and rice", protein: 40, carbs: 60, fat: 12, kcal: 508, emoji: "🍗" },
     { id: "p3", time: "19:00", name: "Salmon with vegetables", protein: 35, carbs: 25, fat: 20, kcal: 420, emoji: "🐟" },
   ]);
+
+  useEffect(() => {
+    const handleWeekStartChange = () => {
+      setWeekStart(getWeekStart());
+    };
+    window.addEventListener('weekStartDayChanged', handleWeekStartChange);
+    return () => window.removeEventListener('weekStartDayChanged', handleWeekStartChange);
+  }, []);
 
   const handleAddMeal = (meal: Omit<Meal, "id">) => {
     const newMeal = { 

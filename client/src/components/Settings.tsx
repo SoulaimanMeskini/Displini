@@ -11,6 +11,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useLocation } from "wouter";
@@ -27,14 +28,17 @@ const themes = [
 export default function Settings() {
   const [selectedTheme, setSelectedTheme] = useState("blue");
   const [customColor, setCustomColor] = useState("#3b82f6");
+  const [weekStartDay, setWeekStartDay] = useState("0");
   const { user } = useAuth();
   const [, setLocation] = useLocation();
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("colorTheme") || "blue";
     const savedCustomColor = localStorage.getItem("customColor") || "#3b82f6";
+    const savedWeekStart = localStorage.getItem("weekStartDay") || "0";
     setSelectedTheme(savedTheme);
     setCustomColor(savedCustomColor);
+    setWeekStartDay(savedWeekStart);
     applyTheme(savedTheme, savedCustomColor);
   }, []);
 
@@ -109,6 +113,12 @@ export default function Settings() {
     if (selectedTheme === "custom") {
       applyTheme("custom", color);
     }
+  };
+
+  const handleWeekStartChange = (day: string) => {
+    setWeekStartDay(day);
+    localStorage.setItem("weekStartDay", day);
+    window.dispatchEvent(new Event('weekStartDayChanged'));
   };
 
   const initials = user 
@@ -191,6 +201,24 @@ export default function Settings() {
                 ))}
               </div>
             </RadioGroup>
+          </div>
+
+          <div>
+            <Label htmlFor="week-start-day" className="text-base font-semibold mb-3 block">Week Starts On</Label>
+            <Select value={weekStartDay} onValueChange={handleWeekStartChange}>
+              <SelectTrigger id="week-start-day" data-testid="select-week-start-day">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="0">Sunday</SelectItem>
+                <SelectItem value="1">Monday</SelectItem>
+                <SelectItem value="2">Tuesday</SelectItem>
+                <SelectItem value="3">Wednesday</SelectItem>
+                <SelectItem value="4">Thursday</SelectItem>
+                <SelectItem value="5">Friday</SelectItem>
+                <SelectItem value="6">Saturday</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </DialogContent>
