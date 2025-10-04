@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import CalendarView from "@/components/CalendarView";
 import EventList from "@/components/EventList";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { addDays, isSameDay, isWithinInterval } from "date-fns";
 
 interface CalendarEvent {
   id: string;
@@ -14,17 +15,81 @@ interface CalendarEvent {
   title: string;
   time: string;
   addToTodo?: boolean;
+  type?: 'event' | 'period';
+}
+
+interface CyclePeriod {
+  id: string;
+  startDate: string;
+  cycleLength: number;
 }
 
 export default function Calendar() {
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [events, setEvents] = useState<CalendarEvent[]>([
-    { id: "1", date: new Date(), title: "Team Meeting", time: "10:00", addToTodo: false },
-    { id: "2", date: new Date(), title: "Gym Session", time: "18:00", addToTodo: true },
-  ]);
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [newEventTitle, setNewEventTitle] = useState("");
   const [newEventTime, setNewEventTime] = useState("");
+
+  useEffect(() => {
+    const savedEvents = localStorage.getItem("calendarEvents");
+    if (savedEvents) {
+      const parsed = JSON.parse(savedEvents);
+      setEvents(parsed.map((e: any) => ({ ...e, date: new Date(e.date) })));
+    }
+
+    generateCycleEvents();
+  }, []);
+
+  useEffect(() => {
+    if (events.length > 0) {
+      const eventsToSave = events
+        .filter(e => e.type !== 'period')
+        .map(e => ({ ...e, date: e.date.toISOString() }));
+      localStorage.setItem("calendarEvents", JSON.stringify(eventsToSave));
+    }
+  }, [events]);
+
+  const generateCycleEvents = () => {
+    const savedCycles = localStorage.getItem("menstrualCycles");
+    if (!savedCycles) return;
+
+    const cycles: CyclePeriod[] = JSON.parse(savedCycles);
+    if (cycles.length === 0) return;
+
+    const periodEvents: CalendarEvent[] = [];
+    const avgLength = cycles.reduce((sum, c) => sum + c.cycleLength, 0) / cycles.length;
+    
+    cycles.forEach(cycle => {
+      const startDate = new Date(cycle.startDate);
+      for (let i = 0; i < 5; i++) {
+        periodEvents.push({
+          id: `period-${cycle.id}-${i}`,
+          date: addDays(startDate, i),
+          title: i === 0 ? "🩸 Period Start" : "🩸 Period",
+          time: "",
+          type: 'period',
+        });
+      }
+    });
+
+    const lastCycle = cycles[0];
+    const nextPeriodStart = addDays(new Date(lastCycle.startDate), Math.round(avgLength));
+    for (let i = 0; i < 5; i++) {
+      periodEvents.push({
+        id: `period-predicted-${i}`,
+        date: addDays(nextPeriodStart, i),
+        title: i === 0 ? "🩸 Period (predicted)" : "🩸 Period (predicted)",
+        time: "",
+        type: 'period',
+      });
+    }
+
+    setEvents(prev => {
+      const nonPeriodEvents = prev.filter(e => e.type !== 'period');
+      return [...nonPeriodEvents, ...periodEvents];
+    });
+  };
 
   const handleAddEvent = () => {
     setIsAddDialogOpen(true);
@@ -40,6 +105,7 @@ export default function Calendar() {
           title: newEventTitle,
           time: newEventTime,
           addToTodo: false,
+          type: 'event',
         },
       ]);
       setNewEventTitle("");

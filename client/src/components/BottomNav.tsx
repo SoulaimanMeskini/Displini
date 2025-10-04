@@ -1,11 +1,13 @@
-import { Utensils, Calendar, CheckSquare } from "lucide-react";
+import { Heart, Utensils, Dumbbell, Calendar, CheckSquare } from "lucide-react";
 import { Link, useLocation } from "wouter";
 
 export default function BottomNav() {
   const [location] = useLocation();
 
   const tabs = [
-    { path: "/", label: "Food", icon: Utensils },
+    { path: "/", label: "Health", icon: Heart },
+    { path: "/food", label: "Food", icon: Utensils },
+    { path: "/sport", label: "Sport", icon: Dumbbell },
     { path: "/calendar", label: "Calendar", icon: Calendar },
     { path: "/todo", label: "To Do", icon: CheckSquare },
   ];
