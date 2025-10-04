@@ -4,9 +4,11 @@ import WeightGoalTracker from "@/components/WeightGoalTracker";
 import EnhancedMealLog from "@/components/EnhancedMealLog";
 import ThemeToggle from "@/components/ThemeToggle";
 import Settings from "@/components/Settings";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import MacroProgress from "@/components/MacroProgress";
+import { Button } from "@/components/ui/button";
+import { ChevronLeft, ChevronRight, BarChart3 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 interface Meal {
   id: string;
@@ -17,6 +19,7 @@ interface Meal {
   fat: number;
   kcal: number;
   emoji: string;
+  date?: string;
   schedule?: {
     type: "now" | "day" | "weekly" | "biweekly";
     day?: string;
@@ -24,15 +27,30 @@ interface Meal {
   };
 }
 
-const daysOfWeek = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+interface DayStats {
+  date: string;
+  kcal: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+}
+
+const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export default function Food() {
   const [currentWeight, setCurrentWeight] = useState(70);
   const [targets, setTargets] = useState<{ kcal: number; protein: number; carbs: number; fat: number } | null>(null);
-  const [viewMode, setViewMode] = useState<"overview" | "daily">("overview");
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [weekStart, setWeekStart] = useState(() => {
+    const today = new Date();
+    const day = today.getDay();
+    const diff = today.getDate() - day;
+    return new Date(today.setDate(diff));
+  });
+
   const [meals, setMeals] = useState<Meal[]>([
-    { id: "1", time: "08:00", name: "Oatmeal with protein powder", protein: 25, carbs: 45, fat: 10, kcal: 350, emoji: "🥣" },
-    { id: "2", time: "12:30", name: "Grilled chicken salad", protein: 35, carbs: 20, fat: 15, kcal: 355, emoji: "🥗" },
+    { id: "1", time: "08:00", name: "Oatmeal with protein powder", protein: 25, carbs: 45, fat: 10, kcal: 350, emoji: "🥣", date: new Date().toISOString().split('T')[0] },
+    { id: "2", time: "12:30", name: "Grilled chicken salad", protein: 35, carbs: 20, fat: 15, kcal: 355, emoji: "🥗", date: new Date().toISOString().split('T')[0] },
     { 
       id: "3", 
       time: "18:00", 
@@ -42,18 +60,7 @@ export default function Food() {
       fat: 12, 
       kcal: 428, 
       emoji: "🍝",
-      schedule: { type: "day", day: "tuesday", time: "18:00" }
-    },
-    { 
-      id: "4", 
-      time: "13:00", 
-      name: "Tuna salad", 
-      protein: 35, 
-      carbs: 15, 
-      fat: 10, 
-      kcal: 290, 
-      emoji: "🥗",
-      schedule: { type: "weekly", day: "wednesday", time: "13:00" }
+      schedule: { type: "weekly", day: "tuesday", time: "18:00" }
     },
   ]);
 
@@ -64,7 +71,11 @@ export default function Food() {
   ]);
 
   const handleAddMeal = (meal: Omit<Meal, "id">) => {
-    setMeals([...meals, { ...meal, id: Date.now().toString() }]);
+    setMeals([...meals, { 
+      ...meal, 
+      id: Date.now().toString(),
+      date: selectedDate.toISOString().split('T')[0]
+    }]);
   };
 
   const handleDeleteMeal = (id: string) => {
@@ -75,18 +86,32 @@ export default function Food() {
     alert("Barcode scanning feature would open camera here. This requires camera permissions and a barcode scanning API.");
   };
 
-  const todayMeals = meals.filter(m => !m.schedule || m.schedule.type === "now");
-  const scheduledMeals = meals.filter(m => m.schedule && m.schedule.type !== "now");
-
-  const getMealsForDay = (day: string) => {
-    return meals.filter(m => 
-      m.schedule && 
-      m.schedule.day?.toLowerCase() === day.toLowerCase() &&
-      (m.schedule.type === "day" || m.schedule.type === "weekly" || m.schedule.type === "biweekly")
-    );
+  const getWeekDays = () => {
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(weekStart);
+      date.setDate(weekStart.getDate() + i);
+      days.push(date);
+    }
+    return days;
   };
 
-  const calculateDayTotals = (dayMeals: Meal[]) => {
+  const getMealsForDate = (date: Date) => {
+    const dateStr = date.toISOString().split('T')[0];
+    const dayName = daysOfWeek[date.getDay()].toLowerCase();
+    
+    const directMeals = meals.filter(m => m.date === dateStr);
+    const scheduledMeals = meals.filter(m => 
+      m.schedule && 
+      m.schedule.day?.toLowerCase().includes(dayName.toLowerCase()) &&
+      (m.schedule.type === "weekly" || m.schedule.type === "biweekly")
+    );
+    
+    return [...directMeals, ...scheduledMeals];
+  };
+
+  const getDayStats = (date: Date) => {
+    const dayMeals = getMealsForDate(date);
     return {
       kcal: dayMeals.reduce((sum, m) => sum + m.kcal, 0),
       protein: dayMeals.reduce((sum, m) => sum + m.protein, 0),
@@ -95,11 +120,123 @@ export default function Food() {
     };
   };
 
+  const getGoalStatus = (date: Date) => {
+    if (!targets) return "none";
+    const stats = getDayStats(date);
+    
+    const proteinPercentage = (stats.protein / targets.protein) * 100;
+    const kcalPercentage = (stats.kcal / targets.kcal) * 100;
+    
+    const avgPercentage = (proteinPercentage + kcalPercentage) / 2;
+    
+    if (avgPercentage >= 95 && avgPercentage <= 105) return "green";
+    if (avgPercentage >= 85 && avgPercentage < 95) return "yellow";
+    if (avgPercentage > 105) return "red";
+    return "none";
+  };
+
+  const navigateWeek = (direction: "prev" | "next") => {
+    const newWeekStart = new Date(weekStart);
+    newWeekStart.setDate(weekStart.getDate() + (direction === "next" ? 7 : -7));
+    setWeekStart(newWeekStart);
+  };
+
+  const isToday = (date: Date) => {
+    const today = new Date();
+    return date.toDateString() === today.toDateString();
+  };
+
+  const isSelectedDate = (date: Date) => {
+    return date.toDateString() === selectedDate.toDateString();
+  };
+
+  const weekDays = getWeekDays();
+  const selectedDayMeals = getMealsForDate(selectedDate);
+  const selectedDayStats = getDayStats(selectedDate);
+
+  const monthlyStats: DayStats[] = [];
+  const today = new Date();
+  for (let i = 29; i >= 0; i--) {
+    const date = new Date(today);
+    date.setDate(today.getDate() - i);
+    const stats = getDayStats(date);
+    monthlyStats.push({
+      date: date.toISOString().split('T')[0],
+      ...stats,
+    });
+  }
+
   return (
     <div className="min-h-screen bg-background pb-20">
       <header className="sticky top-0 z-40 bg-background border-b border-border px-4 py-3 flex items-center justify-between">
         <h1 className="text-xl font-bold">Food Tracking</h1>
         <div className="flex gap-2">
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm" data-testid="button-monthly-stats">
+                <BarChart3 className="w-4 h-4 mr-2" />
+                Monthly Stats
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Last 30 Days Stats</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-3 pt-4">
+                {targets && (
+                  <div className="grid grid-cols-4 gap-2 p-3 bg-muted rounded-md mb-4">
+                    <div className="text-center">
+                      <p className="text-xs text-muted-foreground">Daily Target</p>
+                      <p className="font-bold text-sm">{targets.kcal} kcal</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xs text-muted-foreground">Protein</p>
+                      <p className="font-bold text-sm">{targets.protein}g</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xs text-muted-foreground">Carbs</p>
+                      <p className="font-bold text-sm">{targets.carbs}g</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xs text-muted-foreground">Fat</p>
+                      <p className="font-bold text-sm">{targets.fat}g</p>
+                    </div>
+                  </div>
+                )}
+                {monthlyStats.map((stat, index) => {
+                  const date = new Date(stat.date);
+                  const proteinStatus = targets 
+                    ? stat.protein >= targets.protein * 0.95 && stat.protein <= targets.protein * 1.05 
+                      ? "✓" : stat.protein < targets.protein * 0.95 ? "✗" : "⚠"
+                    : "-";
+                  const fatStatus = targets 
+                    ? stat.fat >= targets.fat * 0.95 && stat.fat <= targets.fat * 1.05 
+                      ? "✓" : stat.fat < targets.fat * 0.95 ? "✗" : "⚠"
+                    : "-";
+                  
+                  return (
+                    <div 
+                      key={stat.date} 
+                      className="flex items-center justify-between p-3 bg-muted rounded-md"
+                      data-testid={`monthly-stat-${index}`}
+                    >
+                      <div className="flex-1">
+                        <p className="font-medium text-sm">{date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
+                        <div className="flex gap-3 text-xs text-muted-foreground mt-1">
+                          <span>P: {stat.protein}g {proteinStatus}</span>
+                          <span>C: {stat.carbs}g</span>
+                          <span>F: {stat.fat}g {fatStatus}</span>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-sm">{stat.kcal} kcal</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </DialogContent>
+          </Dialog>
           <Settings />
           <ThemeToggle />
         </div>
@@ -109,105 +246,81 @@ export default function Food() {
         <MacroCalculator onCalculate={setTargets} />
         <WeightGoalTracker currentWeight={currentWeight} onWeightUpdate={setCurrentWeight} />
         
-        <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as typeof viewMode)}>
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="overview" data-testid="tab-overview">Overview</TabsTrigger>
-            <TabsTrigger value="daily" data-testid="tab-daily">Daily View</TabsTrigger>
-          </TabsList>
+        <Card className="p-4">
+          <div className="flex items-center justify-between mb-4">
+            <Button variant="ghost" size="icon" onClick={() => navigateWeek("prev")} data-testid="button-prev-week">
+              <ChevronLeft className="w-5 h-5" />
+            </Button>
+            <h3 className="text-base font-semibold">Week View</h3>
+            <Button variant="ghost" size="icon" onClick={() => navigateWeek("next")} data-testid="button-next-week">
+              <ChevronRight className="w-5 h-5" />
+            </Button>
+          </div>
 
-          <TabsContent value="overview" className="space-y-4">
-            <div className="mt-4">
-              <h3 className="text-lg font-semibold mb-4">Today's Meals</h3>
-              {targets && (
-                <Card className="p-4 mb-4 space-y-4">
-                  <MacroProgress current={calculateDayTotals(todayMeals).kcal} target={targets.kcal} label="Calories" unit=" kcal" />
-                  <MacroProgress current={calculateDayTotals(todayMeals).protein} target={targets.protein} label="Protein" unit="g" />
-                  <MacroProgress current={calculateDayTotals(todayMeals).carbs} target={targets.carbs} label="Carbs" unit="g" />
-                  <MacroProgress current={calculateDayTotals(todayMeals).fat} target={targets.fat} label="Fat" unit="g" />
-                </Card>
-              )}
-              <EnhancedMealLog
-                meals={todayMeals}
-                previousMeals={previousMeals}
-                onAddMeal={handleAddMeal}
-                onDeleteMeal={handleDeleteMeal}
-                onScanBarcode={handleScanBarcode}
-                targets={undefined}
-              />
-            </div>
-
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Scheduled Meals</h3>
-              <EnhancedMealLog
-                meals={scheduledMeals}
-                previousMeals={[]}
-                onAddMeal={handleAddMeal}
-                onDeleteMeal={handleDeleteMeal}
-                onScanBarcode={handleScanBarcode}
-                targets={undefined}
-                hideAddButton
-              />
-            </div>
-          </TabsContent>
-
-          <TabsContent value="daily" className="space-y-4 mt-4">
-            {daysOfWeek.map((day) => {
-              const dayMeals = getMealsForDay(day);
-              const totals = calculateDayTotals(dayMeals);
+          <div className="flex justify-between gap-1">
+            {weekDays.map((date, index) => {
+              const status = getGoalStatus(date);
+              const isTodayDate = isToday(date);
+              const isSelected = isSelectedDate(date);
               
               return (
-                <Card key={day} className="p-4">
-                  <h3 className="text-base font-semibold mb-3 capitalize">{day}</h3>
-                  
-                  {dayMeals.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No meals scheduled</p>
-                  ) : (
-                    <div className="space-y-3">
-                      {targets && (
-                        <div className="space-y-2 mb-4 pb-4 border-b border-border">
-                          <div className="grid grid-cols-4 gap-2 text-xs">
-                            <div>
-                              <p className="text-muted-foreground">Kcal</p>
-                              <p className="font-bold font-mono">{totals.kcal}</p>
-                            </div>
-                            <div>
-                              <p className="text-muted-foreground">Protein</p>
-                              <p className="font-bold font-mono">{totals.protein}g</p>
-                            </div>
-                            <div>
-                              <p className="text-muted-foreground">Carbs</p>
-                              <p className="font-bold font-mono">{totals.carbs}g</p>
-                            </div>
-                            <div>
-                              <p className="text-muted-foreground">Fat</p>
-                              <p className="font-bold font-mono">{totals.fat}g</p>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                      
-                      {dayMeals.map((meal) => (
-                        <div key={meal.id} className="flex items-center gap-3 p-2 bg-muted rounded-md" data-testid={`meal-card-${meal.id}`}>
-                          <div className="w-10 h-10 rounded-full bg-background flex items-center justify-center text-xl flex-shrink-0">
-                            {meal.emoji}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm truncate">{meal.name}</p>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <span>{meal.time}</span>
-                              <span>•</span>
-                              <span>{meal.kcal} kcal</span>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </Card>
+                <button
+                  key={index}
+                  onClick={() => setSelectedDate(date)}
+                  className={`flex flex-col items-center p-2 rounded-lg transition-all flex-1 ${
+                    isSelected 
+                      ? "bg-primary text-primary-foreground" 
+                      : isTodayDate
+                      ? "bg-accent"
+                      : "hover-elevate"
+                  }`}
+                  data-testid={`button-day-${index}`}
+                >
+                  <span className="text-xs font-medium mb-2">{daysOfWeek[date.getDay()]}</span>
+                  <span className="text-lg font-bold mb-2">{date.getDate()}</span>
+                  <div 
+                    className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                      status === "green" 
+                        ? "bg-success border-success" 
+                        : status === "yellow"
+                        ? "bg-warning border-warning"
+                        : status === "red"
+                        ? "bg-destructive border-destructive"
+                        : "border-muted-foreground/30"
+                    }`}
+                    data-testid={`indicator-${index}`}
+                  >
+                    {status !== "none" && <span className="text-xs">✓</span>}
+                  </div>
+                </button>
               );
             })}
-          </TabsContent>
-        </Tabs>
+          </div>
+        </Card>
+
+        <div>
+          <h3 className="text-lg font-semibold mb-4">
+            {isToday(selectedDate) ? "Today's Meals" : `Meals for ${selectedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
+          </h3>
+          
+          {targets && (
+            <Card className="p-4 mb-4 space-y-4">
+              <MacroProgress current={selectedDayStats.kcal} target={targets.kcal} label="Calories" unit=" kcal" />
+              <MacroProgress current={selectedDayStats.protein} target={targets.protein} label="Protein" unit="g" />
+              <MacroProgress current={selectedDayStats.carbs} target={targets.carbs} label="Carbs" unit="g" />
+              <MacroProgress current={selectedDayStats.fat} target={targets.fat} label="Fat" unit="g" />
+            </Card>
+          )}
+
+          <EnhancedMealLog
+            meals={selectedDayMeals}
+            previousMeals={previousMeals}
+            onAddMeal={handleAddMeal}
+            onDeleteMeal={handleDeleteMeal}
+            onScanBarcode={handleScanBarcode}
+            targets={undefined}
+          />
+        </div>
       </main>
     </div>
   );
