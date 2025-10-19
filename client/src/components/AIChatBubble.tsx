@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -17,7 +18,43 @@ export default function AIChatBubble({ onMealLogged, onWorkoutScheduled, onTaskA
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [response, setResponse] = useState<string>("");
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
+
+  // Listen for openAiChat event
+  useEffect(() => {
+    const handleOpenAiChat = () => {
+      setIsOpen(true);
+    };
+    window.addEventListener('openAiChat', handleOpenAiChat);
+    return () => window.removeEventListener('openAiChat', handleOpenAiChat);
+  }, []);
+
+  // Detect when dialogs are open
+  useEffect(() => {
+    const checkForDialogs = () => {
+      const dialogs = document.querySelectorAll('[data-radix-dialog-content]');
+      const hasOpenDialog = Array.from(dialogs).some(dialog => {
+        const style = window.getComputedStyle(dialog);
+        return style.display !== 'none' && style.visibility !== 'hidden';
+      });
+      setIsDialogOpen(hasOpenDialog);
+    };
+
+    // Check initially
+    checkForDialogs();
+
+    // Set up mutation observer to watch for dialog changes
+    const observer = new MutationObserver(checkForDialogs);
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['data-state', 'style', 'class']
+    });
+
+    return () => observer.disconnect();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -135,14 +172,25 @@ export default function AIChatBubble({ onMealLogged, onWorkoutScheduled, onTaskA
 
   return (
     <>
-      <Button
-        onClick={() => setIsOpen(true)}
-        className="fixed bottom-24 right-4 z-50 rounded-full w-14 h-14 shadow-lg"
-        size="icon"
-        data-testid="button-ai-chat"
-      >
-        <Sparkles className="w-6 h-6" />
-      </Button>
+      {typeof document !== 'undefined' && !isDialogOpen && createPortal(
+        <button
+          onClick={() => setIsOpen(true)}
+          className="fixed left-4 top-1/2 -translate-y-1/2 z-[99999] rounded-full shadow-lg bg-primary text-primary-foreground border border-primary-border flex items-center justify-center hover:scale-110 transition-transform"
+          data-testid="button-ai-chat"
+          aria-label="Open AI Assistant"
+          style={{ 
+            pointerEvents: 'auto',
+            borderRadius: '50%',
+            width: '52px',
+            height: '52px',
+            minWidth: '52px',
+            minHeight: '52px'
+          }}
+        >
+          <Sparkles className="w-5 h-5" />
+        </button>,
+        document.body
+      )}
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="sm:max-w-md">

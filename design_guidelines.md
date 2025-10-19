@@ -162,3 +162,119 @@ Drawing inspiration from industry leaders in productivity and health tracking:
 **To Do Tab**: Stats bar (completed/total) → Filter chips (All, Today, Food, Calendar) → Task list (grouped by status) → Quick add bar (sticky bottom)
 
 **All Tabs**: Consistent header height (h-14), tab title centered, optional action button top-right
+
+---
+
+## Design System & Component Architecture
+
+### Design Tokens (`/client/src/lib/designTokens.ts`)
+
+Centralized design tokens provide consistency across the entire application:
+
+**Timeline Tokens**:
+- Bar width: `w-2`, positioned at `left-0`
+- Time labels: `-7rem` from timeline, `text-sm sm:text-base`, monospace font
+- Task cards: Start at `2rem`, `0.5rem` right margin
+- Wake/Sleep labels: `-250%` above, `150%` below
+
+**Button Tokens**:
+- Icon size: `w-4 h-4`
+- Icon container: `h-8 w-8`
+- Header buttons: `variant="outline"`, `size="icon"`
+
+**Spacing Tokens**:
+- Container padding: Mobile `px-0`, Tablet `sm:px-2`, Desktop `md:px-4`
+- Section spacing: `space-y-4`
+- Gaps: `xs: gap-1`, `sm: gap-2`, `md: gap-3`, `lg: gap-4`
+
+**Typography Tokens**:
+- Page title: `text-xl font-bold`
+- Section title: `text-lg font-semibold`
+- Card title: `text-sm font-semibold`
+- Body: `text-sm`
+- Caption: `text-xs text-muted-foreground`
+
+### Shared Components
+
+**Timeline Components** (`/client/src/components/timeline/`)
+
+1. **TimeLabel** - Reusable time display
+   - Props: `time`, `position`, `isBold`, `withGlow`, `zIndex`, `leftOffset`
+   - Automatically uses design tokens
+   - Handles responsive positioning
+
+2. **TimelineDot** - Interactive timeline dots
+   - Props: `isWakeUp`, `isBedTime`, `isCompleted`, `hasReminder`, `onClick`
+   - Consistent sizing and colors
+   - Hover animations built-in
+
+3. **WakeSleepLabel** - Wake/Sleep text labels
+   - Props: `text`, `position`, `isAbove`
+   - Vertical positioning handled automatically
+   - Uses design token offsets
+
+4. **TaskCheckbox** - Standardized task checkbox
+   - Props: `task`, `onToggle`, `isPrediction`
+   - Disabled state for predictions
+   - Test ID included
+
+### Component Patterns
+
+**MinimizableCard Usage**:
+- Always use `MinimizableCard` wrapper for health/food/sport sections
+- Never nest `Card` components inside `MinimizableCard`
+- Use `relative` positioning for absolute-positioned children
+- Keep titles with emojis for visual hierarchy
+
+**Button Positioning**:
+- Settings/action buttons: Use `absolute top-2 right-12` (next to minimize)
+- Multiple buttons: `right-12` for first, `right-20` for second, etc.
+- Always wrap in `relative` parent container
+
+**Dialog Patterns**:
+- Define dialogs at component root level (not conditionally)
+- Use `DialogTrigger` with `asChild` for custom buttons
+- Keep dialog state in parent component
+
+### Code Review Checklist
+
+**Anti-Patterns to Avoid**:
+- ❌ Nested Card components
+- ❌ Duplicate time label code
+- ❌ Hardcoded spacing values instead of tokens
+- ❌ Inconsistent button variants
+- ❌ Magic numbers for positioning
+- ❌ Inline styles that could be design tokens
+
+**Best Practices**:
+- ✅ Import from `designTokens` for all spacing/sizing
+- ✅ Use shared timeline components
+- ✅ Consistent button styling across all pages
+- ✅ Single source of truth for design values
+- ✅ Reusable components over copy-paste
+- ✅ Mobile-first responsive design
+
+### Refactoring Guide
+
+When refactoring duplicate code:
+
+1. **Identify the pattern**: Look for repeated JSX structures
+2. **Extract to component**: Create in `/components/timeline/` or `/components/shared/`
+3. **Use design tokens**: Replace hardcoded values with token references
+4. **Add props**: Make component flexible but opinionated
+5. **Update imports**: Use barrel exports from `/timeline/index.ts`
+6. **Test responsiveness**: Verify on mobile, tablet, desktop breakpoints
+
+### Design Token Usage Example
+
+```typescript
+import { designTokens } from "@/lib/designTokens";
+
+// Instead of:
+<div className="text-xs sm:text-sm font-mono text-muted-foreground">
+
+// Use:
+<div className={`${designTokens.timeline.timeLabel.fontSize} ${designTokens.timeline.timeLabel.fontFamily} text-muted-foreground`}>
+```
+
+This ensures consistency and makes global design changes easy to implement.

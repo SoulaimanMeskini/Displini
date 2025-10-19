@@ -26,17 +26,18 @@ export default function Profile() {
         variant: "destructive",
       });
       setTimeout(() => {
-        window.location.href = "/api/login";
       }, 500);
       return;
     }
   }, [user, isLoading, toast]);
 
   useEffect(() => {
-    if (user?.dateOfBirth) {
-      setDateOfBirth(user.dateOfBirth);
+    // Load dateOfBirth from localStorage
+    const savedDOB = localStorage.getItem('userDateOfBirth');
+    if (savedDOB) {
+      setDateOfBirth(savedDOB);
     }
-  }, [user]);
+  }, []);
 
   const updateProfileMutation = useMutation({
     mutationFn: async (data: { dateOfBirth: string }) => {
@@ -57,7 +58,6 @@ export default function Profile() {
           variant: "destructive",
         });
         setTimeout(() => {
-          window.location.href = "/api/login";
         }, 500);
         return;
       }
@@ -71,7 +71,11 @@ export default function Profile() {
 
   const handleSave = () => {
     if (dateOfBirth) {
-      updateProfileMutation.mutate({ dateOfBirth });
+      localStorage.setItem('userDateOfBirth', dateOfBirth);
+      toast({
+        title: "Profile updated",
+        description: "Your date of birth has been saved.",
+      });
     }
   };
 
@@ -87,10 +91,10 @@ export default function Profile() {
     return null;
   }
 
-  const initials = `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`.toUpperCase() || user.email?.[0]?.toUpperCase() || '?';
+  const initials = user.email?.[0]?.toUpperCase() || '?';
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background pb-20 pt-16">
       <header className="sticky top-0 z-40 bg-background border-b border-border px-4 py-3 flex items-center gap-4">
         <Button 
           variant="ghost" 
@@ -107,22 +111,12 @@ export default function Profile() {
         <Card className="p-6 space-y-6">
           <div className="flex flex-col items-center gap-4">
             <Avatar className="w-24 h-24">
-              <AvatarImage 
-                src={user.profileImageUrl || undefined} 
-                alt={`${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'User'} 
-                className="object-cover"
-              />
               <AvatarFallback className="text-2xl">{initials}</AvatarFallback>
             </Avatar>
             <div className="text-center">
               <h2 className="text-xl font-semibold" data-testid="text-user-name">
-                {user.firstName || user.lastName 
-                  ? `${user.firstName || ''} ${user.lastName || ''}`.trim() 
-                  : user.email || 'User'}
+                {user.email || 'User'}
               </h2>
-              {user.email && (user.firstName || user.lastName) && (
-                <p className="text-sm text-muted-foreground" data-testid="text-user-email">{user.email}</p>
-              )}
             </div>
           </div>
         </Card>
@@ -138,31 +132,6 @@ export default function Profile() {
               value={user.email || ''} 
               disabled 
               data-testid="input-email"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="firstName">First Name</Label>
-            <Input 
-              id="firstName" 
-              type="text" 
-              value={user.firstName || ''} 
-              disabled 
-              data-testid="input-first-name"
-            />
-            <p className="text-xs text-muted-foreground">
-              First and last name are managed through your account provider
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="lastName">Last Name</Label>
-            <Input 
-              id="lastName" 
-              type="text" 
-              value={user.lastName || ''} 
-              disabled 
-              data-testid="input-last-name"
             />
           </div>
 

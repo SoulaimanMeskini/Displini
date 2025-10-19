@@ -9,7 +9,7 @@ export default function Landing() {
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <h1 className="text-2xl font-bold">Habit Tracker</h1>
           <Button asChild data-testid="button-login">
-            <a href="/api/login">Sign In</a>
+            <a href="/">Sign In</a>
           </Button>
         </div>
       </header>
@@ -28,7 +28,7 @@ export default function Landing() {
             </p>
             <div className="pt-6">
               <Button asChild size="lg" data-testid="button-get-started">
-                <a href="/api/login">Get Started</a>
+                <a href="/">Get Started</a>
               </Button>
             </div>
           </div>

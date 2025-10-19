@@ -8,5 +8,6 @@ export interface CalendarEvent {
   allDay?: boolean;
   emoji?: string;
   addToTodo?: boolean;
-  type?: 'event' | 'period';
+  type?: 'event' | 'period' | 'todo';
+  location?: string;
 }

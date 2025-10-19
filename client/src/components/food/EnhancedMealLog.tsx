@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2, Camera } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { UniversalDialog } from "@/components/shared";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -67,10 +67,12 @@ export default function EnhancedMealLog({
   const [selectedEmoji, setSelectedEmoji] = useState("🍗");
   const [scheduleType, setScheduleType] = useState<"now" | "today" | "day" | "weekly" | "biweekly" | "monthly">("now");
   const [scheduleDay, setScheduleDay] = useState("monday");
+  const [specificDate, setSpecificDate] = useState(""); // For "Specific day" calendar date
   const [scheduleTime, setScheduleTime] = useState("");
   
   const [emojiPickerMealId, setEmojiPickerMealId] = useState<string | null>(null);
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
+  const [saveToQuickAdd, setSaveToQuickAdd] = useState(false);
 
   const calculateKcal = () => {
     const p = parseFloat(protein) || 0;
@@ -84,7 +86,7 @@ export default function EnhancedMealLog({
       const kcal = calculateKcal();
       const schedule = scheduleType !== "now" && scheduleType !== "today" ? {
         type: scheduleType,
-        day: scheduleDay,
+        day: scheduleType === "day" ? specificDate : scheduleDay,
         time: scheduleTime || time,
       } : (scheduleType === "today" ? {
         type: "today" as const,
@@ -102,6 +104,24 @@ export default function EnhancedMealLog({
         emoji: selectedEmoji,
         schedule,
       });
+      
+      // Save to quick add if checkbox is checked
+      if (saveToQuickAdd) {
+        const quickAddMeals = JSON.parse(localStorage.getItem('quickAddMeals') || '[]');
+        const newQuickAddMeal = {
+          id: Date.now().toString(),
+          name: mealName,
+          protein: parseFloat(protein) || 0,
+          carbs: parseFloat(carbs) || 0,
+          fat: parseFloat(fat) || 0,
+          kcal,
+          emoji: selectedEmoji,
+          time: '',
+        };
+        quickAddMeals.push(newQuickAddMeal);
+        localStorage.setItem('quickAddMeals', JSON.stringify(quickAddMeals));
+      }
+      
       setMealName("");
       setProtein("");
       setCarbs("");
@@ -110,7 +130,9 @@ export default function EnhancedMealLog({
       setSelectedEmoji("🍗");
       setScheduleType("now");
       setScheduleDay("monday");
+      setSpecificDate("");
       setScheduleTime("");
+      setSaveToQuickAdd(false);
       setIsOpen(false);
     }
   };
@@ -124,6 +146,7 @@ export default function EnhancedMealLog({
       kcal: meal.kcal,
       emoji: meal.emoji,
       time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
+      schedule: undefined, // Quick add meals are consumed immediately
     });
     setIsOpen(false);
   };
@@ -195,29 +218,32 @@ export default function EnhancedMealLog({
     <div className="space-y-4">
       {!hideAddButton && (
         <div className="flex items-center justify-end gap-2">
-          <Dialog open={isOpen} onOpenChange={setIsOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm" data-testid="button-add-meal">
-                <Plus className="w-4 h-4 mr-2" />
-                Log Food
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <div className="flex items-center justify-between">
-                  <DialogTitle>Log a Meal</DialogTitle>
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="icon"
-                    onClick={onScanBarcode} 
-                    data-testid="button-scan-barcode"
-                  >
-                    <Camera className="w-4 h-4" />
-                  </Button>
-                </div>
-              </DialogHeader>
-              <Tabs defaultValue="manual" className="pt-4">
+          <Button size="sm" onClick={() => setIsOpen(true)} data-testid="button-add-meal">
+            <Plus className="w-4 h-4 mr-2" />
+            Log Food
+          </Button>
+        </div>
+      )}
+
+      <UniversalDialog
+        open={isOpen}
+        onOpenChange={setIsOpen}
+        title="Log a Meal"
+        hideDefaultFooter
+      >
+        <div className="flex items-center justify-end mb-2">
+          <Button 
+            type="button" 
+            variant="outline" 
+            size="sm"
+            onClick={onScanBarcode} 
+            data-testid="button-scan-barcode"
+          >
+            <Camera className="w-4 h-4 mr-2" />
+            Scan Barcode
+          </Button>
+        </div>
+        <Tabs defaultValue="manual">
                 <TabsList className="grid w-full grid-cols-2">
                   <TabsTrigger value="manual" data-testid="tab-manual">Manual Entry</TabsTrigger>
                   <TabsTrigger value="quick" data-testid="tab-quick-add">Quick Add</TabsTrigger>
@@ -300,6 +326,19 @@ export default function EnhancedMealLog({
                       </p>
                     </div>
                   )}
+                  
+                  <div className="flex items-center gap-2">
+                    <input 
+                      type="checkbox" 
+                      id="save-quick-add"
+                      checked={saveToQuickAdd}
+                      onChange={(e) => setSaveToQuickAdd(e.target.checked)}
+                      className="w-4 h-4 rounded border-gray-300"
+                    />
+                    <Label htmlFor="save-quick-add" className="cursor-pointer">
+                      Save to Quick Add
+                    </Label>
+                  </div>
 
                   <div>
                     <Label htmlFor="schedule-type">When to eat?</Label>
@@ -320,23 +359,36 @@ export default function EnhancedMealLog({
 
                   {scheduleType !== "now" && scheduleType !== "today" && (
                     <div className="space-y-3">
-                      <div>
-                        <Label htmlFor="schedule-day">Day</Label>
-                        <Select value={scheduleDay} onValueChange={setScheduleDay}>
-                          <SelectTrigger id="schedule-day" data-testid="select-schedule-day">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="monday">Monday</SelectItem>
-                            <SelectItem value="tuesday">Tuesday</SelectItem>
-                            <SelectItem value="wednesday">Wednesday</SelectItem>
-                            <SelectItem value="thursday">Thursday</SelectItem>
-                            <SelectItem value="friday">Friday</SelectItem>
-                            <SelectItem value="saturday">Saturday</SelectItem>
-                            <SelectItem value="sunday">Sunday</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                      {scheduleType === "day" ? (
+                        <div>
+                          <Label htmlFor="specific-date">Date</Label>
+                          <Input
+                            id="specific-date"
+                            type="date"
+                            value={specificDate}
+                            onChange={(e) => setSpecificDate(e.target.value)}
+                            data-testid="input-specific-date"
+                          />
+                        </div>
+                      ) : (
+                        <div>
+                          <Label htmlFor="schedule-day">Day</Label>
+                          <Select value={scheduleDay} onValueChange={setScheduleDay}>
+                            <SelectTrigger id="schedule-day" data-testid="select-schedule-day">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="monday">Monday</SelectItem>
+                              <SelectItem value="tuesday">Tuesday</SelectItem>
+                              <SelectItem value="wednesday">Wednesday</SelectItem>
+                              <SelectItem value="thursday">Thursday</SelectItem>
+                              <SelectItem value="friday">Friday</SelectItem>
+                              <SelectItem value="saturday">Saturday</SelectItem>
+                              <SelectItem value="sunday">Sunday</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
                       <div>
                         <Label htmlFor="schedule-time">Time</Label>
                         <Input
@@ -369,51 +421,81 @@ export default function EnhancedMealLog({
                 </TabsContent>
 
                 <TabsContent value="quick" className="space-y-3">
-                  {previousMeals.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <p>No previous meals found</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2 max-h-96 overflow-y-auto">
-                      {previousMeals.map((meal) => (
-                        <Card
-                          key={meal.id}
-                          className="p-3 hover-elevate cursor-pointer"
-                          onClick={() => handleQuickAdd(meal)}
-                          data-testid={`card-quick-add-${meal.id}`}
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-xl flex-shrink-0">
-                              {meal.emoji}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium mb-1 truncate">{meal.name}</p>
-                              <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                                <span>{meal.kcal} kcal</span>
-                                <span>P: {meal.protein}g</span>
-                                <span>C: {meal.carbs}g</span>
-                                <span>F: {meal.fat}g</span>
+                  {(() => {
+                    const quickAddMeals = JSON.parse(localStorage.getItem('quickAddMeals') || '[]');
+                    const allQuickMeals = [...quickAddMeals, ...previousMeals];
+                    
+                    return allQuickMeals.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <p>No quick add meals found</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2 max-h-96 overflow-y-auto">
+                        {allQuickMeals.map((meal) => {
+                          const isCustomQuickAdd = quickAddMeals.some((qm: Meal) => qm.id === meal.id);
+                          
+                          return (
+                            <Card
+                              key={meal.id}
+                              className="p-3 hover-elevate cursor-pointer relative group"
+                              onClick={() => handleQuickAdd(meal)}
+                              data-testid={`card-quick-add-${meal.id}`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-xl flex-shrink-0">
+                                  {meal.emoji}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium mb-1 truncate">{meal.name}</p>
+                                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                    <span>{meal.kcal} kcal</span>
+                                    <span>P: {meal.protein}g</span>
+                                    <span>C: {meal.carbs}g</span>
+                                    <span>F: {meal.fat}g</span>
+                                  </div>
+                                </div>
+                                {isCustomQuickAdd && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="opacity-0 group-hover:opacity-100 transition-opacity"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const updated = quickAddMeals.filter((qm: Meal) => qm.id !== meal.id);
+                                      localStorage.setItem('quickAddMeals', JSON.stringify(updated));
+                                      setIsOpen(false); // Force re-render
+                                      setTimeout(() => setIsOpen(true), 0);
+                                    }}
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                )}
                               </div>
-                            </div>
-                          </div>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
+                            </Card>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
                 </TabsContent>
-              </Tabs>
-            </DialogContent>
-          </Dialog>
-        </div>
-      )}
+        </Tabs>
+      </UniversalDialog>
 
       {showTitle && <h4 className="text-sm font-semibold text-muted-foreground">{showTitle}</h4>}
 
       <div className="space-y-3">
         {meals.length === 0 ? (
-          <Card className="p-6 text-center">
-            <p className="text-muted-foreground">No meals logged yet</p>
-          </Card>
+          <div className="flex items-center justify-center p-8">
+            <Button
+              size="icon"
+              variant="outline"
+              className="h-16 w-16 rounded-full"
+                onClick={() => setIsOpen(true)}
+              title="Log food"
+            >
+              <Plus className="w-8 h-8" />
+            </Button>
+          </div>
         ) : (
           meals.map((meal) => renderMealCard(meal, false))
         )}
@@ -426,26 +508,26 @@ export default function EnhancedMealLog({
         </div>
       )}
 
-      <Dialog open={emojiPickerOpen} onOpenChange={setEmojiPickerOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Change Emoji</DialogTitle>
-          </DialogHeader>
-          <div className="flex flex-wrap gap-2 pt-4">
-            {foodEmojis.map((emoji, index) => (
-              <button
-                key={`picker-${emoji}-${index}`}
-                type="button"
-                onClick={() => handleEmojiChange(emoji)}
-                className="w-12 h-12 rounded-full flex items-center justify-center text-2xl bg-muted hover-elevate"
-                data-testid={`button-picker-emoji-${emoji}`}
-              >
-                {emoji}
-              </button>
-            ))}
-          </div>
-        </DialogContent>
-      </Dialog>
+      <UniversalDialog
+        open={emojiPickerOpen}
+        onOpenChange={setEmojiPickerOpen}
+        title="Change Emoji"
+        hideDefaultFooter
+      >
+        <div className="flex flex-wrap gap-2">
+          {foodEmojis.map((emoji, index) => (
+            <button
+              key={`picker-${emoji}-${index}`}
+              type="button"
+              onClick={() => handleEmojiChange(emoji)}
+              className="w-12 h-12 rounded-full flex items-center justify-center text-2xl bg-muted hover-elevate"
+              data-testid={`button-picker-emoji-${emoji}`}
+            >
+              {emoji}
+            </button>
+          ))}
+        </div>
+      </UniversalDialog>
     </div>
   );
 }

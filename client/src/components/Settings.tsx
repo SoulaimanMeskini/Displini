@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Settings as SettingsIcon, User } from "lucide-react";
+import { Settings as SettingsIcon, User, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,6 +11,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -31,8 +32,22 @@ export default function Settings() {
   const [weekStartDay, setWeekStartDay] = useState("0");
   const [temperatureUnit, setTemperatureUnit] = useState("celsius");
   const [measurementUnit, setMeasurementUnit] = useState("metric");
+  const [timezone, setTimezone] = useState("auto");
+  const [showTaskTags, setShowTaskTags] = useState(true);
+  const [confettiEnabled, setConfettiEnabled] = useState(true);
+  const [showTodosInCalendar, setShowTodosInCalendar] = useState(false);
+  const [stickyDateCarousel, setStickyDateCarousel] = useState(false);
+  const [editProfileOpen, setEditProfileOpen] = useState(false);
   const { user } = useAuth();
   const [, setLocation] = useLocation();
+  
+  const handleEditProfile = () => {
+    // Reset onboarding flag to show the dialog again
+    const profile = JSON.parse(localStorage.getItem('userProfile') || '{}');
+    profile.onboardingCompleted = false;
+    localStorage.setItem('userProfile', JSON.stringify(profile));
+    window.location.reload();
+  };
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("colorTheme") || "blue";
@@ -40,11 +55,21 @@ export default function Settings() {
     const savedWeekStart = localStorage.getItem("weekStartDay") || "0";
     const savedTempUnit = localStorage.getItem("temperatureUnit") || "celsius";
     const savedMeasureUnit = localStorage.getItem("measurementUnit") || "metric";
+    const savedTimezone = localStorage.getItem("timezone") || "auto";
+    const savedShowTags = localStorage.getItem("showTaskTags") !== "false"; // Default true
+    const savedConfetti = localStorage.getItem("confettiEnabled") !== "false"; // Default true
+    const savedShowTodosInCalendar = localStorage.getItem("showTodosInCalendar") === "true"; // Default false
+    const savedStickyCarousel = localStorage.getItem("stickyDateCarousel") === "true"; // Default false
     setSelectedTheme(savedTheme);
     setCustomColor(savedCustomColor);
     setWeekStartDay(savedWeekStart);
     setTemperatureUnit(savedTempUnit);
     setMeasurementUnit(savedMeasureUnit);
+    setTimezone(savedTimezone);
+    setShowTaskTags(savedShowTags);
+    setConfettiEnabled(savedConfetti);
+    setShowTodosInCalendar(savedShowTodosInCalendar);
+    setStickyDateCarousel(savedStickyCarousel);
     applyTheme(savedTheme, savedCustomColor);
   }, []);
 
@@ -137,18 +162,47 @@ export default function Settings() {
     localStorage.setItem("measurementUnit", unit);
   };
 
+  const handleTimezoneChange = (tz: string) => {
+    setTimezone(tz);
+    localStorage.setItem("timezone", tz);
+    window.dispatchEvent(new Event('timezoneChanged'));
+  };
+
+  const handleShowTaskTagsChange = (checked: boolean) => {
+    setShowTaskTags(checked);
+    localStorage.setItem("showTaskTags", String(checked));
+    window.dispatchEvent(new Event('taskTagsSettingChanged'));
+  };
+
+  const handleConfettiChange = (checked: boolean) => {
+    setConfettiEnabled(checked);
+    localStorage.setItem("confettiEnabled", String(checked));
+  };
+
+  const handleShowTodosInCalendarChange = (checked: boolean) => {
+    setShowTodosInCalendar(checked);
+    localStorage.setItem("showTodosInCalendar", String(checked));
+    window.dispatchEvent(new Event('calendarTodosSettingChanged'));
+  };
+
+  const handleStickyCarouselChange = (checked: boolean) => {
+    setStickyDateCarousel(checked);
+    localStorage.setItem("stickyDateCarousel", String(checked));
+    window.dispatchEvent(new Event('stickyCarouselSettingChanged'));
+  };
+
   const initials = user 
-    ? `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`.toUpperCase() || user.email?.[0]?.toUpperCase() || '?'
+    ? user.email?.[0]?.toUpperCase() || '?'
     : '?';
 
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon" data-testid="button-settings">
-          <SettingsIcon className="w-5 h-5" />
+        <Button variant="outline" size="icon" data-testid="button-settings">
+          <SettingsIcon className="w-4 h-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Settings</DialogTitle>
         </DialogHeader>
@@ -164,23 +218,37 @@ export default function Settings() {
               >
                 <Avatar className="w-10 h-10">
                   <AvatarImage 
-                    src={user.profileImageUrl || undefined} 
-                    alt={`${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'User'}
+                    src={undefined} 
+                    alt={user.email || 'User'}
                     className="object-cover"
                   />
                   <AvatarFallback>{initials}</AvatarFallback>
                 </Avatar>
                 <div className="flex flex-col items-start">
                   <span className="font-medium">
-                    {user.firstName || user.lastName 
-                      ? `${user.firstName || ''} ${user.lastName || ''}`.trim() 
-                      : user.email || 'User'}
+                    {user.email || 'User'}
                   </span>
                   <span className="text-xs text-muted-foreground">View profile settings</span>
                 </div>
               </Button>
             </div>
           )}
+
+          <div>
+            <Label className="text-base font-semibold mb-3 block">Personal Information</Label>
+            <Button 
+              variant="outline" 
+              className="w-full justify-between"
+              onClick={handleEditProfile}
+              data-testid="button-edit-profile"
+            >
+              <span>Edit Profile Info</span>
+              <Edit className="w-4 h-4" />
+            </Button>
+            <p className="text-xs text-muted-foreground mt-2">
+              Update your gender, age, height, weight, and activity level
+            </p>
+          </div>
           
           <div>
             <Label className="text-base font-semibold mb-4 block">Color Theme</Label>
@@ -261,6 +329,85 @@ export default function Settings() {
                 <SelectItem value="imperial">Imperial (ft, lb)</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="timezone" className="text-base font-semibold mb-3 block">Timezone</Label>
+            <Select value={timezone} onValueChange={handleTimezoneChange}>
+              <SelectTrigger id="timezone" data-testid="select-timezone">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="max-h-[300px]">
+                <SelectItem value="auto">Auto-detect</SelectItem>
+                <SelectItem value="UTC">UTC (GMT+0)</SelectItem>
+                <SelectItem value="America/New_York">Eastern Time (GMT-5)</SelectItem>
+                <SelectItem value="America/Chicago">Central Time (GMT-6)</SelectItem>
+                <SelectItem value="America/Denver">Mountain Time (GMT-7)</SelectItem>
+                <SelectItem value="America/Los_Angeles">Pacific Time (GMT-8)</SelectItem>
+                <SelectItem value="America/Anchorage">Alaska Time (GMT-9)</SelectItem>
+                <SelectItem value="Pacific/Honolulu">Hawaii Time (GMT-10)</SelectItem>
+                <SelectItem value="Europe/London">London (GMT+0)</SelectItem>
+                <SelectItem value="Europe/Paris">Paris/Berlin (GMT+1)</SelectItem>
+                <SelectItem value="Europe/Athens">Athens (GMT+2)</SelectItem>
+                <SelectItem value="Europe/Moscow">Moscow (GMT+3)</SelectItem>
+                <SelectItem value="Asia/Dubai">Dubai (GMT+4)</SelectItem>
+                <SelectItem value="Asia/Karachi">Karachi (GMT+5)</SelectItem>
+                <SelectItem value="Asia/Dhaka">Dhaka (GMT+6)</SelectItem>
+                <SelectItem value="Asia/Bangkok">Bangkok (GMT+7)</SelectItem>
+                <SelectItem value="Asia/Shanghai">Beijing/Shanghai (GMT+8)</SelectItem>
+                <SelectItem value="Asia/Tokyo">Tokyo (GMT+9)</SelectItem>
+                <SelectItem value="Australia/Sydney">Sydney (GMT+10)</SelectItem>
+                <SelectItem value="Pacific/Auckland">Auckland (GMT+12)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="show-task-tags" className="text-base font-semibold mb-3 block">Display Options</Label>
+            <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/50 mb-2">
+              <Label htmlFor="show-task-tags" className="cursor-pointer flex-1">
+                Show task source tags in timeline
+              </Label>
+              <Switch
+                id="show-task-tags"
+                checked={showTaskTags}
+                onCheckedChange={handleShowTaskTagsChange}
+                data-testid="switch-show-task-tags"
+              />
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/50">
+              <Label htmlFor="confetti-enabled" className="cursor-pointer flex-1">
+                Show confetti when all tasks completed
+              </Label>
+              <Switch
+                id="confetti-enabled"
+                checked={confettiEnabled}
+                onCheckedChange={handleConfettiChange}
+                data-testid="switch-confetti-enabled"
+              />
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/50">
+              <Label htmlFor="show-todos-in-calendar" className="cursor-pointer flex-1">
+                Show To Do tasks in Calendar
+              </Label>
+              <Switch
+                id="show-todos-in-calendar"
+                checked={showTodosInCalendar}
+                onCheckedChange={handleShowTodosInCalendarChange}
+                data-testid="switch-show-todos-in-calendar"
+              />
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/50">
+              <Label htmlFor="sticky-date-carousel" className="cursor-pointer flex-1">
+                Pin Date Carousel (Sticky)
+              </Label>
+              <Switch
+                id="sticky-date-carousel"
+                checked={stickyDateCarousel}
+                onCheckedChange={handleStickyCarouselChange}
+                data-testid="switch-sticky-date-carousel"
+              />
+            </div>
           </div>
         </div>
       </DialogContent>

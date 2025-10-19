@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Card } from "@/components/ui/card";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -66,7 +66,7 @@ export default function WeightGoalTracker({ currentWeight, onWeightUpdate }: Wei
   const isProgressGood = goalDirection === "loss" ? totalWeightChange < 0 : totalWeightChange > 0;
 
   return (
-    <Card className="p-6">
+    <div className="p-6">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-base font-semibold">Weight & Body Composition</h3>
         <Button 
@@ -222,6 +222,6 @@ export default function WeightGoalTracker({ currentWeight, onWeightUpdate }: Wei
           </div>
         )}
       </div>
-    </Card>
+    </div>
   );
 }

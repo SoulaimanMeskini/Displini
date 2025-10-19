@@ -1,15 +1,13 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
 import { parseUserCommand } from "./openai";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  await setupAuth(app);
 
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+  app.get('/api/auth/user', async (_req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = "dev-user";
       const user = await storage.getUser(userId);
       res.json(user);
     } catch (error) {
@@ -18,9 +16,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/auth/user/profile', isAuthenticated, async (req: any, res) => {
+  app.patch('/api/auth/user/profile', async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = "dev-user";
       const { dateOfBirth } = req.body;
       
       if (dateOfBirth) {
@@ -43,7 +41,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/ai/parse', isAuthenticated, async (req: any, res) => {
+  app.post('/api/ai/generate-story', async (req: any, res) => {
+    try {
+      const { content, prompt, mood, tags } = req.body;
+      
+      if (!content || typeof content !== 'string') {
+        return res.status(400).json({ message: "Invalid content" });
+      }
+
+      const storyPrompt = `Based on this journal entry, create a beautiful, narrative story in third person that captures the essence of the day. Make it inspiring and reflective.
+
+Journal Entry:
+${content}
+
+${prompt ? `Prompt: ${prompt}` : ''}
+${mood ? `Mood: ${mood}/10` : ''}
+${tags && tags.length > 0 ? `Tags: ${tags.join(', ')}` : ''}
+
+Write a short, beautiful story (2-3 paragraphs) that transforms this entry into a compelling narrative.`;
+
+      const { generateText } = await import('./openai');
+      const story = await generateText(storyPrompt);
+      
+      res.json({ story });
+    } catch (error) {
+      console.error("Error generating AI story:", error);
+      res.status(500).json({ message: "Failed to generate story" });
+    }
+  });
+
+  app.post('/api/ai/parse', async (req: any, res) => {
     try {
       const { input } = req.body;
       

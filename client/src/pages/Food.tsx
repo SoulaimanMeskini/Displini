@@ -1,19 +1,23 @@
 import { useState, useEffect } from "react";
+import { Utensils } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
 import MonthlyStatsModal from "@/components/MonthlyStatsModal";
-import MacroCalculator from "@/components/MacroCalculator";
-import WeightGoalTracker from "@/components/WeightGoalTracker";
-import WaterTracker from "@/components/WaterTracker";
-import EnhancedMealLog from "@/components/EnhancedMealLog";
-import AIChatBubble from "@/components/AIChatBubble";
+import MacroCalculator from "@/components/food/MacroCalculator";
+import WeightGoalTracker from "@/components/food/WeightGoalTracker";
+import WaterTracker from "@/components/food/WaterTracker";
+import EnhancedMealLog from "@/components/food/EnhancedMealLog";
 import { Card } from "@/components/ui/card";
-import MacroProgress from "@/components/MacroProgress";
+import MacroProgress from "@/components/food/MacroProgress";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Edit2, Columns, GripVertical, ChevronUp, ChevronDown } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { ChevronLeft, ChevronRight, Edit2 } from "lucide-react";
+import ManageColumns from "@/components/ManageColumns";
+import MinimizableCard from "@/components/MinimizableCard";
+import BMICalculator from "@/components/food/BMICalculator";
+import { DateCarousel } from "@/components/DateCarousel";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 interface Meal {
   id: string;
@@ -55,19 +59,25 @@ export default function Food() {
   
   const [columnOrder, setColumnOrder] = useState<string[]>(() => {
     const saved = localStorage.getItem('food_column_order');
-    return saved ? JSON.parse(saved) : ['calculator', 'weight', 'water', 'week', 'goals', 'meals'];
+    return saved ? JSON.parse(saved) : ['calculator', 'bmi', 'weight', 'water', 'week', 'goals', 'meals'];
   });
   
   const [columnVisibility, setColumnVisibility] = useState<Record<string, boolean>>(() => {
     const saved = localStorage.getItem('food_column_visibility');
     return saved ? JSON.parse(saved) : {
       calculator: true,
+      bmi: true,
       weight: true,
       water: true,
       week: true,
       goals: true,
       meals: true
     };
+  });
+
+  const [columnMinimized, setColumnMinimized] = useState<Record<string, boolean>>(() => {
+    const saved = localStorage.getItem('food_column_minimized');
+    return saved ? JSON.parse(saved) : {};
   });
   
   const getWeekStart = () => {
@@ -85,31 +95,10 @@ export default function Food() {
 
   const [meals, setMeals] = useState<Meal[]>(() => {
     const saved = localStorage.getItem('meals');
-    if (saved) {
-      return JSON.parse(saved);
-    }
-    return [
-      { id: "1", time: "08:00", name: "Oatmeal with protein powder", protein: 25, carbs: 45, fat: 10, kcal: 350, emoji: "🥣", date: new Date().toISOString().split('T')[0] },
-      { id: "2", time: "12:30", name: "Grilled chicken salad", protein: 35, carbs: 20, fat: 15, kcal: 355, emoji: "🥗", date: new Date().toISOString().split('T')[0] },
-      { 
-        id: "3", 
-        time: "18:00", 
-        name: "Protein pasta", 
-        protein: 30, 
-        carbs: 50, 
-        fat: 12, 
-        kcal: 428, 
-        emoji: "🍝",
-        schedule: { type: "weekly", day: "tuesday", time: "18:00" }
-      },
-    ];
+    return saved ? JSON.parse(saved) : [];
   });
 
-  const [previousMeals] = useState<Meal[]>([
-    { id: "p1", time: "08:00", name: "Protein shake", protein: 30, carbs: 10, fat: 5, kcal: 205, emoji: "🥤" },
-    { id: "p2", time: "13:00", name: "Chicken and rice", protein: 40, carbs: 60, fat: 12, kcal: 508, emoji: "🍗" },
-    { id: "p3", time: "19:00", name: "Salmon with vegetables", protein: 35, carbs: 25, fat: 20, kcal: 420, emoji: "🐟" },
-  ]);
+  const [previousMeals] = useState<Meal[]>([]);
 
   useEffect(() => {
     const handleWeekStartChange = () => {
@@ -127,6 +116,64 @@ export default function Food() {
     localStorage.setItem('food_column_visibility', JSON.stringify(columnVisibility));
   }, [columnVisibility]);
 
+  useEffect(() => {
+    localStorage.setItem('food_column_minimized', JSON.stringify(columnMinimized));
+  }, [columnMinimized]);
+
+  // Sync scheduled meals to To Do tasks
+  useEffect(() => {
+    const todos = JSON.parse(localStorage.getItem("todos") || "[]");
+    const today = new Date();
+    const dayName = daysOfWeek[today.getDay()].toLowerCase();
+    
+    // Remove old meal tasks for today
+    const filteredTodos = todos.filter((t: any) => 
+      t.source !== 'food' || 
+      (t.dueDate && new Date(t.dueDate).toDateString() !== today.toDateString())
+    );
+    
+    // Add new meal tasks for today's scheduled meals
+    let tasksAdded = false;
+    meals.forEach(meal => {
+      if (meal.schedule) {
+        let shouldAddTask = false;
+        
+        if (meal.schedule.type === "weekly" || meal.schedule.type === "biweekly") {
+          const scheduledDay = meal.schedule.day?.toLowerCase();
+          if (scheduledDay && dayName.includes(scheduledDay.substring(0, 3))) {
+            shouldAddTask = true;
+          }
+        } else if (meal.schedule.type === "today") {
+          shouldAddTask = true;
+        }
+        
+        if (shouldAddTask) {
+          const taskId = `meal-${meal.id}-${today.toISOString().split('T')[0]}`;
+          // Check if task already exists
+          if (!filteredTodos.some((t: any) => t.id === taskId)) {
+            const newTask = {
+              id: taskId,
+              title: `Eat ${meal.name}`,
+              completed: false,
+              source: "food" as const,
+              dueDate: today.toISOString(),
+              time: meal.schedule.time || meal.time,
+              emoji: meal.emoji,
+              mealId: meal.id
+            };
+            filteredTodos.push(newTask);
+            tasksAdded = true;
+          }
+        }
+      }
+    });
+    
+    if (tasksAdded || filteredTodos.length !== todos.length) {
+      localStorage.setItem("todos", JSON.stringify(filteredTodos));
+      window.dispatchEvent(new Event("todosUpdated"));
+    }
+  }, [meals]);
+
   const handleSaveGoals = () => {
     setTargets(editedGoals);
     localStorage.setItem('calculator_results', JSON.stringify(editedGoals));
@@ -141,7 +188,7 @@ export default function Food() {
   };
 
   const toggleColumnVisibility = (columnId: string) => {
-    if (columnId === 'week' || columnId === 'meals') return;
+    if (columnId === 'week' || columnId === 'goals') return; // week and goals are required
     setColumnVisibility(prev => ({ ...prev, [columnId]: !prev[columnId] }));
   };
 
@@ -152,15 +199,141 @@ export default function Food() {
     setColumnOrder(newOrder);
   };
 
+  const columns = [
+    { id: 'calculator', name: '🧮 Macro Calculator' },
+    { id: 'bmi', name: '📊 BMI Calculator' },
+    { id: 'water', name: '💧 Water Intake' },
+    { id: 'goals', name: '🎯 Today\'s Goals', required: true },
+    { id: 'meals', name: '🍽️ Food Log' },
+  ];
+
   const handleAddMeal = (meal: Omit<Meal, "id">) => {
     const newMeal = { 
       ...meal, 
       id: Date.now().toString(),
-      date: selectedDate.toISOString().split('T')[0]
+      // Set date for meals without schedule (quick add) or with schedule type "now"
+      date: (!meal.schedule || meal.schedule?.type === "now") ? selectedDate.toISOString().split('T')[0] : undefined
     };
     const updatedMeals = [...meals, newMeal];
     setMeals(updatedMeals);
     localStorage.setItem('meals', JSON.stringify(updatedMeals));
+
+    // Create task for scheduled meals (today, weekly, etc.)
+    if (meal.schedule) {
+      console.log('🍽️ Creating tasks for scheduled meal:', meal.name, 'Schedule:', meal.schedule);
+      const todos = JSON.parse(localStorage.getItem("todos") || "[]");
+      
+      // For weekly/biweekly, create tasks for next 4 weeks
+      if (meal.schedule.type === "weekly" || meal.schedule.type === "biweekly") {
+        let scheduledDay = meal.schedule.day?.toLowerCase().trim();
+        console.log('📅 Raw scheduled day:', meal.schedule.day, '→ Processed:', scheduledDay);
+        
+        if (scheduledDay) {
+          const dayMap: Record<string, number> = {
+            sunday: 0, monday: 1, tuesday: 2, wednesday: 3,
+            thursday: 4, friday: 5, saturday: 6,
+            sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6
+          };
+          
+          // Try exact match first, then substring
+          let targetDayNum: number | undefined = dayMap[scheduledDay];
+          if (targetDayNum === undefined) {
+            const matchedEntry = Object.entries(dayMap).find(([day]) => 
+              day.startsWith(scheduledDay.substring(0, 3)) || scheduledDay.startsWith(day)
+            );
+            if (matchedEntry) {
+              targetDayNum = matchedEntry[1];
+            }
+          }
+          
+          console.log('🎯 Target day number:', targetDayNum, 'for day:', scheduledDay);
+          
+          if (targetDayNum !== undefined) {
+            const today = new Date();
+            const currentDay = today.getDay();
+            
+            // Calculate weeks to add
+            const weeksToAdd = meal.schedule.type === "weekly" ? 4 : 2;
+            
+            console.log(`🔄 Creating ${weeksToAdd} tasks starting from today (${today.toDateString()}, day ${currentDay})`);
+            
+            for (let week = 0; week < weeksToAdd; week++) {
+              // Calculate days ahead for this week
+              let daysAhead = targetDayNum - currentDay;
+              if (daysAhead <= 0) daysAhead += 7; // Next occurrence
+              
+              // Add weeks offset
+              const weekOffset = week * (meal.schedule.type === "biweekly" ? 14 : 7);
+              const totalDaysAhead = daysAhead + weekOffset;
+              
+              const date = new Date(today);
+              date.setDate(date.getDate() + totalDaysAhead);
+              
+              console.log(`  Week ${week}: targetDay=${targetDayNum}, currentDay=${currentDay}, daysAhead=${daysAhead}, weekOffset=${weekOffset}, totalDays=${totalDaysAhead}, date=${date.toDateString()}`);
+              
+              const taskTime = meal.schedule.time || meal.time;
+              const hasTime = taskTime && taskTime.trim() !== '';
+              
+              const newTask = {
+                id: `meal-${newMeal.id}-${date.toISOString().split('T')[0]}`,
+                title: `${meal.name}`,
+                completed: false,
+                source: "food" as const,
+                dueDate: date.toISOString(),
+                time: hasTime ? taskTime : undefined,
+                emoji: meal.emoji,
+                mealId: newMeal.id,
+                isAllDay: !hasTime
+              };
+              todos.push(newTask);
+              console.log('  ✅ Created food task:', {
+                id: newTask.id,
+                title: newTask.title,
+                date: date.toDateString(),
+                time: newTask.time,
+                isAllDay: newTask.isAllDay,
+                dueDate: newTask.dueDate
+              });
+            }
+          }
+        }
+      } else if (meal.schedule.type === "today" || meal.schedule.type === "day") {
+        let taskDate: Date;
+        if (meal.schedule.type === "today") {
+          taskDate = new Date();
+        } else if (meal.schedule.day) {
+          taskDate = new Date(meal.schedule.day);
+          // Validate the date
+          if (isNaN(taskDate.getTime())) {
+            taskDate = new Date(); // Fallback to today if invalid
+          }
+        } else {
+          taskDate = new Date();
+        }
+        
+        const taskTime = meal.schedule.time || meal.time;
+        const hasTime = taskTime && taskTime.trim() !== '';
+        
+        const newTask = {
+          id: `meal-${newMeal.id}`,
+          title: `${meal.name}`,
+          completed: false,
+          source: "food" as const,
+          dueDate: taskDate.toISOString(),
+          time: hasTime ? taskTime : undefined,
+          emoji: meal.emoji,
+          mealId: newMeal.id,
+          isAllDay: !hasTime
+        };
+        todos.push(newTask);
+        console.log('📅 Created food task (today/day) for', taskDate.toDateString(), ':', newTask);
+      }
+      
+      console.log('💾 Saving todos to localStorage, total count:', todos.length);
+      console.log('💾 All todos:', todos.map((t: any) => ({ id: t.id, title: t.title, source: t.source, dueDate: t.dueDate })));
+      localStorage.setItem("todos", JSON.stringify(todos));
+      window.dispatchEvent(new Event("todosUpdated"));
+    }
   };
 
   const handleConsumeScheduledMeal = (scheduledMealId: string) => {
@@ -190,6 +363,30 @@ export default function Food() {
     localStorage.setItem('meals', JSON.stringify(updatedMeals));
   };
 
+  const handleConsumeMeal = (id: string) => {
+    const scheduledMeal = meals.find(m => m.id === id);
+    if (scheduledMeal && scheduledMeal.schedule) {
+      // Create a new consumed meal from the scheduled meal
+      const consumedMeal: Meal = {
+        ...scheduledMeal,
+        id: Date.now().toString(),
+        date: selectedDate.toISOString().split('T')[0],
+        schedule: undefined,
+      };
+      const updatedMeals = [...meals, consumedMeal];
+      setMeals(updatedMeals);
+      localStorage.setItem('meals', JSON.stringify(updatedMeals));
+
+      // Complete corresponding task
+      const todos = JSON.parse(localStorage.getItem("todos") || "[]");
+      const updatedTodos = todos.map((t: any) => 
+        t.mealId === id ? { ...t, completed: true } : t
+      );
+      localStorage.setItem("todos", JSON.stringify(updatedTodos));
+      window.dispatchEvent(new Event("todosUpdated"));
+    }
+  };
+
   const handleScanBarcode = () => {
     alert("Barcode scanning feature would open camera here. This requires camera permissions and a barcode scanning API.");
   };
@@ -207,13 +404,21 @@ export default function Food() {
   const getMealsForDate = (date: Date) => {
     const dateStr = date.toISOString().split('T')[0];
     const dayName = daysOfWeek[date.getDay()].toLowerCase();
+    const isToday = date.toDateString() === new Date().toDateString();
     
     const directMeals = meals.filter(m => m.date === dateStr && !m.schedule);
-    const scheduledMeals = meals.filter(m => 
-      m.schedule && 
-      m.schedule.day?.toLowerCase().includes(dayName.toLowerCase()) &&
-      (m.schedule.type === "weekly" || m.schedule.type === "biweekly")
-    );
+    const scheduledMeals = meals.filter(m => {
+      if (!m.schedule) return false;
+      
+      // Handle today scheduled meals
+      if (m.schedule.type === "today" && isToday) return true;
+      
+      // Handle weekly/biweekly scheduled meals
+      if ((m.schedule.type === "weekly" || m.schedule.type === "biweekly") && 
+          m.schedule.day?.toLowerCase().includes(dayName.toLowerCase())) return true;
+      
+      return false;
+    });
     
     return { consumed: directMeals, scheduled: scheduledMeals };
   };
@@ -280,68 +485,46 @@ export default function Food() {
 
     switch (columnId) {
       case 'calculator':
-        return <MacroCalculator key="calculator" onCalculate={setTargets} />;
-      case 'weight':
-        return <WeightGoalTracker key="weight" currentWeight={currentWeight} onWeightUpdate={setCurrentWeight} />;
-      case 'water':
-        return <WaterTracker key="water" />;
-      case 'week':
         return (
-          <Card key="week" className="p-4">
-            <div className="flex items-center justify-between mb-4">
-              <Button variant="ghost" size="icon" onClick={() => navigateWeek("prev")} data-testid="button-prev-week">
-                <ChevronLeft className="w-5 h-5" />
-              </Button>
-              <h3 className="text-base font-semibold">Week View</h3>
-              <Button variant="ghost" size="icon" onClick={() => navigateWeek("next")} data-testid="button-next-week">
-                <ChevronRight className="w-5 h-5" />
-              </Button>
-            </div>
-
-            <div className="flex justify-between gap-1">
-              {weekDays.map((date, index) => {
-                const status = getGoalStatus(date);
-                const isTodayDate = isToday(date);
-                const isSelected = isSelectedDate(date);
-                
-                return (
-                  <button
-                    key={index}
-                    onClick={() => setSelectedDate(date)}
-                    className={`flex flex-col items-center p-2 rounded-lg transition-all flex-1 ${
-                      isSelected 
-                        ? "bg-primary text-primary-foreground" 
-                        : isTodayDate
-                        ? "bg-accent"
-                        : "hover-elevate"
-                    }`}
-                    data-testid={`button-day-${index}`}
-                  >
-                    <span className="text-xs font-medium mb-2">{daysOfWeek[date.getDay()]}</span>
-                    <span className="text-lg font-bold mb-2">{date.getDate()}</span>
-                    <div 
-                      className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
-                        status === "green" 
-                          ? "bg-success border-success" 
-                          : status === "yellow"
-                          ? "bg-warning border-warning"
-                          : status === "red"
-                          ? "bg-destructive border-destructive"
-                          : "border-muted-foreground/30"
-                      }`}
-                      data-testid={`indicator-${index}`}
-                    >
-                      {status !== "none" && <span className="text-xs">✓</span>}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </Card>
+          <MinimizableCard
+            key="calculator"
+            title="🧮 Macro Calculator"
+            minimized={columnMinimized[columnId]}
+            onMinimizeChange={(minimized) => setColumnMinimized(prev => ({ ...prev, [columnId]: minimized }))}
+          >
+            <MacroCalculator onCalculate={setTargets} />
+          </MinimizableCard>
+        );
+      case 'bmi':
+        return (
+          <MinimizableCard
+            key="bmi"
+            title="📊 BMI Calculator"
+            minimized={columnMinimized[columnId]}
+            onMinimizeChange={(minimized) => setColumnMinimized(prev => ({ ...prev, [columnId]: minimized }))}
+          >
+            <BMICalculator />
+          </MinimizableCard>
+        );
+      case 'water':
+        return (
+          <MinimizableCard
+            key="water"
+            title="💧 Water Intake"
+            minimized={columnMinimized[columnId]}
+            onMinimizeChange={(minimized) => setColumnMinimized(prev => ({ ...prev, [columnId]: minimized }))}
+          >
+            <WaterTracker />
+          </MinimizableCard>
         );
       case 'goals':
         return targets ? (
-          <Card key="goals" className="p-4 space-y-4">
+          <MinimizableCard
+            key="goals"
+            title="🎯 Today's Goals"
+            minimized={columnMinimized[columnId]}
+            onMinimizeChange={(minimized) => setColumnMinimized(prev => ({ ...prev, [columnId]: minimized }))}
+          >
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-sm font-semibold">Today's Goals</h3>
               <Button variant="ghost" size="icon" onClick={handleEditGoals} data-testid="button-edit-goals">
@@ -352,14 +535,16 @@ export default function Food() {
             <MacroProgress current={selectedDayStats.protein} target={targets.protein} label="Protein" unit="g" />
             <MacroProgress current={selectedDayStats.carbs} target={targets.carbs} label="Carbs" unit="g" />
             <MacroProgress current={selectedDayStats.fat} target={targets.fat} label="Fat" unit="g" />
-          </Card>
+          </MinimizableCard>
         ) : null;
       case 'meals':
         return (
-          <div key="meals">
-            <h3 className="text-lg font-semibold mb-4">
-              {isToday(selectedDate) ? "Today's Meals" : `Meals for ${selectedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
-            </h3>
+          <MinimizableCard
+            key="meals"
+            title={isToday(selectedDate) ? "🍽️ Today's Meals" : `🍽️ Meals for ${selectedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
+            minimized={columnMinimized[columnId]}
+            onMinimizeChange={(minimized) => setColumnMinimized(prev => ({ ...prev, [columnId]: minimized }))}
+          >
             <EnhancedMealLog
               meals={selectedDayConsumed}
               scheduledMeals={selectedDayScheduled}
@@ -368,10 +553,10 @@ export default function Food() {
               onDeleteMeal={handleDeleteMeal}
               onUpdateMealEmoji={handleUpdateMealEmoji}
               onScanBarcode={handleScanBarcode}
-              onConsumeMeal={handleConsumeScheduledMeal}
+              onConsumeMeal={handleConsumeMeal}
               targets={undefined}
             />
-          </div>
+          </MinimizableCard>
         );
       default:
         return null;
@@ -379,82 +564,33 @@ export default function Food() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background pb-20 pt-16">
       <PageHeader 
         title="Food Tracking" 
+        icon={Utensils}
         onStatsClick={() => setShowStats(true)}
         additionalButtons={
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="icon" data-testid="button-column-settings">
-                <Columns className="w-4 h-4" />
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Manage Columns</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 pt-4">
-                <div className="space-y-3">
-                  {columnOrder.map((columnId, index) => {
-                    const columnNames: Record<string, string> = {
-                      calculator: 'Macro Calculator',
-                      weight: 'Weight Tracker',
-                      water: 'Water Intake',
-                      week: 'Week View',
-                      goals: 'Today\'s Goals',
-                      meals: 'Food Log'
-                    };
-                    const isProtected = columnId === 'week' || columnId === 'meals';
-                    
-                    return (
-                      <div key={columnId} className="flex items-center justify-between gap-3 p-3 bg-muted rounded-md">
-                        <div className="flex items-center gap-2">
-                          <div className="flex flex-col gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={() => moveColumn(index, Math.max(0, index - 1))}
-                              disabled={index === 0}
-                              data-testid={`button-move-up-${columnId}`}
-                            >
-                              <ChevronUp className="w-3 h-3" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={() => moveColumn(index, Math.min(columnOrder.length - 1, index + 1))}
-                              disabled={index === columnOrder.length - 1}
-                              data-testid={`button-move-down-${columnId}`}
-                            >
-                              <ChevronDown className="w-3 h-3" />
-                            </Button>
-                          </div>
-                          <GripVertical className="w-4 h-4 text-muted-foreground" />
-                          <span className="font-medium">{columnNames[columnId]}</span>
-                          {isProtected && (
-                            <span className="text-xs text-muted-foreground">(required)</span>
-                          )}
-                        </div>
-                        <Switch
-                          checked={columnVisibility[columnId]}
-                          onCheckedChange={() => toggleColumnVisibility(columnId)}
-                          disabled={isProtected}
-                          data-testid={`switch-column-${columnId}`}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
+          <ManageColumns
+            title="Manage Columns"
+            columns={columns}
+            order={columnOrder}
+            visibility={columnVisibility}
+            minimized={columnMinimized}
+            onOrderChange={setColumnOrder}
+            onVisibilityChange={setColumnVisibility}
+            onMinimizeChange={setColumnMinimized}
+            testId="button-column-settings"
+          />
         }
       />
 
-      <main className="max-w-md mx-auto px-4 py-6 space-y-6">
+      <main className="w-full max-w-md lg:max-w-2xl mx-auto px-4 py-6 space-y-6">
+        {/* Date Carousel */}
+        <DateCarousel 
+          selectedDate={selectedDate}
+          onDateChange={setSelectedDate}
+        />
+        
         {columnOrder.map((columnId) => renderColumn(columnId))}
       </main>
 
@@ -512,7 +648,6 @@ export default function Food() {
       </Dialog>
 
       <MonthlyStatsModal open={showStats} onOpenChange={setShowStats} />
-      <AIChatBubble onMealLogged={handleAddMeal} />
     </div>
   );
 }

@@ -49,7 +49,12 @@ export default function EventList({ events, selectedDate, onDeleteEvent, onToggl
                       </span>
                     </div>
                   )}
-                  <p className="font-medium mb-3" data-testid={`text-event-title-${event.id}`}>{event.title}</p>
+                  <p className="font-medium mb-1" data-testid={`text-event-title-${event.id}`}>{event.title}</p>
+                  {event.location && (
+                    <p className="text-xs text-muted-foreground mb-2">
+                      📍 {event.location}
+                    </p>
+                  )}
                   
                   <div className="flex items-center gap-2">
                     <Checkbox

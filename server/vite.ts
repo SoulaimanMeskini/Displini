@@ -22,12 +22,22 @@ export function log(message: string, source = "express") {
 export async function setupVite(app: Express, server: Server) {
   const serverOptions = {
     middlewareMode: true,
-    hmr: { server },
+    // Pin HMR to a stable port to avoid EADDRINUSE on random ephemeral ports
+    hmr: { server, port: 4000, clientPort: 4000 },
     allowedHosts: true as const,
-  };
+  } as const;
+
+  // Support config exported as a function/promise (Vite's defineConfig async)
+  const resolvedConfig =
+    typeof viteConfig === "function" ? await viteConfig({ command: "serve", mode: "development" }) : viteConfig;
+
+  // Ensure Vite uses the client folder as root regardless of config merging order
+  const enforcedRoot = path.resolve(import.meta.dirname, "..", "client");
+  log(`Using Vite root: ${enforcedRoot}`);
 
   const vite = await createViteServer({
-    ...viteConfig,
+    root: enforcedRoot,
+    ...resolvedConfig,
     configFile: false,
     customLogger: {
       ...viteLogger,
