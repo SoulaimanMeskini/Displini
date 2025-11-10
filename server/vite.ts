@@ -20,10 +20,11 @@ export function log(message: string, source = "express") {
 }
 
 export async function setupVite(app: Express, server: Server) {
+  const httpPort = Number(process.env.PORT) || 4000;
   const serverOptions = {
     middlewareMode: true,
-    // Pin HMR to a stable port to avoid EADDRINUSE on random ephemeral ports
-    hmr: { server, port: 4000, clientPort: 4000 },
+    // Use the existing HTTP server for HMR; align clientPort with HTTP port
+    hmr: { server, clientPort: httpPort },
     allowedHosts: true as const,
   } as const;
 

@@ -122,30 +122,56 @@ A comprehensive health, fitness, and productivity tracking application built wit
 
    🎉 App available at **http://localhost:4000**
 
+## 🌐 Routing Structure
+
+**Public Routes (Not Authenticated):**
+- `/` → Landing page with product showcase
+- `/app/*` → Redirects to landing (requires auth)
+
+**Authenticated Routes:**
+- `/` → Landing page (still accessible)
+- `/app` → Redirects to `/app/todo`
+- `/app/todo` → Task management
+- `/app/calendar` → Calendar view
+- `/app/reminders` → Reminders & habits
+- `/app/ai` → AI assistant
+- `/app/profile` → User profile
+
+**Backend API:**
+- `/api/*` → All API endpoints
+- All other routes → SPA fallback (React Router handles)
+
 ## 🏗️ Project Structure
 
 ```
 Displini/
 ├── client/                   # Frontend React application
 │   ├── src/
-│   │   ├── components/      # React components
-│   │   │   ├── shared/     # Universal reusable components
-│   │   │   │   ├── UniversalDialog.tsx
-│   │   │   │   ├── UniversalContainer.tsx
-│   │   │   │   ├── ContainerHeader.tsx
-│   │   │   │   └── EmptyState.tsx
-│   │   │   ├── health/     # Health tab components
-│   │   │   ├── food/       # Food tab components
-│   │   │   ├── sport/      # Sport tab components
-│   │   │   ├── todo/       # Todo tab components
-│   │   │   ├── calendar/   # Calendar components
-│   │   │   └── ui/         # Shadcn UI primitives
-│   │   ├── pages/          # Main page components
-│   │   │   ├── Health.tsx
-│   │   │   ├── Food.tsx
-│   │   │   ├── Sport.tsx
-│   │   │   ├── Todo.tsx
-│   │   │   └── Calendar.tsx
+│   │   ├── app/
+│   │   │   ├── components/  # React components
+│   │   │   │   ├── shared/ # Universal reusable components
+│   │   │   │   │   ├── UniversalDialog.tsx
+│   │   │   │   │   ├── ComingSoonDialog.tsx  ← NEW!
+│   │   │   │   │   ├── ContainerHeader.tsx
+│   │   │   │   │   └── EmptyState.tsx
+│   │   │   │   └── ui/     # Shadcn UI primitives
+│   │   │   ├── features/   # Feature modules
+│   │   │   │   ├── calendar/
+│   │   │   │   ├── reminders/
+│   │   │   │   └── todo/
+│   │   │   ├── pages/      # Main page components
+│   │   │   │   ├── landing/  # Landing page (/)  ← NEW!
+│   │   │   │   │   └── Landing.tsx
+│   │   │   │   ├── todo/     # Todo app (/app/todo)
+│   │   │   │   ├── calendar/ # Calendar (/app/calendar)
+│   │   │   │   ├── reminders/# Reminders (/app/reminders)
+│   │   │   │   ├── ai/       # AI assistant (/app/ai)
+│   │   │   │   └── profile/  # Profile (/app/profile)
+│   │   │   ├── shared/     # Shared app components
+│   │   │   │   ├── AppHeader.tsx
+│   │   │   │   ├── BottomNav.tsx
+│   │   │   │   └── PageTransition.tsx
+│   │   │   └── types/      # App-specific types
 │   │   ├── hooks/          # Custom React hooks
 │   │   │   ├── useAuth.tsx
 │   │   │   ├── use-toast.ts
@@ -155,17 +181,26 @@ Displini/
 │   │   │   ├── timeUtils.ts
 │   │   │   ├── storageUtils.ts
 │   │   │   └── designTokens.ts
-│   │   └── types/          # TypeScript definitions
+│   │   ├── types/          # Shared TypeScript definitions
+│   │   ├── App.tsx         # Main app with routing
+│   │   └── main.tsx        # App entry point
+│   ├── public/             # Static assets
+│   │   ├── images/         # Images and SVGs
+│   │   ├── logos/          # Brand logos
+│   │   └── fonts/          # Custom fonts
 │   └── index.html
 ├── server/                  # Backend Express application
 │   ├── db.ts               # Database setup
 │   ├── routes.ts           # API endpoints
 │   ├── openai.ts           # AI integration
 │   ├── replitAuth.ts       # Authentication
+│   ├── vite.ts             # Vite middleware & SPA fallback  ← KEY!
 │   └── index.ts            # Server entry point
 ├── shared/                  # Shared frontend/backend code
 │   └── schema.ts           # Database schema (Drizzle)
 ├── dist/                    # Production build output
+│   └── public/             # Built React app
+├── DEPLOYMENT_GUIDE.md     # Detailed deployment instructions  ← NEW!
 ├── package.json            # Dependencies
 ├── vite.config.ts          # Vite configuration
 ├── tailwind.config.ts      # Tailwind configuration
@@ -320,6 +355,10 @@ Built-in dark/light mode support:
 npm run build
 ```
 
+This builds:
+- React app → `dist/public/`
+- Server code → `dist/index.js`
+
 ### **Start Production Server**
 ```bash
 npm start
@@ -328,11 +367,19 @@ npm start
 Serves on port 4000 by default.
 
 ### **Deployment Platforms**
-- ✅ Replit (recommended)
-- ✅ Vercel
-- ✅ Netlify
-- ✅ Railway
-- ✅ Any Node.js hosting
+- ✅ **Replit** (recommended) - Auto-configured
+- ✅ **Render/Railway/Fly.io** - Best for Express apps
+- ✅ **Traditional VPS** - Full control (AWS, DigitalOcean, etc.)
+- ⚠️ **Vercel/Netlify** - Not recommended (persistent server needed)
+
+📚 **See [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) for detailed instructions!**
+
+### **Domain Structure**
+Both landing page and app are served from the same domain:
+- `https://yourdomain.com/` → Landing page
+- `https://yourdomain.com/app/*` → Web application
+
+No subdomain or separate hosting needed! ✨
 
 ## 📈 Roadmap
 

@@ -90,10 +90,40 @@ export default {
           busy: "rgb(239 68 68)",
           offline: "rgb(156 163 175)",
         },
+        displini: {
+          50: "#f0f9ff",
+          100: "#e0f2fe",
+          200: "#bae6fd",
+          300: "#7dd3fc",
+          400: "#38bdf8",
+          500: "#0ea5e9",
+          600: "#0284c7",
+          700: "#0369a1",
+          800: "#075985",
+          900: "#0c4a6e",
+          blue: "#30C4FF", /* Default accent */
+          purple: "#DB1DD8",
+          green: "#00FF99",
+        },
+        // Feature colors - matches landing page and design system
+        feature: {
+          reminders: "#DB1DD8",
+          todo: "#30C4FF",
+          calendar: "#00FF99",
+          ai: "#FFF600",
+          menstrual: "#FF3B5F",
+          sleep: "#4B1DDB",
+          water: "#3FD2FF",
+          sport: "#FF7A1D",
+          office: "#00FF99",
+          journal: "#C69C6D",
+          medication: "#00FF99",
+          school: "#FFD400",
+        },
       },
       fontFamily: {
         sans: ["var(--font-sans)"],
-        serif: ["var(--font-serif)"],
+        heading: ["var(--font-heading)"],
         mono: ["var(--font-mono)"],
       },
       keyframes: {
@@ -105,12 +135,28 @@ export default {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
+        "fade-in": {
+          from: { opacity: "0" },
+          to: { opacity: "1" },
+        },
+        "slide-up": {
+          from: { 
+            opacity: "0", 
+            transform: "translateY(30px)" 
+          },
+          to: { 
+            opacity: "1", 
+            transform: "translateY(0)" 
+          },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "fade-in": "fade-in 0.8s ease-in-out",
+        "slide-up": "slide-up 0.8s ease-out",
       },
     },
   },
-  plugins: [require("tailwindcss-animate"), require("@tailwindcss/typography")],
+  plugins: [require("tailwindcss-animate")],
 } satisfies Config;

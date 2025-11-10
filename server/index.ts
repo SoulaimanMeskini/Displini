@@ -56,8 +56,8 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
-  // Force a stable dev port to avoid random EADDRINUSE collisions
-  const port = 4000;
+  // Use PORT from env when provided; default to 4000
+  const port = Number(process.env.PORT) || 4000;
   server.listen(
     {
       port,

@@ -1,0 +1,159 @@
+import { useState, useEffect } from "react";
+import { Button } from "@/app/components/ui/button";
+import { Input } from "@/app/components/ui/input";
+import { Instagram, Youtube } from "lucide-react";
+import { handleSuccess, handleError } from "@/lib/errorHandling";
+
+/**
+ * Call-to-action section with email signup
+ * - Animated gradient blobs (mouse-following effect)
+ * - Email subscription form
+ * - Social media links
+ */
+export function LandingCTA() {
+  const [email, setEmail] = useState('');
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      // Normalize mouse position to -1 to 1 range
+      const x = (e.clientX / window.innerWidth) * 2 - 1;
+      const y = (e.clientY / window.innerHeight) * 2 - 1;
+      setMousePos({ x, y });
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, []);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      // TODO: Send to email service/newsletter API
+      // await fetch('/api/newsletter/subscribe', {
+      //   method: 'POST',
+      //   body: JSON.stringify({ email })
+      // });
+      
+      handleSuccess(
+        'Thank you for subscribing! We\'ll keep you updated.',
+        'Subscription Successful'
+      );
+      setEmail('');
+    } catch (error) {
+      handleError(error, { 
+        title: 'Subscription Failed',
+        description: 'Could not subscribe to newsletter. Please try again.'
+      });
+    }
+  };
+
+  return (
+    <section className="relative py-20 pt-32 overflow-hidden bg-gray-900 dark:bg-gray-950 z-40" style={{ 
+      boxShadow: 'inset 0 20px 40px rgba(0,0,0,0.3), inset 0 40px 80px rgba(0,0,0,0.2), inset 0 60px 120px rgba(0,0,0,0.1), inset 0 80px 160px rgba(0,0,0,0.05)',
+      marginTop: '-200px',
+      scrollSnapAlign: 'start'
+    }}>
+      {/* Animated Background Blobs - Follow Mouse */}
+      <div 
+        className="absolute -top-40 -left-40 w-80 h-80 bg-gradient-to-br from-purple-500 to-purple-700 rounded-full opacity-60 blur-3xl transition-transform duration-1000 ease-out"
+        style={{ transform: `translate(${mousePos.x * 50}px, ${mousePos.y * 50}px)` }}
+      ></div>
+      
+      <div 
+        className="absolute -bottom-40 -right-40 w-80 h-80 bg-gradient-to-br from-green-500 to-green-700 rounded-full opacity-60 blur-3xl transition-transform duration-1000 ease-out"
+        style={{ transform: `translate(${-mousePos.x * 50}px, ${-mousePos.y * 50}px)` }}
+      ></div>
+      
+      <div 
+        className="absolute top-1/2 left-1/4 w-60 h-60 bg-gradient-to-br from-purple-400 to-purple-600 rounded-full opacity-40 blur-2xl transition-transform duration-700 ease-out"
+        style={{ transform: `translate(${mousePos.x * 30}px, ${mousePos.y * 30}px)` }}
+      ></div>
+      
+      <div 
+        className="absolute top-1/3 right-1/4 w-60 h-60 bg-gradient-to-br from-green-400 to-green-600 rounded-full opacity-40 blur-2xl transition-transform duration-700 ease-out"
+        style={{ transform: `translate(${-mousePos.x * 30}px, ${-mousePos.y * 30}px)` }}
+      ></div>
+      
+      <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 via-transparent to-green-900/20"></div>
+      
+      {/* Content */}
+      <div className="relative z-10 w-full flex flex-col items-center justify-center px-6">
+        <h2 className="text-4xl md:text-5xl font-bold mb-6 text-white text-center">
+          Keep in touch
+        </h2>
+        <p className="text-xl mb-8 max-w-2xl text-gray-100 text-center">
+          Get updates on new features and be the first to know when we launch.
+        </p>
+        
+        {/* Email Form */}
+        <form onSubmit={handleSubmit} className="w-full max-w-md mb-12">
+          <div className="flex gap-4 justify-center">
+            <Input
+              id="email-signup"
+              name="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Enter your email"
+              className="flex-1 px-4 py-3 rounded-full text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white/90 backdrop-blur-sm"
+              required
+            />
+            <Button
+              type="submit"
+              className="bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white px-6 py-3 rounded-full font-medium transition-all duration-300 border border-white/30"
+            >
+              Subscribe
+            </Button>
+          </div>
+        </form>
+        
+        {/* Social Media Links */}
+        <div className="flex justify-center space-x-6">
+          <a 
+            href="https://x.com/displini_" 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="text-white hover:bg-white/20 rounded-full p-2 transition-all duration-300" 
+            aria-label="Follow us on X"
+          >
+            <svg className="w-8 h-8" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M12.6 0.75h2.454l-5.36 6.142L16 15.25h-4.937l-3.867 -5.07 -4.425 5.07H0.316l5.733 -6.57L0 0.75h5.063l3.495 4.633L12.601 0.75Zm-0.86 13.028h1.36L4.323 2.145H2.865z"/>
+            </svg>
+          </a>
+          <a 
+            href="https://www.instagram.com/displini/" 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="text-white hover:bg-white/20 rounded-full p-2 transition-all duration-300" 
+            aria-label="Follow us on Instagram"
+          >
+            <Instagram className="w-8 h-8" />
+          </a>
+          <a 
+            href="https://www.tiktok.com/@displini?lang=en" 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="text-white hover:bg-white/20 rounded-full p-2 transition-all duration-300" 
+            aria-label="Follow us on TikTok"
+          >
+            <svg className="w-8 h-8" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
+            </svg>
+          </a>
+          <a 
+            href="https://www.youtube.com/@Displini" 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="text-white hover:bg-white/20 rounded-full p-2 transition-all duration-300" 
+            aria-label="Subscribe on YouTube"
+          >
+            <Youtube className="w-8 h-8" />
+          </a>
+        </div>
+      </div>
+    </section>
+  );
+}
+

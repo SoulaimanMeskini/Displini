@@ -5,7 +5,7 @@ type User = { email: string };
 export function useAuth() {
   // Pretend we're always logged in (no login flow)
   const user: User = { email: "you@local.dev" };
-  const isAuthenticated = true;
+  const isAuthenticated = true; // Set to true to allow access to the app
   const isLoading = false;
 
   async function login(_email: string, _password: string) {

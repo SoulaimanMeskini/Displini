@@ -2,6 +2,53 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Manrope Variable Font */
+@font-face {
+  font-family: 'Manrope';
+  src: url('/fonts/Manrope-VariableFont_wght.ttf') format('truetype-variations');
+  font-weight: 200 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Satoshi Font */
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/Satoshi-Regular.woff2') format('woff2'),
+       url('/fonts/Satoshi-Regular.woff') format('woff'),
+       url('/fonts/Satoshi-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/Satoshi-Medium.woff2') format('woff2'),
+       url('/fonts/Satoshi-Medium.woff') format('woff');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/Satoshi-Variable.woff2') format('woff2'),
+       url('/fonts/Satoshi-Variable.woff') format('woff');
+  font-weight: 300 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/Satoshi-Black.woff') format('woff'),
+       url('/fonts/Satoshi-Black.ttf') format('truetype');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* LIGHT MODE */
 :root {
   --button-outline: rgba(0,0,0, .10);
@@ -14,75 +61,80 @@
   --elevate-1: rgba(0,0,0, .03);
   --elevate-2: rgba(0,0,0, .08);
 
-  --background: 0 0% 100%;
+  --background: 0 0% 94%; /* #EFEFEF */
 
-  --foreground: 220 9% 15%;
+  --foreground: 0 7% 5%; /* #0F0D0D */
 
-  --border: 220 14% 88%;
+  --border: 0 0% 88%;
 
-  --card: 220 14% 96%;
+  --card: 0 0% 96%;
 
-  --card-foreground: 220 9% 15%;
+  --card-foreground: 0 7% 5%;
 
-  --card-border: 220 14% 90%;
+  --card-border: 0 0% 90%;
 
-  --sidebar: 220 14% 94%;
+  --sidebar: 0 0% 94%;
 
-  --sidebar-foreground: 220 9% 15%;
+  --sidebar-foreground: 0 7% 5%;
 
-  --sidebar-border: 220 14% 86%;
+  --sidebar-border: 0 0% 86%;
 
-  --sidebar-primary: 59 91% 47%;
+  --sidebar-primary: 197 100% 59%; /* #30C4FF - Default accent */
 
-  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-primary-foreground: 0 0% 94%;
 
-  --sidebar-accent: 220 14% 88%;
+  --sidebar-accent: 0 0% 88%;
 
-  --sidebar-accent-foreground: 220 9% 15%;
+  --sidebar-accent-foreground: 0 7% 5%;
 
-  --sidebar-ring: 59 91% 47%;
+  --sidebar-ring: 197 100% 59%;
 
-  --popover: 220 14% 93%;
+  --popover: 0 0% 93%;
 
-  --popover-foreground: 220 9% 15%;
+  --popover-foreground: 0 7% 5%;
 
-  --popover-border: 220 14% 85%;
+  --popover-border: 0 0% 85%;
 
-  --primary: 59 91% 47%;
+  --primary: 197 100% 59%; /* #30C4FF - Default accent */
 
-  --primary-foreground: 0 0% 100%;
+  --primary-foreground: 0 0% 94%;
 
-  --secondary: 220 14% 90%;
+  --secondary: 0 0% 90%;
 
-  --secondary-foreground: 220 9% 15%;
+  --secondary-foreground: 0 7% 5%;
 
-  --muted: 220 14% 92%;
+  --muted: 0 0% 92%;
 
-  --muted-foreground: 220 9% 46%;
+  --muted-foreground: 0 7% 46%;
 
-  --accent: 220 14% 89%;
+  --accent: 197 100% 59%; /* #30C4FF */
 
-  --accent-foreground: 220 9% 15%;
+  --accent-foreground: 0 0% 94%;
 
   --destructive: 0 84% 60%;
 
-  --destructive-foreground: 0 0% 100%;
+  --destructive-foreground: 0 0% 94%;
 
-  --input: 220 9% 40%;
-  --ring: 59 91% 47%;
-  --chart-1: 217 91% 60%;
-  --chart-2: 142 76% 36%;
-  --chart-3: 271 81% 56%;
+  --input: 0 7% 40%;
+  --ring: 197 100% 59%; /* #30C4FF */
+  --chart-1: 197 100% 59%; /* #30C4FF */
+  --chart-2: 156 100% 50%; /* #00FF99 */
+  --chart-3: 301 77% 49%; /* #DB1DD8 */
   --chart-4: 24 80% 58%;
-  --chart-5: 59 91% 47%;
+  --chart-5: 197 100% 59%;
 
-  --success: 142 71% 45%;
-  --success-foreground: 0 0% 100%;
+  --success: 156 100% 50%; /* #00FF99 */
+  --success-foreground: 0 7% 5%;
   --warning: 38 92% 50%;
-  --warning-foreground: 0 0% 100%;
+  --warning-foreground: 0 7% 5%;
 
-  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-serif: 'Menlo', monospace;
+  /* Brand accent colors */
+  --displini-blue: 197 100% 59%; /* #30C4FF - Default */
+  --displini-purple: 301 77% 49%; /* #DB1DD8 */
+  --displini-green: 156 100% 50%; /* #00FF99 */
+
+  --font-sans: 'Manrope', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-heading: 'Satoshi', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: "SF Mono", Monaco, Menlo, monospace;
   --radius: .5rem; /* 8px */
   --shadow-2xs: 0px 1px 2px 0px hsl(220 9% 46% / 0.05);
@@ -145,72 +197,72 @@
   --elevate-1: rgba(255,255,255, .04);
   --elevate-2: rgba(255,255,255, .09);
 
-  --background: 222 47% 11%;
+  --background: 0 7% 5%; /* #0F0D0D */
 
-  --foreground: 210 40% 98%;
+  --foreground: 0 0% 94%; /* #EFEFEF */
 
-  --border: 217 33% 21%;
+  --border: 0 0% 21%;
 
-  --card: 217 33% 17%;
+  --card: 0 0% 12%;
 
-  --card-foreground: 210 40% 98%;
+  --card-foreground: 0 0% 94%;
 
-  --card-border: 217 33% 23%;
+  --card-border: 0 0% 18%;
 
-  --sidebar: 217 33% 19%;
+  --sidebar: 0 0% 10%;
 
-  --sidebar-foreground: 210 40% 98%;
+  --sidebar-foreground: 0 0% 94%;
 
-  --sidebar-border: 217 33% 25%;
+  --sidebar-border: 0 0% 20%;
 
-  --sidebar-primary: 210 100% 60%;
+  --sidebar-primary: 197 100% 59%; /* #30C4FF - Default accent */
 
-  --sidebar-primary-foreground: 222 47% 11%;
+  --sidebar-primary-foreground: 0 7% 5%;
 
-  --sidebar-accent: 217 33% 24%;
+  --sidebar-accent: 0 0% 18%;
 
-  --sidebar-accent-foreground: 210 40% 98%;
+  --sidebar-accent-foreground: 0 0% 94%;
 
-  --sidebar-ring: 210 100% 60%;
+  --sidebar-ring: 197 100% 59%;
 
-  --popover: 217 33% 22%;
+  --popover: 0 0% 14%;
 
-  --popover-foreground: 210 40% 98%;
+  --popover-foreground: 0 0% 94%;
 
-  --popover-border: 217 33% 28%;
+  --popover-border: 0 0% 22%;
 
-  --primary: 210 100% 60%;
+  --primary: 197 100% 59%; /* #30C4FF - Default accent */
 
-  --primary-foreground: 222 47% 11%;
+  --primary-foreground: 0 7% 5%;
 
-  --secondary: 217 33% 26%;
+  --secondary: 0 0% 20%;
 
-  --secondary-foreground: 210 40% 98%;
+  --secondary-foreground: 0 0% 94%;
 
-  --muted: 217 33% 24%;
+  --muted: 0 0% 18%;
 
-  --muted-foreground: 215 16% 65%;
+  --muted-foreground: 0 0% 65%;
 
-  --accent: 217 33% 25%;
+  --accent: 197 100% 59%; /* #30C4FF */
 
-  --accent-foreground: 210 40% 98%;
+  --accent-foreground: 0 7% 5%;
 
   --destructive: 0 84% 60%;
 
-  --destructive-foreground: 210 40% 98%;
+  --destructive-foreground: 0 0% 94%;
 
-  --input: 215 16% 65%;
-  --ring: 210 100% 60%;
-  --chart-1: 217 91% 70%;
-  --chart-2: 142 71% 55%;
-  --chart-3: 271 81% 66%;
+  --input: 0 0% 65%;
+  --ring: 197 100% 59%; /* #30C4FF */
+  --chart-1: 197 100% 59%; /* #30C4FF */
+  --chart-2: 156 100% 50%; /* #00FF99 */
+  --chart-3: 301 77% 49%; /* #DB1DD8 */
   --chart-4: 24 80% 68%;
-  --chart-5: 210 100% 60%;
+  --chart-5: 197 100% 59%;
 
-  --success: 142 71% 55%;
-  --success-foreground: 222 47% 11%;
+  --success: 156 100% 50%; /* #00FF99 */
+  --success-foreground: 0 7% 5%;
   --warning: 38 92% 60%;
-  --warning-foreground: 222 47% 11%;
+  --warning-foreground: 0 7% 5%;
 
   --shadow-2xs: 0px 1px 2px 0px hsl(222 47% 11% / 0.40);
   --shadow-xs: 0px 1px 2px 0px hsl(222 47% 11% / 0.50);
@@ -267,6 +319,12 @@
 
   body {
     @apply font-sans antialiased bg-background text-foreground;
+  }
+
+  /* Headings use Satoshi */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+    font-weight: 400; /* Regular */
   }
 
   /* Hide floating AI bubble when any popup/modal is open */
@@ -409,5 +467,54 @@
   to {
     opacity: 1;
     transform: translateX(0);
+  }
+}
+
+/* Date change animation for containers */
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Liquid fill animation for timeline - fills from 0 to current time */
+@keyframes liquidFillUp {
+  from {
+    height: 0%;
+  }
+  to {
+    height: var(--fill-target);
+  }
+}
+
+/* Fill animation for completing missed tasks */
+@keyframes fillMissedTask {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.fill-animation {
+  animation: fillMissedTask 0.5s ease-out forwards;
+  opacity: 0;
+}
+
+/* Arrow fade-in animation */
+@keyframes arrowFade {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
