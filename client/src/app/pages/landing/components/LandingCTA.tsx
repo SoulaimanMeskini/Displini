@@ -1,18 +1,22 @@
 import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
-import { Instagram, Youtube } from "lucide-react";
+import { Instagram, Youtube, CheckCircle2, Loader2 } from "lucide-react";
 import { handleSuccess, handleError } from "@/lib/errorHandling";
 
 /**
  * Call-to-action section with email signup
  * - Animated gradient blobs (mouse-following effect)
- * - Email subscription form
+ * - Email subscription form with Mailchimp integration
+ * - Loading and success states with animations
  * - Social media links
  */
 export function LandingCTA() {
   const [email, setEmail] = useState('');
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -26,26 +30,40 @@ export function LandingCTA() {
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
+    setIsSuccess(false);
     
     try {
-      // TODO: Send to email service/newsletter API
-      // await fetch('/api/newsletter/subscribe', {
-      //   method: 'POST',
-      //   body: JSON.stringify({ email })
-      // });
+      // Submit to backend API which integrates with Mailchimp
+      // Mailchimp script is loaded in index.html for tracking and analytics
+      const response = await fetch('/api/newsletter/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
       
-      handleSuccess(
-        'Thank you for subscribing! We\'ll keep you updated.',
-        'Subscription Successful'
-      );
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: 'Subscription failed' }));
+        throw new Error(error.message || 'Subscription failed');
+      }
+      
+      setIsSuccess(true);
       setEmail('');
+      
+      // Reset success state after 5 seconds
+      setTimeout(() => {
+        setIsSuccess(false);
+      }, 5000);
+      
     } catch (error) {
       handleError(error, { 
         title: 'Subscription Failed',
         description: 'Could not subscribe to newsletter. Please try again.'
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -88,25 +106,55 @@ export function LandingCTA() {
         </p>
         
         {/* Email Form */}
-        <form onSubmit={handleSubmit} className="w-full max-w-md mb-12">
-          <div className="flex gap-4 justify-center">
-            <Input
-              id="email-signup"
-              name="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter your email"
-              className="flex-1 px-4 py-3 rounded-full text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white/90 backdrop-blur-sm"
-              required
-            />
-            <Button
-              type="submit"
-              className="bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white px-6 py-3 rounded-full font-medium transition-all duration-300 border border-white/30"
-            >
-              Subscribe
-            </Button>
-          </div>
+        <form onSubmit={handleSubmit} className="w-full max-w-md mb-12 relative">
+          <AnimatePresence mode="wait">
+            {isSuccess ? (
+              <motion.div
+                key="success"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                className="flex items-center justify-center gap-3 bg-green-500/20 backdrop-blur-sm border border-green-500/30 rounded-full px-6 py-3 text-white"
+              >
+                <CheckCircle2 className="w-5 h-5 text-green-400" />
+                <span className="font-medium">Successfully subscribed!</span>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="form"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="flex gap-4 justify-center"
+              >
+                <Input
+                  id="email-signup"
+                  name="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Enter your email"
+                  className="flex-1 px-4 py-3 rounded-full text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white/90 backdrop-blur-sm disabled:opacity-50"
+                  required
+                  disabled={isLoading}
+                />
+                <Button
+                  type="submit"
+                  disabled={isLoading}
+                  className="bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white px-6 py-3 rounded-full font-medium transition-all duration-300 border border-white/30 disabled:opacity-50 disabled:cursor-not-allowed min-w-[120px]"
+                >
+                  {isLoading ? (
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Subscribing...</span>
+                    </div>
+                  ) : (
+                    'Subscribe'
+                  )}
+                </Button>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </form>
         
         {/* Social Media Links */}

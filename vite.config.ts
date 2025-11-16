@@ -32,39 +32,18 @@ export default defineConfig(async () => ({
     emptyOutDir: true,
     // Performance optimizations
     sourcemap: false, // Disable sourcemaps in production for smaller bundle
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true, // Remove console.logs in production
-        drop_debugger: true,
-      },
-    },
+    minify: 'esbuild', // Use esbuild (faster and built-in)
     // Code splitting configuration
     rollupOptions: {
       output: {
         // Manual chunk splitting for better caching
         manualChunks: {
-          // Vendor chunks
+          // Vendor chunks only (Vite handles feature chunks automatically)
           'react-vendor': ['react', 'react-dom', 'react/jsx-runtime'],
           'date-vendor': ['date-fns'],
           'ui-vendor': ['lucide-react'],
           'router-vendor': ['wouter'],
           'query-vendor': ['@tanstack/react-query'],
-          
-          // Feature chunks
-          'todo-features': [
-            './src/app/features/todo/LiquidTimeline.tsx',
-            './src/app/features/todo/AllDayTasks.tsx',
-            './src/app/features/todo/AddTask.tsx',
-          ],
-          'calendar-features': [
-            './src/app/features/calendar/CalendarView.tsx',
-            './src/app/features/calendar/EventList.tsx',
-          ],
-          'reminder-features': [
-            './src/app/features/reminders/WaterIntakeFeature.tsx',
-            './src/app/features/reminders/MedicationTracker.tsx',
-          ],
         },
         // Optimize chunk file names
         chunkFileNames: 'assets/js/[name]-[hash].js',

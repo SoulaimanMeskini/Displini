@@ -284,15 +284,26 @@ export function LandingCarousel() {
           onClick={handleClick}
           style={{ pointerEvents: 'auto' }}
           onWheel={(e) => {
-            // Capture scroll anywhere in carousel area
+            // Disable sideways scrolling on wide screens (only allow on smaller screens)
+            const isWideScreen = window.innerWidth >= 1024; // lg breakpoint
+            if (isWideScreen) {
+              return; // Don't prevent default or handle wheel on wide screens
+            }
+            
+            // Capture scroll anywhere in carousel area (only on smaller screens)
             if (carouselRef.current) {
               e.preventDefault();
               e.stopPropagation();
               
-              // Direct scroll manipulation - no lag
-              // Convert vertical scroll to horizontal, preserve direction
-              const delta = Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
-              carouselRef.current.scrollLeft += delta;
+              // Use requestAnimationFrame for smooth scrolling
+              requestAnimationFrame(() => {
+                if (carouselRef.current) {
+                  const delta = Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+                  // Reduce sensitivity and smooth the scroll
+                  const scrollAmount = delta * 0.8;
+                  carouselRef.current.scrollLeft += scrollAmount;
+                }
+              });
             }
           }}
         >

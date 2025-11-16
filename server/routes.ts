@@ -86,6 +86,55 @@ Write a short, beautiful story (2-3 paragraphs) that transforms this entry into 
     }
   });
 
+  app.post('/api/newsletter/subscribe', async (req: any, res) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email || typeof email !== 'string' || !email.includes('@')) {
+        return res.status(400).json({ message: "Invalid email address" });
+      }
+
+      // TODO: Integrate with Mailchimp API
+      // For now, just log and return success
+      // You can add Mailchimp integration here:
+      // const MAILCHIMP_API_KEY = process.env.MAILCHIMP_API_KEY;
+      // const MAILCHIMP_LIST_ID = process.env.MAILCHIMP_LIST_ID;
+      // const MAILCHIMP_SERVER = process.env.MAILCHIMP_SERVER || 'us1';
+      // 
+      // const response = await fetch(
+      //   `https://${MAILCHIMP_SERVER}.api.mailchimp.com/3.0/lists/${MAILCHIMP_LIST_ID}/members`,
+      //   {
+      //     method: 'POST',
+      //     headers: {
+      //       'Authorization': `Bearer ${MAILCHIMP_API_KEY}`,
+      //       'Content-Type': 'application/json',
+      //     },
+      //     body: JSON.stringify({
+      //       email_address: email,
+      //       status: 'subscribed',
+      //     }),
+      //   }
+      // );
+      //
+      // if (!response.ok) {
+      //   const error = await response.json();
+      //   throw new Error(error.detail || 'Subscription failed');
+      // }
+
+      console.log('Newsletter subscription:', email);
+      
+      res.json({ 
+        success: true, 
+        message: 'Successfully subscribed to newsletter' 
+      });
+    } catch (error: any) {
+      console.error("Error subscribing to newsletter:", error);
+      res.status(500).json({ 
+        message: error.message || "Failed to subscribe to newsletter" 
+      });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

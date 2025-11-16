@@ -84,8 +84,8 @@ export function LandingHero() {
         
         {/* Scroll Down Indicator - At Bottom */}
         <div className="flex flex-col items-center gap-2 cursor-pointer animate-bounce mt-auto pb-4" onClick={scrollToFeatures}>
-          <span className="text-sm font-medium text-gray-700">Scroll</span>
-          <ChevronDown className="w-6 h-6 text-gray-700" />
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Scroll</span>
+          <ChevronDown className="w-6 h-6 text-gray-700 dark:text-gray-300" />
         </div>
       </div>
     </section>

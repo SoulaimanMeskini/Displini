@@ -67,17 +67,10 @@ export function LandingAbout() {
           {/* Left Side - Our Story (Large Card) */}
           <motion.div
             className="relative h-full"
-            animate={{
-              y: [0, -10, 0],
-            }}
-            transition={{
-              duration: 4,
-              repeat: Infinity,
-              ease: "easeInOut"
-            }}
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.3 }}
+            transition={{ duration: 0.6 }}
             onMouseEnter={() => setHoveredCard('story')}
             onMouseLeave={() => setHoveredCard(null)}
             onMouseMove={(e) => handleMouseMove(e, 'story')}
@@ -85,12 +78,17 @@ export function LandingAbout() {
             <motion.div
               className="relative bg-white/40 dark:bg-gray-800/40 backdrop-blur-xl border border-white/50 dark:border-gray-700/50 rounded-3xl p-8 md:p-12 shadow-2xl overflow-hidden h-full flex items-center"
               animate={{
+                y: [0, -10, 0],
                 scale: hoveredCard === 'story' ? 1.02 : 1,
                 boxShadow: hoveredCard === 'story' 
                   ? '0 25px 50px -12px rgba(0, 0, 0, 0.25)' 
                   : '0 20px 25px -5px rgba(0, 0, 0, 0.1)'
               }}
-              transition={{ duration: 0.3 }}
+              transition={{ 
+                y: { duration: 4, repeat: Infinity, ease: "easeInOut" },
+                scale: { duration: 0.3 },
+                boxShadow: { duration: 0.3 }
+              }}
             >
               {/* Cursor Glow Effect */}
               {hoveredCard === 'story' && (
@@ -143,18 +141,10 @@ export function LandingAbout() {
                 <motion.div
                   key={cardId}
                   className="relative"
-                  animate={{
-                    y: [0, -8, 0],
-                  }}
-                  transition={{
-                    duration: 3.5,
-                    repeat: Infinity,
-                    ease: "easeInOut",
-                    delay: index * 0.3
-                  }}
                   initial={{ opacity: 0, y: 30 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, amount: 0.3 }}
+                  transition={{ duration: 0.6, delay: index * 0.1 }}
                   onMouseEnter={() => setHoveredCard(cardId)}
                   onMouseLeave={() => setHoveredCard(null)}
                   onMouseMove={(e) => handleMouseMove(e, cardId)}
@@ -162,12 +152,17 @@ export function LandingAbout() {
                   <motion.div
                     className="relative bg-white/40 dark:bg-gray-800/40 backdrop-blur-xl border border-white/50 dark:border-gray-700/50 rounded-2xl p-6 md:p-8 shadow-xl overflow-hidden"
                     animate={{
+                      y: [0, -8, 0],
                       scale: hoveredCard === cardId ? 1.02 : 1,
                       boxShadow: hoveredCard === cardId 
                         ? '0 20px 40px -10px rgba(0, 0, 0, 0.25)' 
                         : '0 10px 20px -5px rgba(0, 0, 0, 0.1)'
                     }}
-                    transition={{ duration: 0.3 }}
+                    transition={{ 
+                      y: { duration: 3.5, repeat: Infinity, ease: "easeInOut", delay: index * 0.3 },
+                      scale: { duration: 0.3 },
+                      boxShadow: { duration: 0.3 }
+                    }}
                   >
                     {/* Cursor Glow Effect */}
                     {hoveredCard === cardId && (
@@ -227,17 +222,10 @@ export function LandingAbout() {
         <div className="container mx-auto max-w-md">
           <motion.div
             className="relative"
-            animate={{
-              y: [0, -10, 0],
-            }}
-            transition={{
-              duration: 4,
-              repeat: Infinity,
-              ease: "easeInOut"
-            }}
             initial={{ opacity: 0, scale: 0.9 }}
             whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ amount: 0.3 }}
+            viewport={{ once: true, amount: 0.3 }}
+            transition={{ duration: 0.6 }}
             onMouseEnter={() => setHoveredCard('story-mobile')}
             onMouseLeave={() => setHoveredCard(null)}
             onMouseMove={(e) => handleMouseMove(e, 'story-mobile')}
@@ -245,12 +233,17 @@ export function LandingAbout() {
             <motion.div
               className="relative bg-white/40 dark:bg-gray-800/40 backdrop-blur-xl border border-white/50 dark:border-gray-700/50 rounded-3xl p-8 shadow-2xl overflow-hidden"
               animate={{
+                y: [0, -10, 0],
                 scale: hoveredCard === 'story-mobile' ? 1.02 : 1,
                 boxShadow: hoveredCard === 'story-mobile' 
                   ? '0 25px 50px -12px rgba(0, 0, 0, 0.25)' 
                   : '0 20px 25px -5px rgba(0, 0, 0, 0.1)'
               }}
-              transition={{ duration: 0.3 }}
+              transition={{ 
+                y: { duration: 4, repeat: Infinity, ease: "easeInOut" },
+                scale: { duration: 0.3 },
+                boxShadow: { duration: 0.3 }
+              }}
             >
               {/* Cursor Glow Effect */}
               {hoveredCard === 'story-mobile' && (
@@ -311,31 +304,28 @@ export function LandingAbout() {
                 <motion.div
                   key={cardId}
                   className="relative"
-                  animate={{
-                    y: [0, -8, 0],
-                  }}
-                  transition={{
-                    duration: 3.5,
-                    repeat: Infinity,
-                    ease: "easeInOut",
-                    delay: index * 0.3
-                  }}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  viewport={{ once: true, amount: 0.3 }}
+                  transition={{ duration: 0.6, delay: index * 0.1 }}
                   onMouseEnter={() => setHoveredCard(cardId)}
                   onMouseLeave={() => setHoveredCard(null)}
                   onMouseMove={(e) => handleMouseMove(e, cardId)}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  whileInView={{ opacity: 1, scale: 1 }}
-                  viewport={{ amount: 0.3 }}
                 >
                   <motion.div
                     className="relative bg-white/40 dark:bg-gray-800/40 backdrop-blur-xl border border-white/50 dark:border-gray-700/50 rounded-2xl p-6 shadow-xl overflow-hidden"
                     animate={{
+                      y: [0, -8, 0],
                       scale: hoveredCard === cardId ? 1.02 : 1,
                       boxShadow: hoveredCard === cardId 
                         ? '0 20px 40px -10px rgba(0, 0, 0, 0.25)' 
                         : '0 10px 20px -5px rgba(0, 0, 0, 0.1)'
                     }}
-                    transition={{ duration: 0.3 }}
+                    transition={{ 
+                      y: { duration: 3.5, repeat: Infinity, ease: "easeInOut", delay: index * 0.3 },
+                      scale: { duration: 0.3 },
+                      boxShadow: { duration: 0.3 }
+                    }}
                   >
                     {/* Cursor Glow Effect */}
                     {hoveredCard === cardId && (
