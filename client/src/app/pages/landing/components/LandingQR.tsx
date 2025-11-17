@@ -79,15 +79,21 @@ export function LandingQR() {
             Scan the QR code to download Displini on your phone
           </p>
           
-          {/* QR Code */}
-          <div className="mb-6 md:mb-12 text-gray-800 dark:text-gray-300">
+          {/* QR Code - Clickable */}
+          <a 
+            href="https://linktr.ee/displini" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="mb-6 md:mb-12 text-gray-800 dark:text-gray-300 cursor-pointer transition-transform duration-300 hover:scale-105 inline-block"
+            aria-label="Open Linktree - Stay focused. Stay Displini."
+          >
             <CircularQrOrbit 
               qrSrc="/images/Qr_code.svg"
               size={qrSize}
               speedSec={8}
               words={['Discipline', 'Improve', 'Benefit', 'Energy', 'Calm', 'Focus', 'Growth', 'Balance', 'Aware']}
             />
-          </div>
+          </a>
           
           {/* App Store buttons */}
           <div className="flex gap-4 md:gap-8 items-center mb-8 md:mb-16">
