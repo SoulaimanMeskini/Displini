@@ -289,7 +289,7 @@ The assistant helps you stay balanced from optimizing focus time to rearranging 
       id="features"
       className="px-6 bg-gray-50 dark:bg-gray-900 transition-colors duration-300" 
       style={{
-        minHeight: '100vh',
+        minHeight: 'calc(100vh - 80px)',
         display: 'flex',
         alignItems: 'center',
         paddingTop: '8rem',
@@ -331,6 +331,7 @@ The assistant helps you stay balanced from optimizing focus time to rearranging 
               >
                 {features.map((feature, index) => {
                   const IconComponent = feature.icon;
+                  const isTodo = feature.id === 'todo';
                   return (
                     <motion.button
                       key={feature.id}
@@ -347,10 +348,16 @@ The assistant helps you stay balanced from optimizing focus time to rearranging 
                         }}
                         transition={{ duration: 0.2 }}
                       >
-                        <IconComponent 
-                          className={`transition-all duration-300 ${activeFeature === index ? 'w-7 h-7' : 'w-6 h-6'}`}
-                          style={{ color: activeFeature === index ? feature.color : colors.neutral.gray }}
-                        />
+                        {isTodo ? (
+                          <span className={`text-2xl transition-all duration-300 ${activeFeature === index ? 'text-3xl' : ''}`}>
+                            ☀️
+                          </span>
+                        ) : (
+                          <IconComponent 
+                            className={`transition-all duration-300 ${activeFeature === index ? 'w-7 h-7' : 'w-6 h-6'}`}
+                            style={{ color: activeFeature === index ? feature.color : colors.neutral.gray }}
+                          />
+                        )}
                         <span 
                           className={`text-sm transition-all duration-300 whitespace-nowrap ${activeFeature === index ? 'font-bold' : 'font-normal'}`}
                           style={{ color: activeFeature === index ? feature.color : colors.text.secondary }}

@@ -266,7 +266,7 @@ export function LandingCarousel() {
     <section 
       data-section="carousel" 
       className="py-20 flex items-center bg-gray-50 dark:bg-gray-900 transition-colors duration-300" 
-      style={{ scrollSnapAlign: 'center', minHeight: '100vh' }}
+      style={{ scrollSnapAlign: 'center', minHeight: 'calc(100vh - 80px)' }}
     >
       <div className="w-full">
         {/* Title */}
@@ -295,13 +295,17 @@ export function LandingCarousel() {
               e.preventDefault();
               e.stopPropagation();
               
-              // Use requestAnimationFrame for smooth scrolling
+              // Throttle scroll updates for better performance
+              if (carouselRef.current.dataset.scrolling === 'true') return;
+              carouselRef.current.dataset.scrolling = 'true';
+              
               requestAnimationFrame(() => {
                 if (carouselRef.current) {
                   const delta = Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
-                  // Reduce sensitivity and smooth the scroll
-                  const scrollAmount = delta * 0.8;
+                  // Reduce sensitivity for smoother scrolling
+                  const scrollAmount = delta * 0.5;
                   carouselRef.current.scrollLeft += scrollAmount;
+                  carouselRef.current.dataset.scrolling = 'false';
                 }
               });
             }
@@ -380,9 +384,10 @@ export function LandingCarousel() {
             className="overflow-x-auto scrollbar-hide w-full"
             style={{ 
               WebkitOverflowScrolling: 'touch',
-              touchAction: 'pan-y pan-x',
+              touchAction: 'pan-x',
               overscrollBehaviorX: 'contain',
-              overscrollBehaviorY: 'none'
+              overscrollBehaviorY: 'none',
+              scrollBehavior: 'smooth'
             }}
           >
             <div className="flex gap-6 pb-6" style={{ 

@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { BookHeart, Target, Users, Heart } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { colors } from "@/lib/designSystem";
 
 /**
@@ -42,10 +42,11 @@ const smallCards: StoryCard[] = [
 export function LandingAbout() {
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const sectionRef = useRef<HTMLElement>(null);
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>, cardId: string) => {
-    if (hoveredCard === cardId) {
-      const rect = e.currentTarget.getBoundingClientRect();
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (sectionRef.current) {
+      const rect = sectionRef.current.getBoundingClientRect();
       setMousePosition({
         x: e.clientX - rect.left,
         y: e.clientY - rect.top
@@ -57,9 +58,12 @@ export function LandingAbout() {
     <>
       {/* Desktop Version - Single Section */}
       <section 
+        ref={sectionRef}
         data-section="about"
         className="hidden lg:flex relative py-20 px-6 bg-gray-50 dark:bg-gray-900 transition-colors duration-300 items-center justify-center"
-        style={{ scrollSnapAlign: 'center', minHeight: '100vh' }}
+        style={{ scrollSnapAlign: 'center', minHeight: 'calc(100vh - 80px)' }}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={() => setHoveredCard(null)}
       >
         <div className="container mx-auto max-w-7xl">
           {/* Desktop Layout: Left (Our Story) + Right (3 cards stacked) */}
@@ -72,8 +76,6 @@ export function LandingAbout() {
             viewport={{ once: true, amount: 0.3 }}
             transition={{ duration: 0.6 }}
             onMouseEnter={() => setHoveredCard('story')}
-            onMouseLeave={() => setHoveredCard(null)}
-            onMouseMove={(e) => handleMouseMove(e, 'story')}
           >
             <motion.div
               className="relative bg-white/40 dark:bg-gray-800/40 backdrop-blur-xl border border-white/50 dark:border-gray-700/50 rounded-3xl p-8 md:p-12 shadow-2xl overflow-hidden h-full flex items-center"
@@ -98,8 +100,6 @@ export function LandingAbout() {
                     width: '300px',
                     height: '300px',
                     background: `radial-gradient(circle, ${colors.features.todo}66 0%, transparent 70%)`,
-                    left: mousePosition.x - 150,
-                    top: mousePosition.y - 150,
                   }}
                   animate={{
                     left: mousePosition.x - 150,
@@ -146,8 +146,6 @@ export function LandingAbout() {
                   viewport={{ once: true, amount: 0.3 }}
                   transition={{ duration: 0.6, delay: index * 0.1 }}
                   onMouseEnter={() => setHoveredCard(cardId)}
-                  onMouseLeave={() => setHoveredCard(null)}
-                  onMouseMove={(e) => handleMouseMove(e, cardId)}
                 >
                   <motion.div
                     className="relative bg-white/40 dark:bg-gray-800/40 backdrop-blur-xl border border-white/50 dark:border-gray-700/50 rounded-2xl p-6 md:p-8 shadow-xl overflow-hidden"
@@ -164,7 +162,7 @@ export function LandingAbout() {
                       boxShadow: { duration: 0.3 }
                     }}
                   >
-                    {/* Cursor Glow Effect */}
+                    {/* Cursor Glow Effect - Uses global mouse position */}
                     {hoveredCard === cardId && (
                       <motion.div
                         className="absolute pointer-events-none rounded-full blur-3xl opacity-30"
@@ -172,8 +170,6 @@ export function LandingAbout() {
                           width: '250px',
                           height: '250px',
                           background: `radial-gradient(circle, ${card.color}66 0%, transparent 70%)`,
-                          left: mousePosition.x - 125,
-                          top: mousePosition.y - 125,
                         }}
                         animate={{
                           left: mousePosition.x - 125,
@@ -217,7 +213,7 @@ export function LandingAbout() {
       <section
         data-section="about-story"
         className="lg:hidden relative py-20 px-6 bg-gray-50 dark:bg-gray-900 transition-colors duration-300 flex items-center justify-center"
-        style={{ scrollSnapAlign: 'center', minHeight: '100vh' }}
+        style={{ scrollSnapAlign: 'center', minHeight: 'calc(100vh - 80px)' }}
       >
         <div className="container mx-auto max-w-md">
           <motion.div
@@ -292,7 +288,7 @@ export function LandingAbout() {
       <section
         data-section="about-values"
         className="lg:hidden relative py-20 px-6 bg-gray-50 dark:bg-gray-900 transition-colors duration-300 flex items-center justify-center"
-        style={{ scrollSnapAlign: 'center', minHeight: '100vh' }}
+        style={{ scrollSnapAlign: 'center', minHeight: 'calc(100vh - 80px)' }}
       >
         <div className="container mx-auto max-w-md">
           <div className="flex flex-col gap-8">
@@ -327,7 +323,7 @@ export function LandingAbout() {
                       boxShadow: { duration: 0.3 }
                     }}
                   >
-                    {/* Cursor Glow Effect */}
+                    {/* Cursor Glow Effect - Uses global mouse position */}
                     {hoveredCard === cardId && (
                       <motion.div
                         className="absolute pointer-events-none rounded-full blur-3xl opacity-30"
@@ -335,8 +331,6 @@ export function LandingAbout() {
                           width: '250px',
                           height: '250px',
                           background: `radial-gradient(circle, ${card.color}66 0%, transparent 70%)`,
-                          left: mousePosition.x - 125,
-                          top: mousePosition.y - 125,
                         }}
                         animate={{
                           left: mousePosition.x - 125,

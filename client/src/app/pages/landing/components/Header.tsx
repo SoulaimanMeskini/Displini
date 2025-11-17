@@ -105,12 +105,21 @@ export function Header() {
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <a href="/" className="h-14 group cursor-pointer">
+              {/* Mobile: Show icon only, Desktop: Show logo with text */}
+              <img 
+                src={isDark || !isScrolled ? "/logos/Displini_Icon_Gradiant_1.svg" : "/logos/Displini_Icon_black.svg"}
+                alt="Displini" 
+                width="56"
+                height="56"
+                className="md:hidden h-full w-auto transition-all duration-300 group-hover:scale-105 group-hover:opacity-80"
+                loading="eager"
+              />
               <img 
                 src={isDark || !isScrolled ? "/logos/Displini_Logo_text_white.svg" : "/logos/Displini_Logo_text_black.svg"}
                 alt="Displini" 
                 width="200"
                 height="56"
-                className="h-full w-auto transition-all duration-300 group-hover:scale-105 group-hover:opacity-80"
+                className="hidden md:block h-full w-auto transition-all duration-300 group-hover:scale-105 group-hover:opacity-80"
                 loading="eager"
               />
             </a>

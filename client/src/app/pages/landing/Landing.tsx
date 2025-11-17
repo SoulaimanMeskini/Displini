@@ -21,7 +21,7 @@ function Landing() {
   useLandingScroll();
   
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-white transition-colors duration-300" style={{ scrollSnapType: 'y mandatory', height: '100vh', overflowY: 'scroll' }}>
+    <div className="min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-white transition-colors duration-300" style={{ scrollSnapType: 'y mandatory', height: '100vh', overflowY: 'scroll', paddingTop: '80px' }}>
       <SEO
         title="Stay Focused, Build Better Habits"
         description="Displini helps you build structure, improve your health and routines. Track water intake, sleep schedule, menstrual cycle, medication, workouts, and more."

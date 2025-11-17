@@ -52,7 +52,7 @@ export function LandingQR() {
     <section 
       className="relative px-6 py-32 bg-gray-50 dark:bg-gray-900 transition-colors duration-300"
       style={{
-        minHeight: '100vh',
+        minHeight: 'calc(100vh - 80px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
