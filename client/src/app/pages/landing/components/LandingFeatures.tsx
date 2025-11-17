@@ -348,16 +348,10 @@ The assistant helps you stay balanced from optimizing focus time to rearranging 
                         }}
                         transition={{ duration: 0.2 }}
                       >
-                        {isTodo ? (
-                          <span className={`text-xl md:text-2xl transition-all duration-300 ${activeFeature === index ? 'text-2xl md:text-3xl' : ''}`}>
-                            ☀️
-                          </span>
-                        ) : (
-                          <IconComponent 
-                            className={`transition-all duration-300 ${activeFeature === index ? 'w-6 h-6 md:w-7 md:h-7' : 'w-5 h-5 md:w-6 md:h-6'}`}
-                            style={{ color: activeFeature === index ? feature.color : colors.neutral.gray }}
-                          />
-                        )}
+                        <IconComponent 
+                          className={`transition-all duration-300 ${activeFeature === index ? 'w-6 h-6 md:w-7 md:h-7' : 'w-5 h-5 md:w-6 md:h-6'}`}
+                          style={{ color: activeFeature === index ? feature.color : colors.neutral.gray }}
+                        />
                         <span 
                           className={`text-xs md:text-sm transition-all duration-300 whitespace-nowrap ${activeFeature === index ? 'font-bold' : 'font-normal'}`}
                           style={{ color: activeFeature === index ? feature.color : colors.text.secondary }}

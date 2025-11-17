@@ -43,6 +43,10 @@ export function LandingAbout() {
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const sectionRef = useRef<HTMLElement>(null);
+  const storyCardRef = useRef<HTMLDivElement>(null);
+  const missionCardRef = useRef<HTMLDivElement>(null);
+  const unityCardRef = useRef<HTMLDivElement>(null);
+  const careCardRef = useRef<HTMLDivElement>(null);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (sectionRef.current) {
@@ -50,6 +54,16 @@ export function LandingAbout() {
       setMousePosition({
         x: e.clientX - rect.left,
         y: e.clientY - rect.top
+      });
+    }
+  };
+  
+  const handleStoryCardMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (storyCardRef.current) {
+      const cardRect = storyCardRef.current.getBoundingClientRect();
+      setMousePosition({
+        x: e.clientX - cardRect.left,
+        y: e.clientY - cardRect.top
       });
     }
   };
@@ -76,8 +90,10 @@ export function LandingAbout() {
             viewport={{ once: true, amount: 0.3 }}
             transition={{ duration: 0.6 }}
             onMouseEnter={() => setHoveredCard('story')}
+            onMouseLeave={() => setHoveredCard(null)}
           >
             <motion.div
+              ref={storyCardRef}
               className="relative bg-white/40 dark:bg-gray-800/40 backdrop-blur-xl border border-white/50 dark:border-gray-700/50 rounded-3xl p-8 md:p-12 shadow-2xl overflow-hidden h-full flex items-center"
               animate={{
                 y: [0, -10, 0],
@@ -91,6 +107,7 @@ export function LandingAbout() {
                 scale: { duration: 0.3 },
                 boxShadow: { duration: 0.3 }
               }}
+              onMouseMove={handleStoryCardMouseMove}
             >
               {/* Cursor Glow Effect */}
               {hoveredCard === 'story' && (
@@ -138,6 +155,25 @@ export function LandingAbout() {
               const Icon = card.icon;
               const cardId = card.title.toLowerCase();
               
+              // Get the appropriate ref for each card
+              const getCardRef = () => {
+                if (cardId === 'mission') return missionCardRef;
+                if (cardId === 'unity') return unityCardRef;
+                if (cardId === 'care') return careCardRef;
+                return null;
+              };
+              
+              const handleCardMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+                const cardRef = getCardRef();
+                if (cardRef?.current) {
+                  const cardRect = cardRef.current.getBoundingClientRect();
+                  setMousePosition({
+                    x: e.clientX - cardRect.left,
+                    y: e.clientY - cardRect.top
+                  });
+                }
+              };
+              
               return (
                 <motion.div
                   key={cardId}
@@ -147,8 +183,10 @@ export function LandingAbout() {
                   viewport={{ once: true, amount: 0.3 }}
                   transition={{ duration: 0.6, delay: index * 0.1 }}
                   onMouseEnter={() => setHoveredCard(cardId)}
+                  onMouseLeave={() => setHoveredCard(null)}
                 >
                   <motion.div
+                    ref={getCardRef()}
                     className="relative bg-white/40 dark:bg-gray-800/40 backdrop-blur-xl border border-white/50 dark:border-gray-700/50 rounded-2xl p-6 md:p-8 shadow-xl overflow-hidden"
                     animate={{
                       y: [0, -8, 0],
@@ -162,8 +200,9 @@ export function LandingAbout() {
                       scale: { duration: 0.3 },
                       boxShadow: { duration: 0.3 }
                     }}
+                    onMouseMove={handleCardMouseMove}
                   >
-                    {/* Cursor Glow Effect - Uses global mouse position */}
+                    {/* Cursor Glow Effect - Uses card-relative mouse position */}
                     {hoveredCard === cardId && (
                       <motion.div
                         className="absolute pointer-events-none rounded-full blur-3xl opacity-30"
