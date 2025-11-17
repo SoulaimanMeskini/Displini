@@ -107,8 +107,8 @@ export function LandingFAQ() {
           </Card>
         </div>
         
-        {/* Arrow & Text - ABSOLUTE AT BOTTOM OF SECTION */}
-        <div ref={arrowRef} className="absolute bottom-16 md:bottom-32 left-4 md:left-12">
+        {/* Arrow & Text - ABSOLUTE AT BOTTOM OF SECTION - Hidden on mobile */}
+        <div ref={arrowRef} className="hidden md:block absolute bottom-16 md:bottom-32 left-4 md:left-12">
           <AnimatePresence mode="wait">
             {showArrow && (
               <motion.div 
