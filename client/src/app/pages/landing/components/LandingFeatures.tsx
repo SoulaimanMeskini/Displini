@@ -292,8 +292,8 @@ The assistant helps you stay balanced from optimizing focus time to rearranging 
         minHeight: 'calc(100vh - 80px)',
         display: 'flex',
         alignItems: 'center',
-        paddingTop: '8rem',
-        paddingBottom: '8rem',
+        paddingTop: '4rem',
+        paddingBottom: '4rem',
         scrollSnapAlign: 'center',
         scrollSnapStop: 'always'
       }}
@@ -323,7 +323,7 @@ The assistant helps you stay balanced from optimizing focus time to rearranging 
             <div className="flex flex-col items-center mx-auto order-2 lg:order-2">
               {/* Feature Buttons - Above Phone on Mobile (order-1), Below on Desktop */}
               <div 
-                className="order-1 lg:order-2 flex flex-row gap-4 w-full max-w-md mb-6 lg:mb-0 lg:mt-8 overflow-x-auto scrollbar-hide pb-2 lg:pb-0"
+                className="order-1 lg:order-2 flex flex-row gap-2 md:gap-4 w-full max-w-md mb-4 lg:mb-0 lg:mt-8 overflow-x-auto scrollbar-hide pb-2 lg:pb-0 justify-center md:justify-start"
                 style={{
                   WebkitOverflowScrolling: 'touch',
                   touchAction: 'pan-y pan-x'
@@ -336,30 +336,30 @@ The assistant helps you stay balanced from optimizing focus time to rearranging 
                     <motion.button
                       key={feature.id}
                       onClick={() => setActiveFeature(index)}
-                      className="relative group flex-shrink-0 px-4 py-3 font-medium transition-all duration-300"
+                      className="relative group flex-shrink-0 px-2 md:px-4 py-2 md:py-3 font-medium transition-all duration-300"
                       whileHover={{ scale: 1.05, y: -5 }}
                       whileTap={{ scale: 0.95 }}
                       transition={{ type: "spring", stiffness: 300, damping: 20 }}
                     >
                       <motion.div 
-                        className="flex flex-col items-center gap-2"
+                        className="flex flex-col items-center gap-1 md:gap-2"
                         animate={{
                           scale: activeFeature === index ? 1.1 : 1,
                         }}
                         transition={{ duration: 0.2 }}
                       >
                         {isTodo ? (
-                          <span className={`text-2xl transition-all duration-300 ${activeFeature === index ? 'text-3xl' : ''}`}>
+                          <span className={`text-xl md:text-2xl transition-all duration-300 ${activeFeature === index ? 'text-2xl md:text-3xl' : ''}`}>
                             ☀️
                           </span>
                         ) : (
                           <IconComponent 
-                            className={`transition-all duration-300 ${activeFeature === index ? 'w-7 h-7' : 'w-6 h-6'}`}
+                            className={`transition-all duration-300 ${activeFeature === index ? 'w-6 h-6 md:w-7 md:h-7' : 'w-5 h-5 md:w-6 md:h-6'}`}
                             style={{ color: activeFeature === index ? feature.color : colors.neutral.gray }}
                           />
                         )}
                         <span 
-                          className={`text-sm transition-all duration-300 whitespace-nowrap ${activeFeature === index ? 'font-bold' : 'font-normal'}`}
+                          className={`text-xs md:text-sm transition-all duration-300 whitespace-nowrap ${activeFeature === index ? 'font-bold' : 'font-normal'}`}
                           style={{ color: activeFeature === index ? feature.color : colors.text.secondary }}
                         >
                           {feature.title}
@@ -379,12 +379,12 @@ The assistant helps you stay balanced from optimizing focus time to rearranging 
                 ></div>
                 
                 {/* iPhone Frame */}
-                <div className="relative bg-gray-900 rounded-[2.5rem] p-2.5 shadow-2xl" style={{ width: '280px', height: '570px' }}>
+                <div className="relative bg-gray-900 rounded-[2.5rem] p-2.5 shadow-2xl mx-auto" style={{ width: '240px', height: '490px', maxWidth: '90vw' }}>
                   {/* Notch */}
                   <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-gray-900 rounded-b-3xl z-20"></div>
                   
-                  {/* Screen */}
-                  <div className="relative w-full h-full bg-white rounded-[2.5rem] overflow-hidden flex flex-col">
+                  {/* Screen - Reflects dark/light mode */}
+                  <div className="relative w-full h-full dark:bg-gray-900 bg-white rounded-[2.5rem] overflow-hidden flex flex-col">
                     {/* Noise texture overlay */}
                     <div 
                       className="absolute inset-0 opacity-[0.15] pointer-events-none z-0"
@@ -406,10 +406,10 @@ The assistant helps you stay balanced from optimizing focus time to rearranging 
                         {/* Timeline Container - Matching App Style */}
                         {(() => {
                           const timelineRange = getTimelineRange();
-                          const timelineHeight = 380; // Fixed height to fit in view - increased for more spacing
+                          const timelineHeight = 320; // Fixed height to fit in view - reduced for mobile
                           
                           return (
-                            <div className="flex-1 relative overflow-hidden" style={{ paddingLeft: '4.5rem', paddingRight: '0.5rem', paddingTop: '3rem', paddingBottom: '3.5rem', height: `${timelineHeight}px` }}>
+                            <div className="flex-1 relative overflow-hidden" style={{ paddingLeft: '3.5rem', paddingRight: '0.5rem', paddingTop: '2rem', paddingBottom: '2.5rem', height: `${timelineHeight}px` }}>
                               {/* Timeline Items Container */}
                               <div className="relative" style={{ height: `${timelineHeight}px` }}>
                                 {/* Liquid Timeline Background */}
@@ -464,7 +464,7 @@ The assistant helps you stay balanced from optimizing focus time to rearranging 
                                         }}
                                       >
                                         <div className="w-10 h-10 rounded-full border-2 flex items-center justify-center flex-shrink-0 shadow-lg bg-blue-500 border-blue-600">
-                                          <span className="text-white text-xs font-bold">🌅</span>
+                                          <span className="text-white text-xs font-bold">☀️</span>
                                         </div>
                                       </div>
                                     </>

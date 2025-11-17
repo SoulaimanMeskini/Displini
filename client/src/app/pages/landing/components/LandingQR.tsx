@@ -47,10 +47,20 @@ export function LandingQR() {
   const tasksCount = useCountUp(10000000); // 10M+
   const usersCount = useCountUp(500000); // 500K+
   const satisfactionCount = useCountUp(98); // 98%
+  const [qrSize, setQrSize] = useState(320);
+  
+  useEffect(() => {
+    const updateSize = () => {
+      setQrSize(window.innerWidth < 768 ? 200 : 320);
+    };
+    updateSize();
+    window.addEventListener('resize', updateSize);
+    return () => window.removeEventListener('resize', updateSize);
+  }, []);
 
   return (
     <section 
-      className="relative px-6 py-32 bg-gray-50 dark:bg-gray-900 transition-colors duration-300"
+      className="relative px-6 py-12 md:py-32 bg-gray-50 dark:bg-gray-900 transition-colors duration-300"
       style={{
         minHeight: 'calc(100vh - 80px)',
         display: 'flex',
@@ -62,25 +72,25 @@ export function LandingQR() {
     >
       <div className="container mx-auto max-w-4xl">
         <div className="flex flex-col items-center">
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-4 text-center">
+          <h2 className="text-2xl md:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-2 md:mb-4 text-center">
             Download Displini
           </h2>
-          <p className="text-base md:text-lg text-gray-700 dark:text-gray-300 mb-12 text-center">
+          <p className="text-sm md:text-lg text-gray-700 dark:text-gray-300 mb-6 md:mb-12 text-center">
             Scan the QR code to download Displini on your phone
           </p>
           
           {/* QR Code */}
-          <div className="mb-12 text-gray-800 dark:text-gray-300">
+          <div className="mb-6 md:mb-12 text-gray-800 dark:text-gray-300">
             <CircularQrOrbit 
               qrSrc="/images/Qr_code.svg"
-              size={320}
+              size={qrSize}
               speedSec={8}
               words={['Discipline', 'Improve', 'Benefit', 'Energy', 'Calm', 'Focus', 'Growth', 'Balance', 'Aware']}
             />
           </div>
           
           {/* App Store buttons */}
-          <div className="flex gap-8 items-center mb-16">
+          <div className="flex gap-4 md:gap-8 items-center mb-8 md:mb-16">
             <a 
               href="#" 
               className="transition-all duration-300 hover:scale-110 hover:opacity-70"
@@ -117,25 +127,25 @@ export function LandingQR() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
-            className="grid grid-cols-1 sm:grid-cols-3 gap-8 md:gap-12 lg:gap-16 w-full max-w-4xl px-4"
+            className="grid grid-cols-3 gap-2 md:gap-8 lg:gap-16 w-full max-w-4xl px-2 md:px-4"
           >
-            <div className="text-center px-2">
-              <div ref={tasksCount.ref} className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-2 whitespace-nowrap">
+            <div className="text-center px-1">
+              <div ref={tasksCount.ref} className="text-lg sm:text-xl md:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-1 md:mb-2 whitespace-nowrap">
                 {tasksCount.count.toLocaleString()}+
               </div>
-              <div className="text-xs sm:text-sm md:text-base text-gray-600 dark:text-gray-400">Tasks Completed</div>
+              <div className="text-[10px] sm:text-xs md:text-base text-gray-600 dark:text-gray-400">Tasks Completed</div>
             </div>
-            <div className="text-center px-2">
-              <div ref={usersCount.ref} className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-2 whitespace-nowrap">
+            <div className="text-center px-1">
+              <div ref={usersCount.ref} className="text-lg sm:text-xl md:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-1 md:mb-2 whitespace-nowrap">
                 {usersCount.count.toLocaleString()}+
               </div>
-              <div className="text-xs sm:text-sm md:text-base text-gray-600 dark:text-gray-400">Active Users</div>
+              <div className="text-[10px] sm:text-xs md:text-base text-gray-600 dark:text-gray-400">Active Users</div>
             </div>
-            <div className="text-center px-2">
-              <div ref={satisfactionCount.ref} className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-2 whitespace-nowrap">
+            <div className="text-center px-1">
+              <div ref={satisfactionCount.ref} className="text-lg sm:text-xl md:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-1 md:mb-2 whitespace-nowrap">
                 {satisfactionCount.count}%
               </div>
-              <div className="text-xs sm:text-sm md:text-base text-gray-600 dark:text-gray-400">Satisfaction Rate</div>
+              <div className="text-[10px] sm:text-xs md:text-base text-gray-600 dark:text-gray-400">Satisfaction Rate</div>
             </div>
           </motion.div>
         </div>

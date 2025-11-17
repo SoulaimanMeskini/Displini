@@ -100,6 +100,7 @@ export function LandingAbout() {
                     width: '300px',
                     height: '300px',
                     background: `radial-gradient(circle, ${colors.features.todo}66 0%, transparent 70%)`,
+                    position: 'absolute',
                   }}
                   animate={{
                     left: mousePosition.x - 150,
@@ -170,6 +171,7 @@ export function LandingAbout() {
                           width: '250px',
                           height: '250px',
                           background: `radial-gradient(circle, ${card.color}66 0%, transparent 70%)`,
+                          position: 'absolute',
                         }}
                         animate={{
                           left: mousePosition.x - 125,
@@ -211,9 +213,12 @@ export function LandingAbout() {
       
       {/* Section 1: Our Story */}
       <section
+        ref={sectionRef}
         data-section="about-story"
         className="lg:hidden relative py-20 px-6 bg-gray-50 dark:bg-gray-900 transition-colors duration-300 flex items-center justify-center"
         style={{ scrollSnapAlign: 'center', minHeight: 'calc(100vh - 80px)' }}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={() => setHoveredCard(null)}
       >
         <div className="container mx-auto max-w-md">
           <motion.div
@@ -223,8 +228,6 @@ export function LandingAbout() {
             viewport={{ once: true, amount: 0.3 }}
             transition={{ duration: 0.6 }}
             onMouseEnter={() => setHoveredCard('story-mobile')}
-            onMouseLeave={() => setHoveredCard(null)}
-            onMouseMove={(e) => handleMouseMove(e, 'story-mobile')}
           >
             <motion.div
               className="relative bg-white/40 dark:bg-gray-800/40 backdrop-blur-xl border border-white/50 dark:border-gray-700/50 rounded-3xl p-8 shadow-2xl overflow-hidden"
@@ -249,8 +252,7 @@ export function LandingAbout() {
                     width: '300px',
                     height: '300px',
                     background: `radial-gradient(circle, ${colors.features.todo}66 0%, transparent 70%)`,
-                    left: mousePosition.x - 150,
-                    top: mousePosition.y - 150,
+                    position: 'absolute',
                   }}
                   animate={{
                     left: mousePosition.x - 150,
@@ -286,12 +288,15 @@ export function LandingAbout() {
 
       {/* Section 2: Mission, Unity, Care */}
       <section
+        ref={sectionRef}
         data-section="about-values"
-        className="lg:hidden relative py-20 px-6 bg-gray-50 dark:bg-gray-900 transition-colors duration-300 flex items-center justify-center"
+        className="lg:hidden relative py-12 px-6 bg-gray-50 dark:bg-gray-900 transition-colors duration-300 flex items-center justify-center"
         style={{ scrollSnapAlign: 'center', minHeight: 'calc(100vh - 80px)' }}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={() => setHoveredCard(null)}
       >
         <div className="container mx-auto max-w-md">
-          <div className="flex flex-col gap-8">
+          <div className="flex flex-col gap-4 md:gap-8">
             {smallCards.map((card, index) => {
               const Icon = card.icon;
               const cardId = `${card.title.toLowerCase()}-mobile`;
@@ -305,11 +310,9 @@ export function LandingAbout() {
                   viewport={{ once: true, amount: 0.3 }}
                   transition={{ duration: 0.6, delay: index * 0.1 }}
                   onMouseEnter={() => setHoveredCard(cardId)}
-                  onMouseLeave={() => setHoveredCard(null)}
-                  onMouseMove={(e) => handleMouseMove(e, cardId)}
                 >
                   <motion.div
-                    className="relative bg-white/40 dark:bg-gray-800/40 backdrop-blur-xl border border-white/50 dark:border-gray-700/50 rounded-2xl p-6 shadow-xl overflow-hidden"
+                    className="relative bg-white/40 dark:bg-gray-800/40 backdrop-blur-xl border border-white/50 dark:border-gray-700/50 rounded-2xl p-4 md:p-6 shadow-xl overflow-hidden"
                     animate={{
                       y: [0, -8, 0],
                       scale: hoveredCard === cardId ? 1.02 : 1,
@@ -331,6 +334,7 @@ export function LandingAbout() {
                           width: '250px',
                           height: '250px',
                           background: `radial-gradient(circle, ${card.color}66 0%, transparent 70%)`,
+                          position: 'absolute',
                         }}
                         animate={{
                           left: mousePosition.x - 125,

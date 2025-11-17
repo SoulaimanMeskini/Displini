@@ -107,7 +107,7 @@ export function Header() {
             <a href="/" className="h-14 group cursor-pointer">
               {/* Mobile: Show icon only, Desktop: Show logo with text */}
               <img 
-                src={isDark || !isScrolled ? "/logos/Displini_Icon_Gradiant_1.svg" : "/logos/Displini_Icon_black.svg"}
+                src={isDark || !isScrolled ? "/logos/Displini_Icon_white.svg" : "/logos/Displini_Icon_black.svg"}
                 alt="Displini" 
                 width="56"
                 height="56"

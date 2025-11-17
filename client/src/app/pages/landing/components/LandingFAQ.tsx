@@ -64,9 +64,9 @@ export function LandingFAQ() {
   ];
 
   return (
-    <section data-section="faq" className="py-20 flex flex-col items-center justify-center relative bg-gray-50 dark:bg-gray-900 transition-colors duration-300" style={{ scrollSnapAlign: 'center', minHeight: '100vh' }}>
+    <section data-section="faq" className="py-12 md:py-20 flex flex-col items-center justify-center relative bg-gray-50 dark:bg-gray-900 transition-colors duration-300" style={{ scrollSnapAlign: 'center', minHeight: 'calc(100vh - 80px)' }}>
       <div className="container mx-auto px-6 w-full">
-        <h2 className="text-4xl md:text-5xl font-bold text-center mb-16 text-gray-900 dark:text-white" style={{ marginTop: '80px' }}>
+        <h2 className="text-2xl md:text-4xl lg:text-5xl font-bold text-center mb-8 md:mb-16 text-gray-900 dark:text-white" style={{ marginTop: '40px' }}>
           Frequently Asked Questions
         </h2>
         <div className="max-w-3xl mx-auto">
@@ -75,7 +75,7 @@ export function LandingFAQ() {
               {faqs.map((faq, index) => (
                 <div key={index}>
                   <button
-                    className="w-full px-6 py-4 flex items-center gap-4 hover:bg-white/50 transition-colors"
+                    className="w-full px-4 md:px-6 py-4 flex items-center gap-3 md:gap-4 hover:bg-white/50 transition-colors justify-center md:justify-start"
                     onClick={() => {
                       setOpenIndices(prev => 
                         prev.includes(index) 
@@ -88,9 +88,9 @@ export function LandingFAQ() {
                       className={`transition-all duration-300 flex-shrink-0 ${openIndices.includes(index) ? 'rotate-45' : ''}`}
                       style={{ color: colors.brand.primary }}
                     >
-                      <Plus className="w-6 h-6" />
+                      <Plus className="w-5 h-5 md:w-6 md:h-6" />
                     </span>
-                    <span className="text-lg font-medium text-gray-900 text-left">{faq.question}</span>
+                    <span className="text-sm md:text-lg font-medium text-gray-900 text-center md:text-left flex-1">{faq.question}</span>
                   </button>
                   <div 
                     className={`overflow-hidden transition-all duration-300 ${
@@ -108,7 +108,7 @@ export function LandingFAQ() {
         </div>
         
         {/* Arrow & Text - ABSOLUTE AT BOTTOM OF SECTION */}
-        <div ref={arrowRef} className="absolute bottom-32 left-12">
+        <div ref={arrowRef} className="absolute bottom-16 md:bottom-32 left-4 md:left-12">
           <AnimatePresence mode="wait">
             {showArrow && (
               <motion.div 
@@ -127,11 +127,10 @@ export function LandingFAQ() {
                   className="text-gray-900 dark:text-gray-300 font-medium text-sm whitespace-nowrap mb-4"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 10 }}
+                  exit={{ opacity: 0, y: 10, transition: { duration: 0.2 } }}
                   transition={{ 
                     duration: 0.6,
-                    ease: "easeOut",
-                    exit: { duration: 0.2 }
+                    ease: "easeOut"
                   }}
                 >
                   we can help you
@@ -144,13 +143,12 @@ export function LandingFAQ() {
                   }}
                   initial={{ opacity: 0, scale: 0, rotate: -45 }}
                   animate={{ opacity: 1, scale: 1, rotate: -15 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
+                  exit={{ opacity: 0, scale: 0.8, transition: { duration: 0.2, type: "tween" } }}
                   transition={{ 
                     type: "spring", 
                     stiffness: 200, 
                     damping: 10,
-                    mass: 0.8,
-                    exit: { duration: 0.2, type: "tween" }
+                    mass: 0.8
                   }}
                 >
                   <img 

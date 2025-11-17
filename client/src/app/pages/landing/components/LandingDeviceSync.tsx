@@ -9,7 +9,7 @@ import { colors } from "@/lib/designSystem";
  */
 export function LandingDeviceSync() {
   return (
-    <section data-section="device-sync" className="relative pb-0 bg-gray-50 dark:bg-gray-900 transition-colors duration-300" style={{ scrollSnapAlign: 'start', minHeight: '100vh', paddingTop: '300px' }}>
+    <section data-section="device-sync" className="relative pb-0 bg-gray-50 dark:bg-gray-900 transition-colors duration-300" style={{ scrollSnapAlign: 'start', minHeight: 'calc(100vh - 80px)', paddingTop: '200px' }}>
       <div className="container mx-auto max-w-7xl px-6 relative">
         <style>{`
           @keyframes spin-smooth {
@@ -47,7 +47,7 @@ export function LandingDeviceSync() {
         {/* Device Screens with Title */}
         <div className="relative flex items-start justify-center overflow-visible" style={{ minWidth: '100%', height: '900px' }}>
           {/* Title and Sync - IN FRONT OF SCREENS */}
-          <div className="absolute left-1/2 -translate-x-1/2 z-40 text-center w-full" style={{ top: '100px' }}>
+          <div className="absolute left-1/2 -translate-x-1/2 z-40 text-center w-full" style={{ top: '60px', paddingTop: '0' }}>
           <h2 className="text-4xl md:text-5xl font-bold mb-6 text-gray-900 dark:text-white">
             Keep track where you left off on any device
           </h2>
