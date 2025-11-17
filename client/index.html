@@ -1,18 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <!-- Google Tag Manager -->
-    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-    })(window,document,'script','dataLayer','GTM-K3NM436V');</script>
-    <!-- End Google Tag Manager -->
-    
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Track your daily habits, protein intake, calendar events, and tasks all in one place. Improve your health and productivity with smart habit tracking." />
     <title>Displini - Stay focused. Stay Displini.</title>
+    
+    <!-- Resource Hints for Performance -->
+    <link rel="preconnect" href="https://www.googletagmanager.com" crossorigin />
+    <link rel="preconnect" href="https://chimpstatic.com" crossorigin />
+    <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
+    <link rel="dns-prefetch" href="https://chimpstatic.com" />
+    
+    <!-- Preload Critical Fonts -->
+    <link rel="preload" href="/fonts/Satoshi-Variable.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/Manrope-VariableFont_wght.ttf" as="font" type="font/truetype-variations" crossorigin />
     
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -27,18 +29,54 @@
     <!-- Theme Color -->
     <meta name="theme-color" content="#30C4FF" />
     
-    <!-- Fonts are loaded locally via CSS -->
-    
-    <!-- Mailchimp Script -->
-    <script id="mcjs">!function(c,h,i,m,p){m=c.createElement(h),p=c.getElementsByTagName(h)[0],m.async=1,m.src=i,p.parentNode.insertBefore(m,p)}(document,"script","https://chimpstatic.com/mcjs-connected/js/users/bc59553c3eeb378829fe08748/7c1a266dbf55c7f24564ce1d1.js");</script>
-    
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-TJMTZHQZR5"></script>
+    <!-- Defer Non-Critical Scripts - Load after page is interactive -->
     <script>
+      // Defer Google Tag Manager
       window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'G-TJMTZHQZR5');
+      function gtmLoad() {
+        (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+        new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+        j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+        'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+        })(window,document,'script','dataLayer','GTM-K3NM436V');
+      }
+      
+      // Defer Google Analytics
+      function gaLoad() {
+        var script = document.createElement('script');
+        script.async = true;
+        script.src = 'https://www.googletagmanager.com/gtag/js?id=G-TJMTZHQZR5';
+        document.head.appendChild(script);
+        
+        script.onload = function() {
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', 'G-TJMTZHQZR5');
+        };
+      }
+      
+      // Defer Mailchimp
+      function mailchimpLoad() {
+        !function(c,h,i,m,p){m=c.createElement(h),p=c.getElementsByTagName(h)[0],m.async=1,m.src=i,p.parentNode.insertBefore(m,p)}(document,"script","https://chimpstatic.com/mcjs-connected/js/users/bc59553c3eeb378829fe08748/7c1a266dbf55c7f24564ce1d1.js");
+      }
+      
+      // Load analytics after page is interactive
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+          setTimeout(function() {
+            gtmLoad();
+            gaLoad();
+            mailchimpLoad();
+          }, 2000); // Delay 2 seconds to prioritize content
+        });
+      } else {
+        setTimeout(function() {
+          gtmLoad();
+          gaLoad();
+          mailchimpLoad();
+        }, 2000);
+      }
     </script>
   </head>
   <body>

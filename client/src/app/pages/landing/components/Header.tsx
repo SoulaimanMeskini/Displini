@@ -108,6 +108,8 @@ export function Header() {
               <img 
                 src={isDark || !isScrolled ? "/logos/Displini_Logo_text_white.svg" : "/logos/Displini_Logo_text_black.svg"}
                 alt="Displini" 
+                width="200"
+                height="56"
                 className="h-full w-auto transition-all duration-300 group-hover:scale-105 group-hover:opacity-80"
                 loading="eager"
               />

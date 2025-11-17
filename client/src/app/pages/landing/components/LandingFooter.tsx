@@ -23,6 +23,8 @@ export function LandingFooter() {
               <img 
                 src="/logos/Displini_Logo_text_white.svg" 
                 alt="Displini" 
+                width="200"
+                height="48"
                 className="h-full w-auto"
                 loading="lazy"
               />
@@ -88,6 +90,8 @@ export function LandingFooter() {
               <img
                 src="/icons/Apple_icon.svg"
                 alt="Download on the App Store"
+                width="96"
+                height="32"
                 className="w-24 h-8 object-contain filter brightness-0 invert"
                 loading="lazy"
               />
@@ -100,6 +104,8 @@ export function LandingFooter() {
               <img
                 src="/icons/Googleplay_icon.svg"
                 alt="Get it on Google Play"
+                width="96"
+                height="32"
                 className="w-24 h-8 object-contain filter brightness-0 invert"
                 loading="lazy"
               />

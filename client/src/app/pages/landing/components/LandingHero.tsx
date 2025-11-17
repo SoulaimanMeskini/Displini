@@ -23,6 +23,9 @@ export function LandingHero() {
           muted 
           loop 
           playsInline
+          preload="metadata"
+          width="1920"
+          height="1080"
           aria-label="Displini app demonstration video showing productivity and health tracking features"
           style={{
             clipPath: 'ellipse(120% 100% at 50% 0%)',
@@ -31,6 +34,7 @@ export function LandingHero() {
           }}
         >
           <source src="/placeholder.mp4" type="video/mp4" />
+          <track kind="captions" srcLang="en" label="English captions" />
           {/* Fallback for screen readers and when video fails */}
           <div className="w-full h-full bg-gradient-to-br from-displini-600 to-displini-800 flex items-center justify-center">
             <div className="text-center text-white">
@@ -47,6 +51,8 @@ export function LandingHero() {
             <img 
               src="/icons/Apple_icon.svg" 
               alt="Download on App Store"
+              width="24"
+              height="24"
               className="w-6 h-6 filter brightness-0 invert object-contain"
               loading="lazy"
             />
@@ -56,6 +62,8 @@ export function LandingHero() {
             <img 
               src="/icons/Googleplay_icon.svg" 
               alt="Get it on Google Play"
+              width="24"
+              height="24"
               className="w-6 h-6 filter brightness-0 invert object-contain"
               loading="lazy"
             />
@@ -70,6 +78,8 @@ export function LandingHero() {
             <img 
               src="/logos/Displini_text_black.svg" 
               alt="Displini" 
+              width="200"
+              height="64"
               className="h-12 md:h-16 w-auto dark:brightness-0 dark:invert"
               loading="lazy"
             />
