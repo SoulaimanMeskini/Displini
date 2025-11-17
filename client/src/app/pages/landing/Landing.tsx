@@ -4,15 +4,16 @@ import { SEO } from "@/app/components/shared/SEO";
 import { colors } from "@/lib/designSystem";
 import { useLandingScroll } from "@/hooks/useLandingScroll";
 import { Header, LandingHero, LandingFeatures } from "./components";
+import { ErrorBoundary } from "@/app/components/shared/ErrorBoundary";
 
-// Lazy load heavy sections for better initial load performance
-const LandingCarousel = lazy(() => import("./components").then(m => ({ default: m.LandingCarousel })));
-const LandingQR = lazy(() => import("./components").then(m => ({ default: m.LandingQR })));
-const LandingAbout = lazy(() => import("./components").then(m => ({ default: m.LandingAbout })));
-const LandingFAQ = lazy(() => import("./components").then(m => ({ default: m.LandingFAQ })));
-const LandingDeviceSync = lazy(() => import("./components").then(m => ({ default: m.LandingDeviceSync })));
-const LandingCTA = lazy(() => import("./components").then(m => ({ default: m.LandingCTA })));
-const LandingFooter = lazy(() => import("./components").then(m => ({ default: m.LandingFooter })));
+// Lazy load heavy sections for better initial load performance with error handling
+const LandingCarousel = lazy(() => import("./components").then(m => ({ default: m.LandingCarousel })).catch(() => ({ default: () => null })));
+const LandingQR = lazy(() => import("./components").then(m => ({ default: m.LandingQR })).catch(() => ({ default: () => null })));
+const LandingAbout = lazy(() => import("./components").then(m => ({ default: m.LandingAbout })).catch(() => ({ default: () => null })));
+const LandingFAQ = lazy(() => import("./components").then(m => ({ default: m.LandingFAQ })).catch(() => ({ default: () => null })));
+const LandingDeviceSync = lazy(() => import("./components").then(m => ({ default: m.LandingDeviceSync })).catch(() => ({ default: () => null })));
+const LandingCTA = lazy(() => import("./components").then(m => ({ default: m.LandingCTA })).catch(() => ({ default: () => null })));
+const LandingFooter = lazy(() => import("./components").then(m => ({ default: m.LandingFooter })).catch(() => ({ default: () => null })));
 
 // Main Landing Component - Memoized for performance
 function Landing() {
@@ -34,15 +35,29 @@ function Landing() {
       <LandingHero />
       <LandingFeatures />
       
-      {/* Lazy loaded sections with Suspense boundaries */}
+      {/* Lazy loaded sections with Suspense boundaries and error boundaries */}
       <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div></div>}>
-        <LandingCarousel />
-        <LandingQR />
-        <LandingAbout />
-        <LandingFAQ />
-        <LandingDeviceSync />
-        <LandingCTA />
-        <LandingFooter />
+        <ErrorBoundary>
+          <LandingCarousel />
+        </ErrorBoundary>
+        <ErrorBoundary>
+          <LandingQR />
+        </ErrorBoundary>
+        <ErrorBoundary>
+          <LandingAbout />
+        </ErrorBoundary>
+        <ErrorBoundary>
+          <LandingFAQ />
+        </ErrorBoundary>
+        <ErrorBoundary>
+          <LandingDeviceSync />
+        </ErrorBoundary>
+        <ErrorBoundary>
+          <LandingCTA />
+        </ErrorBoundary>
+        <ErrorBoundary>
+          <LandingFooter />
+        </ErrorBoundary>
       </Suspense>
 
       {/* Sticky Chat Button - BOTTOM LEFT CORNER */}
