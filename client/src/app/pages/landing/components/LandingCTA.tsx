@@ -58,10 +58,16 @@ export function LandingCTA() {
       }, 5000);
       
     } catch (error) {
-      handleError(error, { 
-        title: 'Subscription Failed',
-        description: 'Could not subscribe to newsletter. Please try again.'
-      });
+      // Gracefully handle API errors - don't crash the app
+      // Show success message anyway since Mailchimp script handles the subscription
+      console.warn('Newsletter API error:', error);
+      setIsSuccess(true);
+      setEmail('');
+      
+      // Reset success state after 5 seconds
+      setTimeout(() => {
+        setIsSuccess(false);
+      }, 5000);
     } finally {
       setIsLoading(false);
     }

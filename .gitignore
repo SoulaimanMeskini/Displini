@@ -44,3 +44,4 @@ Displini/
 # Misc
 vite.config.ts.*
 *.tar.gz
+.vercel
