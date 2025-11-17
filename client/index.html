@@ -8,9 +8,7 @@
     
     <!-- Resource Hints for Performance -->
     <link rel="preconnect" href="https://www.googletagmanager.com" crossorigin />
-    <link rel="preconnect" href="https://chimpstatic.com" crossorigin />
     <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
-    <link rel="dns-prefetch" href="https://chimpstatic.com" />
     
     <!-- Preload Critical Fonts -->
     <link rel="preload" href="/fonts/Satoshi-Variable.woff2" as="font" type="font/woff2" crossorigin />
@@ -56,25 +54,18 @@
         };
       }
       
-      // Defer Mailchimp
-      function mailchimpLoad() {
-        !function(c,h,i,m,p){m=c.createElement(h),p=c.getElementsByTagName(h)[0],m.async=1,m.src=i,p.parentNode.insertBefore(m,p)}(document,"script","https://chimpstatic.com/mcjs-connected/js/users/bc59553c3eeb378829fe08748/7c1a266dbf55c7f24564ce1d1.js");
-      }
-      
       // Load analytics after page is interactive
       if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function() {
           setTimeout(function() {
             gtmLoad();
             gaLoad();
-            mailchimpLoad();
           }, 2000); // Delay 2 seconds to prioritize content
         });
       } else {
         setTimeout(function() {
           gtmLoad();
           gaLoad();
-          mailchimpLoad();
         }, 2000);
       }
     </script>

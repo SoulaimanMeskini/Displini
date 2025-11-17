@@ -61,7 +61,7 @@ export function LandingDeviceSync() {
                   animation: 'spin-smooth 4s linear infinite'
                 }}
               />
-              <p className="text-base font-semibold" style={{ color: colors.brand.primary }}>Sync</p>
+              <p className="text-base font-semibold text-gray-900 dark:text-white">Sync</p>
             </div>
           </div>
 

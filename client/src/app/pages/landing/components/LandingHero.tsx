@@ -23,7 +23,8 @@ export function LandingHero() {
           muted 
           loop 
           playsInline
-          preload="metadata"
+          preload="none"
+          poster="/images/OG_Image.png"
           width="1920"
           height="1080"
           aria-label="Displini app demonstration video showing productivity and health tracking features"
@@ -31,6 +32,10 @@ export function LandingHero() {
             clipPath: 'ellipse(120% 100% at 50% 0%)',
             WebkitClipPath: 'ellipse(120% 100% at 50% 0%)',
             backgroundColor: colors.neutral.black
+          }}
+          onLoadedData={(e) => {
+            // Video loaded, can start playing
+            e.currentTarget.play().catch(() => {});
           }}
         >
           <source src="/placeholder.mp4" type="video/mp4" />
@@ -84,10 +89,10 @@ export function LandingHero() {
               loading="lazy"
             />
           </div>
-          <p className="text-base md:text-lg mb-4 max-w-3xl mx-auto animate-fade-in text-gray-700 dark:text-gray-300" style={{animationDelay: '0.2s'}}>
+          <p className="text-base md:text-lg mb-4 max-w-3xl mx-auto animate-fade-in text-gray-900 dark:text-gray-100 font-medium" style={{animationDelay: '0.2s'}}>
             Displini is an application that helps you build structure, improve your health and routines.
           </p>
-          <p className="text-xl md:text-2xl italic text-displini-600 mb-8 animate-fade-in" style={{animationDelay: '0.4s'}}>
+          <p className="text-xl md:text-2xl italic text-gray-900 dark:text-displini-400 mb-8 animate-fade-in font-semibold" style={{animationDelay: '0.4s'}}>
             Stay focused. Stay Displini.
           </p>
         </div>

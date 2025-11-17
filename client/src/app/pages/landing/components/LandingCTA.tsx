@@ -3,12 +3,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 import { Instagram, Youtube, CheckCircle2, Loader2 } from "lucide-react";
-import { handleSuccess, handleError } from "@/lib/errorHandling";
 
 /**
  * Call-to-action section with email signup
  * - Animated gradient blobs (mouse-following effect)
- * - Email subscription form with Mailchimp integration
+ * - Email subscription form (backend integration pending)
  * - Loading and success states with animations
  * - Social media links
  */
@@ -35,42 +34,18 @@ export function LandingCTA() {
     setIsLoading(true);
     setIsSuccess(false);
     
-    try {
-      // Submit to backend API which integrates with Mailchimp
-      // Mailchimp script is loaded in index.html for tracking and analytics
-      const response = await fetch('/api/newsletter/subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-      
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({ message: 'Subscription failed' }));
-        throw new Error(error.message || 'Subscription failed');
-      }
-      
+    // TODO: Connect to backend API when ready
+    // For now, simulate success
+    setTimeout(() => {
       setIsSuccess(true);
       setEmail('');
-      
-      // Reset success state after 5 seconds
-      setTimeout(() => {
-        setIsSuccess(false);
-      }, 5000);
-      
-    } catch (error) {
-      // Gracefully handle API errors - don't crash the app
-      // Show success message anyway since Mailchimp script handles the subscription
-      console.warn('Newsletter API error:', error);
-      setIsSuccess(true);
-      setEmail('');
-      
-      // Reset success state after 5 seconds
-      setTimeout(() => {
-        setIsSuccess(false);
-      }, 5000);
-    } finally {
       setIsLoading(false);
-    }
+      
+      // Reset success state after 5 seconds
+      setTimeout(() => {
+        setIsSuccess(false);
+      }, 5000);
+    }, 800);
   };
 
   return (
