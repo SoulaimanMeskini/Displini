@@ -10,7 +10,11 @@ import { colors } from "@/lib/designSystem";
  * - Sticky arrow (acts like fixed but contained in section)
  * - No lag into other sections!
  */
-export function LandingFAQ() {
+interface LandingFAQProps {
+  showHelpText?: boolean;
+}
+
+export function LandingFAQ({ showHelpText = true }: LandingFAQProps = {}) {
   const [openIndices, setOpenIndices] = useState<number[]>([]);
   const [showArrow, setShowArrow] = useState(false);
   const [animationKey, setAnimationKey] = useState(0);
@@ -107,7 +111,8 @@ export function LandingFAQ() {
           </Card>
         </div>
         
-        {/* Arrow & Text - ABSOLUTE AT BOTTOM OF SECTION - Hidden on mobile */}
+        {/* Arrow & Text - ABSOLUTE AT BOTTOM OF SECTION - Hidden on mobile and when showHelpText is false */}
+        {showHelpText && (
         <div ref={arrowRef} className="hidden md:block absolute bottom-16 md:bottom-32 left-4 md:left-12">
           <AnimatePresence mode="wait">
             {showArrow && (
@@ -166,6 +171,7 @@ export function LandingFAQ() {
             )}
           </AnimatePresence>
         </div>
+        )}
       </div>
     </section>
   );

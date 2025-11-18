@@ -1,5 +1,4 @@
-import React, { memo, lazy, Suspense } from "react";
-import { MessageSquare } from "lucide-react";
+import React, { memo, lazy, Suspense, useState, useEffect } from "react";
 import { SEO } from "@/app/components/shared/SEO";
 import { colors } from "@/lib/designSystem";
 import { useLandingScroll } from "@/hooks/useLandingScroll";
@@ -7,19 +6,28 @@ import { Header, LandingHero, LandingFeatures } from "./components";
 import { ErrorBoundary } from "@/app/components/shared/ErrorBoundary";
 
 // Lazy load heavy sections for better initial load performance with error handling
-const LandingCarousel = lazy(() => import("./components").then(m => ({ default: m.LandingCarousel })).catch(() => ({ default: () => null })));
-const LandingQR = lazy(() => import("./components").then(m => ({ default: m.LandingQR })).catch(() => ({ default: () => null })));
-const LandingAbout = lazy(() => import("./components").then(m => ({ default: m.LandingAbout })).catch(() => ({ default: () => null })));
-const LandingFAQ = lazy(() => import("./components").then(m => ({ default: m.LandingFAQ })).catch(() => ({ default: () => null })));
-const LandingDeviceSync = lazy(() => import("./components").then(m => ({ default: m.LandingDeviceSync })).catch(() => ({ default: () => null })));
-const LandingCTA = lazy(() => import("./components").then(m => ({ default: m.LandingCTA })).catch(() => ({ default: () => null })));
-const LandingFooter = lazy(() => import("./components").then(m => ({ default: m.LandingFooter })).catch(() => ({ default: () => null })));
+const LandingCarousel = lazy(() => import("./components").then(m => ({ default: m.LandingCarousel })).catch(() => ({ default: () => <div /> })));
+const LandingQR = lazy(() => import("./components").then(m => ({ default: m.LandingQR })).catch(() => ({ default: () => <div /> })));
+const LandingAbout = lazy(() => import("./components").then(m => ({ default: m.LandingAbout })).catch(() => ({ default: () => <div /> })));
+const LandingFAQ = lazy(() => import("./components").then(m => ({ default: m.LandingFAQ })).catch(() => ({ default: () => <div /> })));
+const LandingDeviceSync = lazy(() => import("./components").then(m => ({ default: m.LandingDeviceSync })).catch(() => ({ default: () => <div /> })));
+const LandingCTA = lazy(() => import("./components").then(m => ({ default: m.LandingCTA })).catch(() => ({ default: () => <div /> })));
+const LandingFooter = lazy(() => import("./components").then(m => ({ default: m.LandingFooter })).catch(() => ({ default: () => <div /> })));
 
 // Main Landing Component - Memoized for performance
 function Landing() {
   // Track scroll position for restoration on reload
   useLandingScroll();
+  const [isMobile, setIsMobile] = useState(false);
   
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
   
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-white transition-colors duration-300" style={{ scrollSnapType: 'y mandatory', height: '100vh', overflowY: 'scroll', paddingTop: '80px' }}>
@@ -61,22 +69,6 @@ function Landing() {
         </ErrorBoundary>
       </Suspense>
 
-      {/* Sticky Chat Button - BOTTOM LEFT CORNER */}
-      <button 
-        className="fixed bg-white hover:bg-gray-50 text-gray-900 p-4 rounded-full shadow-2xl transition-all duration-300 hover:scale-110 z-50"
-        style={{ 
-          bottom: '24px',
-          left: '24px',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(0, 0, 0, 0.1)'
-        }}
-        onClick={() => {
-          alert('Chat feature coming soon!');
-        }}
-        aria-label="Open chat"
-      >
-        <MessageSquare className="w-6 h-6" />
-      </button>
-      
       </main>
     </div>
   );

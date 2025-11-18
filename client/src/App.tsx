@@ -12,6 +12,7 @@ import BottomNav from "@/app/shared/BottomNav";
 import PageTransition from "@/app/shared/PageTransition";
 import OnboardingDialog from "@/app/components/shared/OnboardingDialog";
 import { LoadingScreen } from "@/app/components/shared/LoadingScreen";
+import { ChatButton } from "@/app/components/shared/ChatButton";
 
 // Lazy load pages for better performance
 const Login = lazy(() => import("@/app/pages/auth/Login"));
@@ -22,6 +23,7 @@ const AI = lazy(() => import("@/app/pages/ai/AI"));
 const Profile = lazy(() => import("@/app/pages/profile/Profile"));
 const Pricing = lazy(() => import("@/app/pages/Pricing"));
 const Roadmap = lazy(() => import("@/app/pages/Roadmap"));
+const About = lazy(() => import("@/app/pages/About"));
 const Collaboration = lazy(() => import("@/app/pages/Collaboration"));
 const Contact = lazy(() => import("@/app/pages/Contact"));
 const FeatureRequests = lazy(() => import("@/app/pages/FeatureRequests"));
@@ -68,6 +70,7 @@ function Router() {
               <Route path="/login" component={Login} />
               <Route path="/pricing" component={Pricing} />
               <Route path="/roadmap" component={Roadmap} />
+              <Route path="/about" component={About} />
               <Route path="/collaboration" component={Collaboration} />
               <Route path="/contact" component={Contact} />
               <Route path="/feature-requests" component={FeatureRequests} />
@@ -83,6 +86,7 @@ function Router() {
               <Route path="/login" component={() => <Redirect to="/app/todo" />} />
               <Route path="/pricing" component={Pricing} />
               <Route path="/roadmap" component={Roadmap} />
+              <Route path="/about" component={About} />
               <Route path="/collaboration" component={Collaboration} />
               <Route path="/contact" component={Contact} />
               <Route path="/feature-requests" component={FeatureRequests} />
@@ -110,6 +114,8 @@ function Router() {
           />
         </>
       )}
+      {/* Show chat button on all pages */}
+      <ChatButton />
     </>
   );
 }

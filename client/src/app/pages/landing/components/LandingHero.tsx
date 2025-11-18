@@ -18,11 +18,14 @@ export function LandingHero() {
       {/* Video with Outward Curved Bottom */}
       <div className="relative w-full h-96 md:h-[500px] lg:h-[600px]">
         <video 
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover [&::-webkit-media-controls]:hidden [&::-webkit-media-controls-panel]:hidden [&::-webkit-media-controls-play-button]:hidden [&::-webkit-media-controls-start-playback-button]:hidden"
           autoPlay 
           muted 
           loop 
           playsInline
+          controls={false}
+          disablePictureInPicture
+          controlsList="nodownload nofullscreen noplaybackrate"
           preload="metadata"
           poster="/images/OG_Image.png"
           width="1920"

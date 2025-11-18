@@ -132,8 +132,8 @@ export function CircularQrOrbit({
             <img 
               src={qrSrc}
               alt="QR Code"
-              className="w-full h-full object-contain relative z-10 dark:invert"
-              style={{ maxWidth: '128px', maxHeight: '128px' }}
+              className="w-full h-full object-contain relative z-10"
+              style={{ maxWidth: '128px', maxHeight: '128px', filter: 'none' }}
               loading="lazy"
             />
           </div>

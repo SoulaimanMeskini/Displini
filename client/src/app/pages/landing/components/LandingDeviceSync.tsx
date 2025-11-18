@@ -9,7 +9,7 @@ import { colors } from "@/lib/designSystem";
  */
 export function LandingDeviceSync() {
   return (
-    <section data-section="device-sync" className="relative pb-0 bg-gray-50 dark:bg-gray-900 transition-colors duration-300" style={{ scrollSnapAlign: 'start', minHeight: 'calc(100vh - 80px)', paddingTop: '200px' }}>
+    <section data-section="device-sync" className="relative pb-0 bg-gray-50 dark:bg-gray-900 transition-colors duration-300" style={{ scrollSnapAlign: 'start', scrollSnapStop: 'always', minHeight: 'calc(100vh - 80px)', paddingTop: '200px' }}>
       <div className="container mx-auto max-w-7xl px-6 relative">
         <style>{`
           @keyframes spin-smooth {
@@ -44,7 +44,7 @@ export function LandingDeviceSync() {
           }
           
           .device-sync-title-container {
-            top: 200px;
+            top: 300px;
           }
           
           @media (min-width: 768px) {

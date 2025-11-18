@@ -41,7 +41,7 @@ export default function Collaboration() {
   return (
     <>
       <Header />
-      <div className="min-h-screen pt-24" style={{ backgroundColor: colors.background.light }}>
+      <div className="min-h-screen pt-24 bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
         <SEO
           title="Collaborations"
           description="Partner with Displini. Join our community, influencer program, or explore brand partnerships."
@@ -52,8 +52,8 @@ export default function Collaboration() {
         <div className="py-20">
         <div className="container mx-auto px-6 max-w-6xl">
           <div className="text-center mb-16">
-            <h1 className="text-5xl font-bold mb-4 text-gray-900">Collaborate with Displini</h1>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            <h1 className="text-5xl font-bold mb-4 text-gray-900 dark:text-white">Collaborate with Displini</h1>
+            <p className="text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
               Join our community, become a partner, or collaborate with our brand. 
               Let's build something amazing together.
             </p>
@@ -63,28 +63,28 @@ export default function Collaboration() {
             {collaborationTypes.map((feature, index) => {
               const Icon = feature.icon;
               return (
-                <div key={index} className="bg-white rounded-xl p-8 shadow-lg hover:shadow-xl transition-shadow">
+                <div key={index} className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-lg hover:shadow-xl transition-shadow">
                   <div 
                     className="w-12 h-12 rounded-full flex items-center justify-center mb-4"
                     style={{ backgroundColor: `${colors.brand.secondary}20` }}
                   >
                     <Icon className="w-6 h-6" style={{ color: colors.brand.secondary }} />
                   </div>
-                  <h3 className="text-2xl font-bold mb-3 text-gray-900">{feature.title}</h3>
-                  <p className="text-gray-600 leading-relaxed">{feature.description}</p>
+                  <h3 className="text-2xl font-bold mb-3 text-gray-900 dark:text-white">{feature.title}</h3>
+                  <p className="text-gray-600 dark:text-gray-400 leading-relaxed">{feature.description}</p>
                 </div>
               );
             })}
           </div>
 
           {/* Benefits Section */}
-          <div className="bg-white rounded-xl p-8 shadow-lg mb-12">
-            <h2 className="text-2xl font-bold mb-6 text-gray-900 text-center">Partnership Benefits</h2>
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-lg mb-12">
+            <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white text-center">Partnership Benefits</h2>
             <div className="grid md:grid-cols-2 gap-4">
               {benefits.map((benefit, index) => (
                 <div key={index} className="flex items-center gap-3">
                   <TrendingUp className="w-5 h-5 flex-shrink-0" style={{ color: colors.brand.primary }} />
-                  <span className="text-gray-700">{benefit}</span>
+                  <span className="text-gray-700 dark:text-gray-300">{benefit}</span>
                 </div>
               ))}
             </div>
@@ -92,10 +92,10 @@ export default function Collaboration() {
 
           {/* CTA Section */}
           <div className="text-center bg-gradient-to-br from-primary/10 to-secondary/10 rounded-2xl p-12">
-            <h2 className="text-3xl font-bold mb-4 text-gray-900">
+            <h2 className="text-3xl font-bold mb-4 text-gray-900 dark:text-white">
               Interested in Collaborating?
             </h2>
-            <p className="text-gray-600 mb-8 max-w-2xl mx-auto">
+            <p className="text-gray-600 dark:text-gray-400 mb-8 max-w-2xl mx-auto">
               Whether you're an influencer, brand, or community leader, we'd love to hear from you. 
               Let's explore how we can work together.
             </p>

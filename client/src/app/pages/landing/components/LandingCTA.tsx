@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
@@ -14,20 +14,63 @@ import { Instagram, Youtube, CheckCircle2, Loader2 } from "lucide-react";
 export function LandingCTA() {
   const [email, setEmail] = useState('');
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [animatedPos, setAnimatedPos] = useState({ x: 0, y: 0 });
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const animationFrameRef = useRef<number>();
+  const timeRef = useRef(0);
+  
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
+      if (isMobile) return; // Don't track mouse on mobile
       // Normalize mouse position to -1 to 1 range
       const x = (e.clientX / window.innerWidth) * 2 - 1;
       const y = (e.clientY / window.innerHeight) * 2 - 1;
       setMousePos({ x, y });
     };
 
-    window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, []);
+    if (!isMobile) {
+      window.addEventListener('mousemove', handleMouseMove);
+      return () => window.removeEventListener('mousemove', handleMouseMove);
+    }
+  }, [isMobile]);
+
+  // Animated loop for mobile
+  useEffect(() => {
+    if (!isMobile) {
+      // Reset animated position when not mobile
+      setAnimatedPos({ x: 0, y: 0 });
+      return;
+    }
+
+    const animate = () => {
+      timeRef.current += 0.015;
+      // Create smooth circular motion - different speeds for variety
+      const x = Math.sin(timeRef.current) * 0.8;
+      const y = Math.cos(timeRef.current * 0.7) * 0.8;
+      setAnimatedPos({ x, y });
+      animationFrameRef.current = requestAnimationFrame(animate);
+    };
+
+    // Start animation immediately
+    animationFrameRef.current = requestAnimationFrame(animate);
+    
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [isMobile]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,33 +90,41 @@ export function LandingCTA() {
       }, 5000);
     }, 800);
   };
-
+  
   return (
     <section className="relative py-20 pt-32 overflow-hidden bg-gray-900 dark:bg-gray-950 z-40" style={{ 
       boxShadow: 'inset 0 20px 40px rgba(0,0,0,0.3), inset 0 40px 80px rgba(0,0,0,0.2), inset 0 60px 120px rgba(0,0,0,0.1), inset 0 80px 160px rgba(0,0,0,0.05)',
       marginTop: '-200px',
       scrollSnapAlign: 'start',
-      scrollSnapStop: 'normal'
+      scrollSnapStop: isMobile ? 'normal' : 'always'
     }}>
-      {/* Animated Background Blobs - Follow Mouse */}
+      {/* Animated Background Blobs - Follow Mouse on desktop, animated loop on mobile */}
       <div 
-        className="absolute -top-40 -left-40 w-80 h-80 bg-gradient-to-br from-purple-500 to-purple-700 rounded-full opacity-60 blur-3xl transition-transform duration-1000 ease-out"
-        style={{ transform: `translate(${mousePos.x * 50}px, ${mousePos.y * 50}px)` }}
+        className={`absolute -top-40 -left-40 w-80 h-80 bg-gradient-to-br from-purple-500 to-purple-700 rounded-full opacity-60 blur-3xl ${isMobile ? '' : 'transition-transform duration-1000 ease-out'}`}
+        style={{ 
+          transform: `translate(${(isMobile ? animatedPos.x : mousePos.x) * 50}px, ${(isMobile ? animatedPos.y : mousePos.y) * 50}px)`,
+        }}
       ></div>
       
       <div 
-        className="absolute -bottom-40 -right-40 w-80 h-80 bg-gradient-to-br from-green-500 to-green-700 rounded-full opacity-60 blur-3xl transition-transform duration-1000 ease-out"
-        style={{ transform: `translate(${-mousePos.x * 50}px, ${-mousePos.y * 50}px)` }}
+        className={`absolute -bottom-40 -right-40 w-80 h-80 bg-gradient-to-br from-green-500 to-green-700 rounded-full opacity-60 blur-3xl ${isMobile ? '' : 'transition-transform duration-1000 ease-out'}`}
+        style={{ 
+          transform: `translate(${-(isMobile ? animatedPos.x : mousePos.x) * 50}px, ${-(isMobile ? animatedPos.y : mousePos.y) * 50}px)`,
+        }}
       ></div>
       
       <div 
-        className="absolute top-1/2 left-1/4 w-60 h-60 bg-gradient-to-br from-purple-400 to-purple-600 rounded-full opacity-40 blur-2xl transition-transform duration-700 ease-out"
-        style={{ transform: `translate(${mousePos.x * 30}px, ${mousePos.y * 30}px)` }}
+        className={`absolute top-1/2 left-1/4 w-60 h-60 bg-gradient-to-br from-purple-400 to-purple-600 rounded-full opacity-40 blur-2xl ${isMobile ? '' : 'transition-transform duration-700 ease-out'}`}
+        style={{ 
+          transform: `translate(${(isMobile ? animatedPos.x : mousePos.x) * 30}px, ${(isMobile ? animatedPos.y : mousePos.y) * 30}px)`,
+        }}
       ></div>
       
       <div 
-        className="absolute top-1/3 right-1/4 w-60 h-60 bg-gradient-to-br from-green-400 to-green-600 rounded-full opacity-40 blur-2xl transition-transform duration-700 ease-out"
-        style={{ transform: `translate(${-mousePos.x * 30}px, ${-mousePos.y * 30}px)` }}
+        className={`absolute top-1/3 right-1/4 w-60 h-60 bg-gradient-to-br from-green-400 to-green-600 rounded-full opacity-40 blur-2xl ${isMobile ? '' : 'transition-transform duration-700 ease-out'}`}
+        style={{ 
+          transform: `translate(${-(isMobile ? animatedPos.x : mousePos.x) * 30}px, ${-(isMobile ? animatedPos.y : mousePos.y) * 30}px)`,
+        }}
       ></div>
       
       <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 via-transparent to-green-900/20"></div>

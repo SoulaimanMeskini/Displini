@@ -42,11 +42,22 @@ const smallCards: StoryCard[] = [
 export function LandingAbout() {
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [isMobile, setIsMobile] = useState(false);
   const sectionRef = useRef<HTMLElement>(null);
   const storyCardRef = useRef<HTMLDivElement>(null);
   const missionCardRef = useRef<HTMLDivElement>(null);
   const unityCardRef = useRef<HTMLDivElement>(null);
   const careCardRef = useRef<HTMLDivElement>(null);
+  
+  // Detect mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
   
   // Invalidate cached rect on resize
   useEffect(() => {
@@ -102,7 +113,7 @@ export function LandingAbout() {
         ref={sectionRef}
         data-section="about"
         className="hidden lg:flex relative py-20 px-6 bg-gray-50 dark:bg-gray-900 transition-colors duration-300 items-center justify-center"
-        style={{ scrollSnapAlign: 'center', minHeight: 'calc(100vh - 80px)' }}
+        style={{ scrollSnapAlign: 'center', scrollSnapStop: 'always', minHeight: 'calc(100vh - 80px)' }}
         onMouseMove={handleMouseMove}
         onMouseLeave={() => setHoveredCard(null)}
       >
@@ -139,16 +150,16 @@ export function LandingAbout() {
               {/* Cursor Glow Effect */}
               {hoveredCard === 'story' && (
                 <motion.div
-                  className="absolute pointer-events-none rounded-full blur-3xl opacity-30"
+                  className="absolute pointer-events-none rounded-full blur-3xl dark:opacity-30 opacity-50"
                   style={{
-                    width: '300px',
-                    height: '300px',
+                    width: isMobile ? '200px' : '300px',
+                    height: isMobile ? '200px' : '300px',
                     background: `radial-gradient(circle, ${colors.features.todo}66 0%, transparent 70%)`,
                     position: 'absolute',
                   }}
                   animate={{
-                    left: mousePosition.x - 150,
-                    top: mousePosition.y - 150,
+                    left: mousePosition.x - (isMobile ? 100 : 150),
+                    top: mousePosition.y - (isMobile ? 100 : 150),
                   }}
                   transition={{ type: "spring", damping: 30, stiffness: 200 }}
                 />
@@ -237,16 +248,16 @@ export function LandingAbout() {
                     {/* Cursor Glow Effect - Uses card-relative mouse position */}
                     {hoveredCard === cardId && (
                       <motion.div
-                        className="absolute pointer-events-none rounded-full blur-3xl opacity-30"
+                        className="absolute pointer-events-none rounded-full blur-3xl dark:opacity-30 opacity-50"
                         style={{
-                          width: '250px',
-                          height: '250px',
+                          width: isMobile ? '150px' : '250px',
+                          height: isMobile ? '150px' : '250px',
                           background: `radial-gradient(circle, ${card.color}66 0%, transparent 70%)`,
                           position: 'absolute',
                         }}
                         animate={{
-                          left: mousePosition.x - 125,
-                          top: mousePosition.y - 125,
+                          left: mousePosition.x - (isMobile ? 75 : 125),
+                          top: mousePosition.y - (isMobile ? 75 : 125),
                         }}
                         transition={{ type: "spring", damping: 30, stiffness: 200 }}
                       />
@@ -318,16 +329,16 @@ export function LandingAbout() {
               {/* Cursor Glow Effect */}
               {hoveredCard === 'story-mobile' && (
                 <motion.div
-                  className="absolute pointer-events-none rounded-full blur-3xl opacity-30"
+                  className="absolute pointer-events-none rounded-full blur-3xl dark:opacity-30 opacity-50"
                   style={{
-                    width: '300px',
-                    height: '300px',
+                    width: isMobile ? '200px' : '300px',
+                    height: isMobile ? '200px' : '300px',
                     background: `radial-gradient(circle, ${colors.features.todo}66 0%, transparent 70%)`,
                     position: 'absolute',
                   }}
                   animate={{
-                    left: mousePosition.x - 150,
-                    top: mousePosition.y - 150,
+                    left: mousePosition.x - (isMobile ? 100 : 150),
+                    top: mousePosition.y - (isMobile ? 100 : 150),
                   }}
                   transition={{ type: "spring", damping: 30, stiffness: 200 }}
                 />
@@ -400,16 +411,16 @@ export function LandingAbout() {
                     {/* Cursor Glow Effect - Uses global mouse position */}
                     {hoveredCard === cardId && (
                       <motion.div
-                        className="absolute pointer-events-none rounded-full blur-3xl opacity-30"
+                        className="absolute pointer-events-none rounded-full blur-3xl dark:opacity-30 opacity-50"
                         style={{
-                          width: '250px',
-                          height: '250px',
+                          width: isMobile ? '150px' : '250px',
+                          height: isMobile ? '150px' : '250px',
                           background: `radial-gradient(circle, ${card.color}66 0%, transparent 70%)`,
                           position: 'absolute',
                         }}
                         animate={{
-                          left: mousePosition.x - 125,
-                          top: mousePosition.y - 125,
+                          left: mousePosition.x - (isMobile ? 75 : 125),
+                          top: mousePosition.y - (isMobile ? 75 : 125),
                         }}
                         transition={{ type: "spring", damping: 30, stiffness: 200 }}
                       />

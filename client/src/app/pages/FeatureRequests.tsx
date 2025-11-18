@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Lightbulb, TrendingUp, ThumbsUp, Send, CheckCircle, Clock } from 'lucide-react';
+import { Lightbulb, TrendingUp, ThumbsUp, Send, CheckCircle, Clock, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
@@ -10,47 +10,63 @@ import { colors } from '@/lib/designSystem';
 import { handleSuccess, handleError } from '@/lib/errorHandling';
 import { Header } from '@/app/pages/landing/components/Header';
 import { LandingFooter } from '@/app/pages/landing/components/LandingFooter';
+import { useFeatureRequests, useCreateFeatureRequest, useLikeFeatureRequest } from '@/hooks/useFeatureRequests';
+import type { SortOption } from '@/api/featureRequests';
+
+const statusLabels: Record<string, string> = {
+  'planned': 'Planned',
+  'in-progress': 'In Progress',
+  'completed': 'Completed',
+};
 
 export default function FeatureRequests() {
+  const [sort, setSort] = useState<SortOption>('top');
+  const [showCompleted, setShowCompleted] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
+    category: '',
     email: ''
   });
-  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Fetch feature requests
+  const { data: allRequests, isLoading, error } = useFeatureRequests(sort);
+  
+  // Filter requests based on completed filter
+  const requests = showCompleted 
+    ? allRequests?.filter(req => req.status === 'completed')
+    : allRequests;
+  
+  // Mutations
+  const createMutation = useCreateFeatureRequest();
+  const likeMutation = useLikeFeatureRequest();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
-
+    
     try {
-      // TODO: Send to backend API
-      // await fetch('/api/feature-requests', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(formData)
-      // });
-
+      await createMutation.mutateAsync({
+        title: formData.title,
+        description: formData.description,
+        category: formData.category || undefined,
+        email: formData.email || undefined,
+      });
+      
       handleSuccess('Feature request submitted! We\'ll review it and get back to you.', 'Thank You');
-      setFormData({ title: '', description: '', email: '' });
+      setFormData({ title: '', description: '', category: '', email: '' });
     } catch (error) {
       handleError(error, { title: 'Failed to Submit Request' });
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
-  const popularRequests = [
-    { title: 'Dark Mode', votes: 127, status: 'In Progress' },
-    { title: 'Apple Watch App', votes: 95, status: 'Planned' },
-    { title: 'Shared Calendars', votes: 73, status: 'Planned' },
-    { title: 'Custom Themes', votes: 61, status: 'Completed' }
-  ];
+  const handleLike = (id: string) => {
+    likeMutation.mutate(id);
+  };
 
   return (
     <>
       <Header />
-      <div className="min-h-screen pt-24" style={{ backgroundColor: colors.background.light }}>
+      <div className="min-h-screen pt-24 bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
         <SEO
           title="Feature Requests"
           description="Request new features and vote on upcoming additions to Displini."
@@ -60,52 +76,161 @@ export default function FeatureRequests() {
       <div className="py-20">
         <div className="container mx-auto px-6 max-w-6xl">
           <div className="text-center mb-12">
-            <h1 className="text-5xl font-bold mb-4 text-gray-900">Feature Requests</h1>
-            <p className="text-xl text-gray-600">
+            <h1 className="text-5xl font-bold mb-4 text-gray-900 dark:text-white">Feature Requests</h1>
+            <p className="text-xl text-gray-600 dark:text-gray-400">
               Help us build the features you want. Share your ideas!
             </p>
           </div>
 
+          {/* How It Works - Above Popular Requests, side-by-side on mobile */}
+          <div className="mb-12">
+            <div className="grid grid-cols-3 gap-4 md:gap-8">
+              <div className="text-center">
+                <div 
+                  className="w-12 h-12 mx-auto mb-4 rounded-full flex items-center justify-center text-white font-bold"
+                  style={{ backgroundColor: colors.brand.primary }}
+                >
+                  1
+                </div>
+                <h3 className="font-semibold mb-2 text-gray-900 dark:text-white">Submit</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Share your feature idea with us</p>
+              </div>
+              <div className="text-center">
+                <div 
+                  className="w-12 h-12 mx-auto mb-4 rounded-full flex items-center justify-center text-white font-bold"
+                  style={{ backgroundColor: colors.brand.primary }}
+                >
+                  2
+                </div>
+                <h3 className="font-semibold mb-2 text-gray-900 dark:text-white">Review</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">We review and prioritize requests</p>
+              </div>
+              <div className="text-center">
+                <div 
+                  className="w-12 h-12 mx-auto mb-4 rounded-full flex items-center justify-center text-white font-bold"
+                  style={{ backgroundColor: colors.brand.primary }}
+                >
+                  3
+                </div>
+                <h3 className="font-semibold mb-2 text-gray-900 dark:text-white">Build</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Top requests get built into the app</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Sort Toggle */}
+          <div className="flex justify-center items-center gap-4 mb-8">
+            <Button
+              variant={sort === 'top' ? 'default' : 'outline'}
+              onClick={() => {
+                setSort('top');
+                setShowCompleted(false);
+              }}
+            >
+              <TrendingUp className="w-4 h-4 mr-2" />
+              Top Requests
+            </Button>
+            <Button
+              variant={sort === 'new' ? 'default' : 'outline'}
+              onClick={() => {
+                setSort('new');
+                setShowCompleted(false);
+              }}
+            >
+              Newest First
+            </Button>
+            <Button
+              variant={showCompleted ? 'default' : 'outline'}
+              onClick={() => setShowCompleted(!showCompleted)}
+            >
+              <CheckCircle className="w-4 h-4 mr-2" />
+              Completed
+            </Button>
+          </div>
+
           <div className="grid md:grid-cols-2 gap-12">
-            {/* Popular Requests */}
+            {/* Feature Requests List */}
             <div>
-              <h2 className="text-2xl font-bold mb-6 text-gray-900 flex items-center gap-2">
+              <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white flex items-center gap-2">
                 <TrendingUp className="w-6 h-6" style={{ color: colors.brand.primary }} />
-                Popular Requests
+                {sort === 'top' ? 'Popular Requests' : 'Recent Requests'}
               </h2>
 
-              <div className="space-y-4">
-                {popularRequests.map((request, index) => (
-                  <Card key={index} className="p-6 hover:shadow-lg transition-shadow">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-gray-900 mb-1">{request.title}</h3>
-                        <div className="flex items-center gap-4 text-sm">
-                          <span className="flex items-center gap-1 text-gray-600">
-                            <ThumbsUp className="w-4 h-4" />
-                            {request.votes} votes
-                          </span>
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            request.status === 'Completed' ? 'bg-green-100 text-green-700' :
-                            request.status === 'In Progress' ? 'bg-blue-100 text-blue-700' :
-                            'bg-gray-100 text-gray-700'
-                          }`}>
-                            {request.status}
-                          </span>
+              {/* Loading State */}
+              {isLoading && (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-6 h-6 animate-spin" style={{ color: colors.brand.primary }} />
+                  <span className="ml-2 text-gray-600 dark:text-gray-400">Loading requests...</span>
+                </div>
+              )}
+
+              {/* Error State */}
+              {error && (
+                <Card className="p-6 border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-800">
+                  <div className="flex items-center gap-2 text-red-700 dark:text-red-400">
+                    <AlertCircle className="w-5 h-5" />
+                    <span>Failed to load feature requests. Please try again.</span>
+                  </div>
+                </Card>
+              )}
+
+              {/* Empty State */}
+              {!isLoading && !error && (!requests || requests.length === 0) && (
+                <Card className="p-8 text-center bg-white dark:bg-gray-800">
+                  <Lightbulb className="w-12 h-12 mx-auto mb-4 text-gray-400 dark:text-gray-500" />
+                  <p className="text-gray-600 dark:text-gray-400">No feature requests yet. Be the first to submit one!</p>
+                </Card>
+              )}
+
+              {/* Requests List */}
+              {!isLoading && !error && requests && requests.length > 0 && (
+                <div className="space-y-4">
+                  {requests.map((request) => (
+                    <Card key={request.id} className="p-6 hover:shadow-lg transition-shadow bg-white dark:bg-gray-800">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-gray-900 dark:text-white mb-2">{request.title}</h3>
+                          {request.description && (
+                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">{request.description}</p>
+                          )}
+                          <div className="flex items-center gap-4 text-sm flex-wrap">
+                            <span className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
+                              <ThumbsUp className={`w-4 h-4 ${request.userLiked ? 'fill-current' : ''}`} />
+                              {request.likeCount} {request.likeCount === 1 ? 'vote' : 'votes'}
+                            </span>
+                            {request.category && (
+                              <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full text-xs">
+                                {request.category}
+                              </span>
+                            )}
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              request.status === 'completed' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' :
+                              request.status === 'in-progress' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' :
+                              'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                            }`}>
+                              {statusLabels[request.status] || request.status}
+                            </span>
+                          </div>
                         </div>
+                        <Button 
+                          variant={request.userLiked ? 'default' : 'ghost'} 
+                          size="sm"
+                          onClick={() => handleLike(request.id)}
+                          disabled={likeMutation.isPending}
+                          className="flex-shrink-0"
+                        >
+                          <ThumbsUp className={`w-4 h-4 ${request.userLiked ? 'fill-current' : ''}`} />
+                        </Button>
                       </div>
-                      <Button variant="ghost" size="sm">
-                        <ThumbsUp className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </Card>
-                ))}
-              </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Submit Request Form */}
             <div>
-              <h2 className="text-2xl font-bold mb-6 text-gray-900 flex items-center gap-2">
+              <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white flex items-center gap-2">
                 <Lightbulb className="w-6 h-6" style={{ color: colors.brand.secondary }} />
                 Submit Your Idea
               </h2>
@@ -138,6 +263,18 @@ export default function FeatureRequests() {
                 </div>
 
                 <div>
+                  <Label htmlFor="category">Category (optional)</Label>
+                  <Input
+                    id="category"
+                    type="text"
+                    value={formData.category}
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                    placeholder="e.g., UI/UX, Mobile, Features"
+                    className="mt-1"
+                  />
+                </div>
+
+                <div>
                   <Label htmlFor="email">Your Email (optional)</Label>
                   <Input
                     id="email"
@@ -155,51 +292,24 @@ export default function FeatureRequests() {
                 <Button 
                   type="submit" 
                   className="w-full bg-primary hover:bg-primary/90"
-                  disabled={isSubmitting}
+                  disabled={createMutation.isPending}
                 >
-                  <Send className="w-4 h-4 mr-2" />
-                  {isSubmitting ? 'Submitting...' : 'Submit Feature Request'}
+                  {createMutation.isPending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Submitting...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4 mr-2" />
+                      Submit Feature Request
+                    </>
+                  )}
                 </Button>
               </form>
             </div>
           </div>
 
-          {/* How It Works */}
-          <div className="mt-16 bg-white rounded-xl p-8 shadow-lg">
-            <h2 className="text-2xl font-bold mb-6 text-gray-900">How It Works</h2>
-            <div className="grid md:grid-cols-3 gap-8">
-              <div className="text-center">
-                <div 
-                  className="w-12 h-12 mx-auto mb-4 rounded-full flex items-center justify-center text-white font-bold"
-                  style={{ backgroundColor: colors.brand.primary }}
-                >
-                  1
-                </div>
-                <h3 className="font-semibold mb-2 text-gray-900">Submit</h3>
-                <p className="text-sm text-gray-600">Share your feature idea with us</p>
-              </div>
-              <div className="text-center">
-                <div 
-                  className="w-12 h-12 mx-auto mb-4 rounded-full flex items-center justify-center text-white font-bold"
-                  style={{ backgroundColor: colors.brand.primary }}
-                >
-                  2
-                </div>
-                <h3 className="font-semibold mb-2 text-gray-900">Review</h3>
-                <p className="text-sm text-gray-600">We review and prioritize requests</p>
-              </div>
-              <div className="text-center">
-                <div 
-                  className="w-12 h-12 mx-auto mb-4 rounded-full flex items-center justify-center text-white font-bold"
-                  style={{ backgroundColor: colors.brand.primary }}
-                >
-                  3
-                </div>
-                <h3 className="font-semibold mb-2 text-gray-900">Build</h3>
-                <p className="text-sm text-gray-600">Top requests get built into the app</p>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
       </div>

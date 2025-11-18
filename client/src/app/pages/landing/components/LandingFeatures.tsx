@@ -430,9 +430,9 @@ The assistant helps you stay balanced from optimizing focus time to rearranging 
                         {/* Timeline Container - Matching App Style */}
                         {(() => {
                           const timelineRange = getTimelineRange();
-                          const timelineHeight = isMobile ? 240 : isTablet ? 300 : 320;
+                          const timelineHeight = isMobile ? 280 : isTablet ? 300 : 320;
                           const paddingLeft = isMobile ? '2rem' : isTablet ? '2.5rem' : '3rem';
-                          const paddingTop = isMobile ? '2.5rem' : isTablet ? '2rem' : '2.25rem';
+                          const paddingTop = isMobile ? '1.5rem' : isTablet ? '2rem' : '2.25rem';
                           const paddingBottom = isMobile ? '1rem' : isTablet ? '1.5rem' : '2rem';
                           
                           return (
@@ -442,7 +442,7 @@ The assistant helps you stay balanced from optimizing focus time to rearranging 
                               paddingTop, 
                               paddingBottom, 
                               height: `${timelineHeight}px`,
-                              marginTop: isMobile ? '1rem' : '0'
+                              marginTop: isMobile ? '0.5rem' : '0'
                             }}>
                               {/* Timeline Items Container */}
                               <div className="relative" style={{ height: `${timelineHeight}px` }}>

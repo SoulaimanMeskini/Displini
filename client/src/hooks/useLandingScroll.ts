@@ -7,12 +7,15 @@ import { useEffect } from 'react';
  */
 export function useLandingScroll() {
   useEffect(() => {
-    // Restore scroll position on mount
+    // Restore scroll position on mount - only if user was previously on device-sync section
     const savedSection = localStorage.getItem('landingSection');
-    if (savedSection) {
+    const targetSection = savedSection === 'device-sync' ? 'device-sync' : null;
+    
+    // Only auto-scroll if user was previously on device-sync section
+    if (targetSection) {
       // Wait for lazy-loaded sections and page to fully render
       const restoreScroll = () => {
-        const section = document.querySelector(`[data-section="${savedSection}"]`);
+        const section = document.querySelector(`[data-section="${targetSection}"]`);
         if (section) {
           // Find the scroll container
           const scrollContainer = document.querySelector('[style*="overflowY: scroll"]') as HTMLElement;

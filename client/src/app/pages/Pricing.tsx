@@ -4,6 +4,7 @@ import { SEO } from '@/app/components/shared/SEO';
 import { colors } from '@/lib/designSystem';
 import { Header } from '@/app/pages/landing/components/Header';
 import { LandingFooter } from '@/app/pages/landing/components/LandingFooter';
+import { LandingFAQ } from '@/app/pages/landing/components/LandingFAQ';
 
 export default function Pricing() {
   const plans = [
@@ -65,7 +66,7 @@ export default function Pricing() {
   return (
     <>
       <Header />
-      <div className="min-h-screen pt-24" style={{ backgroundColor: colors.background.light }}>
+      <div className="min-h-screen pt-24 bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
         <SEO
           title="Pricing"
           description="Simple, transparent pricing for Displini. Start free or go Pro for advanced features."
@@ -77,8 +78,8 @@ export default function Pricing() {
       <div className="py-20">
         <div className="container mx-auto px-6">
           <div className="text-center mb-16">
-            <h1 className="text-5xl font-bold mb-4 text-gray-900">Simple Pricing</h1>
-            <p className="text-xl text-gray-600">Choose the plan that works for you</p>
+            <h1 className="text-5xl font-bold mb-4 text-gray-900 dark:text-white">Simple Pricing</h1>
+            <p className="text-xl text-gray-600 dark:text-gray-400">Choose the plan that works for you</p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
@@ -88,7 +89,7 @@ export default function Pricing() {
                 className={`rounded-2xl p-8 transition-transform hover:scale-105 ${
                   plan.highlighted 
                     ? 'bg-gradient-to-br from-primary/10 to-secondary/10 ring-2 ring-primary shadow-xl md:scale-105' 
-                    : 'bg-white shadow-lg'
+                    : 'bg-white dark:bg-gray-800 shadow-lg'
                 }`}
               >
                 {plan.highlighted && (
@@ -99,24 +100,24 @@ export default function Pricing() {
                   </div>
                 )}
                 
-                <h3 className="text-2xl font-bold mb-2 text-gray-900">{plan.name}</h3>
+                <h3 className="text-2xl font-bold mb-2 text-gray-900 dark:text-white">{plan.name}</h3>
                 <div className="mb-4">
-                  <span className="text-4xl font-bold text-gray-900">{plan.price}</span>
-                  {plan.period && <span className="text-gray-600">{plan.period}</span>}
+                  <span className="text-4xl font-bold text-gray-900 dark:text-white">{plan.price}</span>
+                  {plan.period && <span className="text-gray-600 dark:text-gray-400">{plan.period}</span>}
                 </div>
-                <p className="text-gray-600 mb-6">{plan.description}</p>
+                <p className="text-gray-600 dark:text-gray-400 mb-6">{plan.description}</p>
 
                 <ul className="space-y-3 mb-8">
                   {plan.features.map((feature, i) => (
                     <li key={i} className="flex items-start">
                       <Check className="w-5 h-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
-                      <span className="text-gray-700">{feature}</span>
+                      <span className="text-gray-700 dark:text-gray-300">{feature}</span>
                     </li>
                   ))}
                   {plan.limitations.map((limitation, i) => (
                     <li key={i} className="flex items-start opacity-50">
                       <X className="w-5 h-5 text-gray-400 mr-2 flex-shrink-0 mt-0.5" />
-                      <span className="text-gray-500">{limitation}</span>
+                      <span className="text-gray-500 dark:text-gray-500">{limitation}</span>
                     </li>
                   ))}
                 </ul>
@@ -132,23 +133,9 @@ export default function Pricing() {
             ))}
           </div>
 
-          {/* FAQ Section */}
-          <div className="mt-20 text-center max-w-3xl mx-auto">
-            <h2 className="text-2xl font-bold mb-6 text-gray-900">Frequently Asked Questions</h2>
-            <div className="space-y-4 text-left">
-              <details className="bg-white p-6 rounded-lg shadow">
-                <summary className="font-semibold cursor-pointer text-gray-900">Can I switch plans anytime?</summary>
-                <p className="mt-3 text-gray-600">Yes! You can upgrade, downgrade, or cancel your subscription at any time.</p>
-              </details>
-              <details className="bg-white p-6 rounded-lg shadow">
-                <summary className="font-semibold cursor-pointer text-gray-900">Is there a free trial?</summary>
-                <p className="mt-3 text-gray-600">Yes! Pro plan comes with a 14-day free trial. No credit card required.</p>
-              </details>
-              <details className="bg-white p-6 rounded-lg shadow">
-                <summary className="font-semibold cursor-pointer text-gray-900">What payment methods do you accept?</summary>
-                <p className="mt-3 text-gray-600">We accept all major credit cards, Apple Pay, and Google Pay.</p>
-              </details>
-            </div>
+          {/* FAQ Section - Same as Landing Page, but without help text */}
+          <div className="mt-20">
+            <LandingFAQ showHelpText={false} />
           </div>
         </div>
       </div>

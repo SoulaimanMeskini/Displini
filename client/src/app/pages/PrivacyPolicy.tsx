@@ -7,7 +7,7 @@ export default function PrivacyPolicy() {
   return (
     <>
       <Header />
-      <div className="min-h-screen pt-24" style={{ backgroundColor: colors.background.light }}>
+      <div className="min-h-screen pt-24 bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
         <SEO
           title="Privacy Policy"
           description="Displini Privacy Policy - How we collect, use, and protect your data."
@@ -16,116 +16,139 @@ export default function PrivacyPolicy() {
       
         <div className="py-20">
         <div className="container mx-auto px-6 max-w-4xl">
-          <h1 className="text-5xl font-bold mb-4 text-gray-900">Privacy Policy</h1>
-          <p className="text-gray-600 mb-8">Last updated: November 4, 2025</p>
+          <h1 className="text-5xl font-bold mb-4 text-gray-900 dark:text-white">Privacy Policy</h1>
+          <p className="text-gray-600 dark:text-gray-400 mb-8"><strong>Last updated:</strong> {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
 
-          <div className="prose prose-gray max-w-none">
-            <div className="bg-white rounded-xl p-8 shadow-lg mb-8">
-              <h2 className="text-2xl font-bold mb-4 text-gray-900">Introduction</h2>
-              <p className="text-gray-600 leading-relaxed">
-                At Displini, we take your privacy seriously. This Privacy Policy explains how we collect, use, 
-                disclose, and safeguard your information when you use our application.
+          <div className="prose prose-gray max-w-none dark:prose-invert">
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-lg mb-8">
+              <p className="text-gray-600 dark:text-gray-300 leading-relaxed mb-4">
+                This Privacy Policy describes how <strong>Displini</strong> ("we", "us", "our") collects, uses, and protects your personal data when you use the Displini web, iOS, or Android app ("the Service"). By using Displini, you agree to this Privacy Policy.
               </p>
             </div>
 
-            <div className="bg-white rounded-xl p-8 shadow-lg mb-8">
-              <h2 className="text-2xl font-bold mb-4 text-gray-900">Information We Collect</h2>
-              <h3 className="text-xl font-semibold mb-3 text-gray-900">Personal Information</h3>
-              <ul className="list-disc list-inside text-gray-600 space-y-2 mb-4">
-                <li>Email address (for account creation)</li>
-                <li>Name (optional)</li>
-                <li>Profile information you choose to provide</li>
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-lg mb-8">
+              <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">1. Information We Collect</h2>
+              
+              <h3 className="text-xl font-semibold mb-3 text-gray-900 dark:text-white">1.1 Account Information</h3>
+              <ul className="list-disc list-inside text-gray-600 dark:text-gray-300 space-y-2 mb-4">
+                <li>Name</li>
+                <li>Email</li>
+                <li>Password or OAuth login (Google/Apple)</li>
               </ul>
 
-              <h3 className="text-xl font-semibold mb-3 text-gray-900">Health & Activity Data</h3>
-              <ul className="list-disc list-inside text-gray-600 space-y-2">
-                <li>Tasks and to-do items</li>
-                <li>Calendar events</li>
-                <li>Water intake logs</li>
-                <li>Sleep schedule information</li>
-                <li>Menstrual cycle data</li>
-                <li>Medication reminders</li>
-                <li>Journal entries</li>
+              <h3 className="text-xl font-semibold mb-3 text-gray-900 dark:text-white">1.2 App Data</h3>
+              <ul className="list-disc list-inside text-gray-600 dark:text-gray-300 space-y-2 mb-4">
+                <li>Tasks, reminders, schedules, notes</li>
+                <li>Work and school schedules</li>
+                <li>Health-related data: sleep, menstruation tracking, medication reminders, water intake</li>
+              </ul>
+
+              <h3 className="text-xl font-semibold mb-3 text-gray-900 dark:text-white">1.3 Device Information</h3>
+              <ul className="list-disc list-inside text-gray-600 dark:text-gray-300 space-y-2 mb-4">
+                <li>IP address</li>
+                <li>Browser and device type</li>
+                <li>Operating system</li>
+                <li>Crash logs</li>
+                <li>Usage data</li>
+              </ul>
+
+              <h3 className="text-xl font-semibold mb-3 text-gray-900 dark:text-white">1.4 Analytics</h3>
+              <p className="text-gray-600 dark:text-gray-300 leading-relaxed mb-4">
+                We may use analytics tools such as Google Analytics or Mixpanel.
+              </p>
+
+              <h3 className="text-xl font-semibold mb-3 text-gray-900 dark:text-white">1.5 Payments</h3>
+              <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
+                Payment information is handled securely by <strong>Stripe</strong>. We do not store full payment details.
+              </p>
+            </div>
+
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-lg mb-8">
+              <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">2. How We Use Your Information</h2>
+              <ul className="list-disc list-inside text-gray-600 dark:text-gray-300 space-y-2 mb-4">
+                <li>Provide the core Displini features</li>
+                <li>Sync data across devices</li>
+                <li>Process payments</li>
+                <li>Provide AI suggestions</li>
+                <li>Improve the app</li>
+                <li>Authenticate your account</li>
+                <li>Customer support</li>
+              </ul>
+              <p className="text-gray-600 dark:text-gray-300 leading-relaxed font-semibold">
+                We never sell your data.
+              </p>
+            </div>
+
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-lg mb-8">
+              <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">3. AI Usage</h2>
+              <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
+                Displini uses OpenAI (ChatGPT) to generate insights and suggestions. Data sent for AI processing is not stored by OpenAI.
+              </p>
+            </div>
+
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-lg mb-8">
+              <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">4. Third-Party Services</h2>
+              <ul className="list-disc list-inside text-gray-600 dark:text-gray-300 space-y-2">
+                <li>Mailchimp — emails and newsletters</li>
+                <li>Stripe — payments</li>
+                <li>Google OAuth / Apple Sign-In — authentication</li>
+                <li>Analytics providers</li>
+                <li>Database provider (TBA)</li>
+                <li>OpenAI — AI features</li>
               </ul>
             </div>
 
-            <div className="bg-white rounded-xl p-8 shadow-lg mb-8">
-              <h2 className="text-2xl font-bold mb-4 text-gray-900">How We Use Your Information</h2>
-              <ul className="list-disc list-inside text-gray-600 space-y-2">
-                <li>To provide and maintain our service</li>
-                <li>To personalize your experience</li>
-                <li>To send you reminders and notifications</li>
-                <li>To improve our app based on usage patterns</li>
-                <li>To communicate with you about updates</li>
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-lg mb-8">
+              <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">5. Cookies</h2>
+              <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
+                We may use cookies for sessions, preferences, and analytics.
+              </p>
+            </div>
+
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-lg mb-8">
+              <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">6. Data Retention</h2>
+              <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
+                We store your data <strong>until you delete your account</strong>. All personal, schedule, and health-related data is removed permanently after deletion.
+              </p>
+            </div>
+
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-lg mb-8">
+              <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">7. Your Rights (GDPR)</h2>
+              <ul className="list-disc list-inside text-gray-600 dark:text-gray-300 space-y-2">
+                <li>Access your data</li>
+                <li>Correct your data</li>
+                <li>Delete your account</li>
+                <li>Export your data</li>
+                <li>Withdraw consent</li>
               </ul>
             </div>
 
-            <div className="bg-white rounded-xl p-8 shadow-lg mb-8">
-              <h2 className="text-2xl font-bold mb-4 text-gray-900">Data Storage & Security</h2>
-              <p className="text-gray-600 leading-relaxed mb-4">
-                We implement appropriate security measures to protect your personal information:
-              </p>
-              <ul className="list-disc list-inside text-gray-600 space-y-2">
-                <li>End-to-end encryption for sensitive health data</li>
-                <li>Secure servers with regular security audits</li>
-                <li>Limited employee access to personal data</li>
-                <li>Regular backups to prevent data loss</li>
-              </ul>
-            </div>
-
-            <div className="bg-white rounded-xl p-8 shadow-lg mb-8">
-              <h2 className="text-2xl font-bold mb-4 text-gray-900">Your Rights</h2>
-              <ul className="list-disc list-inside text-gray-600 space-y-2">
-                <li><strong>Access:</strong> Request a copy of your data</li>
-                <li><strong>Correction:</strong> Update incorrect information</li>
-                <li><strong>Deletion:</strong> Request deletion of your account and data</li>
-                <li><strong>Export:</strong> Download your data in a portable format</li>
-                <li><strong>Opt-out:</strong> Unsubscribe from marketing emails</li>
-              </ul>
-            </div>
-
-            <div className="bg-white rounded-xl p-8 shadow-lg mb-8">
-              <h2 className="text-2xl font-bold mb-4 text-gray-900">Third-Party Services</h2>
-              <p className="text-gray-600 leading-relaxed mb-4">
-                We may use third-party services for:
-              </p>
-              <ul className="list-disc list-inside text-gray-600 space-y-2">
-                <li>Analytics (anonymized data only)</li>
-                <li>Cloud storage and hosting</li>
-                <li>Email delivery</li>
-                <li>Payment processing</li>
-              </ul>
-              <p className="text-gray-600 leading-relaxed mt-4">
-                We ensure all third parties comply with strict data protection standards.
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-lg mb-8">
+              <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">8. Security</h2>
+              <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
+                We apply industry-standard security practices to protect your data.
               </p>
             </div>
 
-            <div className="bg-white rounded-xl p-8 shadow-lg mb-8">
-              <h2 className="text-2xl font-bold mb-4 text-gray-900">Children's Privacy</h2>
-              <p className="text-gray-600 leading-relaxed">
-                Our service is not intended for children under 13. We do not knowingly collect information 
-                from children under 13. If you are a parent and believe your child has provided us with 
-                personal information, please contact us.
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-lg mb-8">
+              <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">9. Age Requirement</h2>
+              <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
+                Users must be at least <strong>13 years old</strong>.
               </p>
             </div>
 
-            <div className="bg-white rounded-xl p-8 shadow-lg mb-8">
-              <h2 className="text-2xl font-bold mb-4 text-gray-900">Changes to This Policy</h2>
-              <p className="text-gray-600 leading-relaxed">
-                We may update this Privacy Policy from time to time. We will notify you of any changes by 
-                posting the new Privacy Policy on this page and updating the "Last updated" date.
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-lg mb-8">
+              <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">10. Future Features</h2>
+              <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
+                We may add additional features, including AI improvements and calendar syncing.
               </p>
             </div>
 
-            <div className="bg-white rounded-xl p-8 shadow-lg">
-              <h2 className="text-2xl font-bold mb-4 text-gray-900">Contact Us</h2>
-              <p className="text-gray-600 leading-relaxed">
-                If you have questions about this Privacy Policy, please contact us at:
-              </p>
-              <p className="mt-4">
-                <a href="mailto:privacy@displini.com" className="text-primary hover:underline font-medium">
-                  privacy@displini.com
-                </a>
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-lg">
+              <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">11. Contact</h2>
+              <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
+                Email: <strong>support@displini.com</strong><br />
+                Location: Eindhoven, Noord-Brabant, The Netherlands
               </p>
             </div>
           </div>
