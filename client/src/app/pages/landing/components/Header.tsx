@@ -139,10 +139,10 @@ export function Header() {
                 Get started
               </Button>
               
-              {/* Dark Mode Toggle - Far Right */}
+              {/* Dark Mode Toggle - Far Right - Hidden on mobile */}
               <button
                 onClick={toggleDarkMode}
-                className="p-2 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
+                className="hidden md:flex p-2 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
                 aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
               >
                 {isDark ? (

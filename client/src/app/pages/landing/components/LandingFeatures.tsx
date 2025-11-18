@@ -292,8 +292,8 @@ The assistant helps you stay balanced from optimizing focus time to rearranging 
         minHeight: 'calc(100vh - 80px)',
         display: 'flex',
         alignItems: 'center',
-        paddingTop: '4rem',
-        paddingBottom: '4rem',
+        paddingTop: '2rem',
+        paddingBottom: '2rem',
         scrollSnapAlign: 'center',
         scrollSnapStop: 'always'
       }}
@@ -349,7 +349,7 @@ The assistant helps you stay balanced from optimizing focus time to rearranging 
                         transition={{ duration: 0.2 }}
                       >
                         <IconComponent 
-                          className={`transition-all duration-300 ${activeFeature === index ? 'w-6 h-6 md:w-7 md:h-7' : 'w-5 h-5 md:w-6 md:h-6'}`}
+                          className={`transition-all duration-300 ${activeFeature === index ? 'w-5 h-5 md:w-7 md:h-7' : 'w-4 h-4 md:w-6 md:h-6'}`}
                           style={{ color: activeFeature === index ? feature.color : colors.neutral.gray }}
                         />
                         <span 
@@ -373,7 +373,7 @@ The assistant helps you stay balanced from optimizing focus time to rearranging 
                 ></div>
                 
                 {/* iPhone Frame */}
-                <div className="relative bg-gray-900 rounded-[2.5rem] p-2.5 shadow-2xl mx-auto" style={{ width: '240px', height: '490px', maxWidth: '90vw' }}>
+                <div className="relative bg-gray-900 rounded-[2.5rem] p-2.5 shadow-2xl mx-auto" style={{ width: '200px', height: '410px', maxWidth: '85vw' }}>
                   {/* Notch */}
                   <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-gray-900 rounded-b-3xl z-20"></div>
                   
@@ -400,10 +400,10 @@ The assistant helps you stay balanced from optimizing focus time to rearranging 
                         {/* Timeline Container - Matching App Style */}
                         {(() => {
                           const timelineRange = getTimelineRange();
-                          const timelineHeight = 320; // Fixed height to fit in view - reduced for mobile
+                          const timelineHeight = 280; // Fixed height to fit in view - further reduced for mobile
                           
                           return (
-                            <div className="flex-1 relative overflow-hidden" style={{ paddingLeft: '3.5rem', paddingRight: '0.5rem', paddingTop: '2rem', paddingBottom: '2.5rem', height: `${timelineHeight}px` }}>
+                            <div className="flex-1 relative overflow-hidden" style={{ paddingLeft: '3rem', paddingRight: '0.5rem', paddingTop: '1.5rem', paddingBottom: '2rem', height: `${timelineHeight}px` }}>
                               {/* Timeline Items Container */}
                               <div className="relative" style={{ height: `${timelineHeight}px` }}>
                                 {/* Liquid Timeline Background */}

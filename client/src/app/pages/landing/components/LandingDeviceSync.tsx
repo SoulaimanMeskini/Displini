@@ -47,7 +47,7 @@ export function LandingDeviceSync() {
         {/* Device Screens with Title */}
         <div className="relative flex items-start justify-center overflow-visible" style={{ minWidth: '100%', height: '900px' }}>
           {/* Title and Sync - IN FRONT OF SCREENS */}
-          <div className="absolute left-1/2 -translate-x-1/2 z-40 text-center w-full" style={{ top: '60px', paddingTop: '0' }}>
+          <div className="absolute left-1/2 -translate-x-1/2 z-40 text-center w-full" style={{ top: '20px', paddingTop: '0' }}>
           <h2 className="text-4xl md:text-5xl font-bold mb-6 text-gray-900 dark:text-white">
             Keep track where you left off on any device
           </h2>

@@ -1,4 +1,4 @@
-import { memo, lazy, Suspense } from "react";
+import React, { memo, lazy, Suspense } from "react";
 import { MessageSquare } from "lucide-react";
 import { SEO } from "@/app/components/shared/SEO";
 import { colors } from "@/lib/designSystem";
@@ -19,6 +19,7 @@ const LandingFooter = lazy(() => import("./components").then(m => ({ default: m.
 function Landing() {
   // Track scroll position for restoration on reload
   useLandingScroll();
+  
   
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-white transition-colors duration-300" style={{ scrollSnapType: 'y mandatory', height: '100vh', overflowY: 'scroll', paddingTop: '80px' }}>

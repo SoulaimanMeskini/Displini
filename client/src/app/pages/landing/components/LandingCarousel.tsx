@@ -384,10 +384,34 @@ export function LandingCarousel() {
             className="overflow-x-auto scrollbar-hide w-full"
             style={{ 
               WebkitOverflowScrolling: 'touch',
-              touchAction: 'pan-x',
+              touchAction: 'pan-x pan-y',
               overscrollBehaviorX: 'contain',
-              overscrollBehaviorY: 'none',
+              overscrollBehaviorY: 'auto',
               scrollBehavior: 'smooth'
+            }}
+            onTouchStart={(e) => {
+              const touch = e.touches[0];
+              const startX = touch.clientX;
+              const startY = touch.clientY;
+              
+              const handleTouchMove = (moveEvent: TouchEvent) => {
+                const moveTouch = moveEvent.touches[0];
+                const deltaX = Math.abs(moveTouch.clientX - startX);
+                const deltaY = Math.abs(moveTouch.clientY - startY);
+                
+                // If horizontal movement is greater, prevent vertical scroll
+                if (deltaX > deltaY && deltaX > 10) {
+                  moveEvent.preventDefault();
+                }
+              };
+              
+              const handleTouchEnd = () => {
+                document.removeEventListener('touchmove', handleTouchMove);
+                document.removeEventListener('touchend', handleTouchEnd);
+              };
+              
+              document.addEventListener('touchmove', handleTouchMove, { passive: false });
+              document.addEventListener('touchend', handleTouchEnd);
             }}
           >
             <div className="flex gap-6 pb-6" style={{ 

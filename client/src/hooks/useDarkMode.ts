@@ -29,7 +29,25 @@ export function useDarkMode() {
     localStorage.setItem('darkMode', String(isDark));
   }, [isDark]);
 
-  const toggle = () => setIsDark(prev => !prev);
+  // Auto-update based on system preference on mobile (only if no manual setting)
+  useEffect(() => {
+    const isMobile = window.innerWidth < 768;
+    if (isMobile && localStorage.getItem('darkMode') === null) {
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      const handleChange = (e: MediaQueryListEvent) => {
+        setIsDark(e.matches);
+      };
+      
+      mediaQuery.addEventListener('change', handleChange);
+      return () => mediaQuery.removeEventListener('change', handleChange);
+    }
+  }, []);
+
+  const toggle = () => {
+    setIsDark(prev => !prev);
+    // Mark as manual setting
+    localStorage.setItem('darkMode', String(!isDark));
+  };
 
   return { isDark, toggle };
 }

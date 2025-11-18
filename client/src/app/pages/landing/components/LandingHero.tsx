@@ -14,7 +14,7 @@ export function LandingHero() {
   };
 
   return (
-    <section className="relative min-h-[calc(100vh-80px)] md:min-h-screen overflow-hidden dark:bg-gray-900" style={{ scrollSnapAlign: 'start' }}>
+    <section className="relative min-h-[calc(100vh-80px)] md:min-h-screen overflow-hidden dark:bg-gray-900" style={{ scrollSnapAlign: 'start', scrollSnapStop: 'always' }}>
       {/* Video with Outward Curved Bottom */}
       <div className="relative w-full h-96 md:h-[500px] lg:h-[600px]">
         <video 
@@ -23,7 +23,7 @@ export function LandingHero() {
           muted 
           loop 
           playsInline
-          preload="none"
+          preload="auto"
           poster="/images/OG_Image.png"
           width="1920"
           height="1080"
@@ -32,10 +32,6 @@ export function LandingHero() {
             clipPath: 'ellipse(120% 100% at 50% 0%)',
             WebkitClipPath: 'ellipse(120% 100% at 50% 0%)',
             backgroundColor: colors.neutral.black
-          }}
-          onLoadedData={(e) => {
-            // Video loaded, can start playing
-            e.currentTarget.play().catch(() => {});
           }}
         >
           <source src="/placeholder.mp4" type="video/mp4" />
