@@ -52,7 +52,8 @@ export function LandingCTA() {
     <section className="relative py-20 pt-32 overflow-hidden bg-gray-900 dark:bg-gray-950 z-40" style={{ 
       boxShadow: 'inset 0 20px 40px rgba(0,0,0,0.3), inset 0 40px 80px rgba(0,0,0,0.2), inset 0 60px 120px rgba(0,0,0,0.1), inset 0 80px 160px rgba(0,0,0,0.05)',
       marginTop: '-200px',
-      scrollSnapAlign: 'start'
+      scrollSnapAlign: 'start',
+      scrollSnapStop: 'normal'
     }}>
       {/* Animated Background Blobs - Follow Mouse */}
       <div 

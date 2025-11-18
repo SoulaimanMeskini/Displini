@@ -42,12 +42,22 @@ export function LandingDeviceSync() {
               right: calc(50% - 200px) !important;
             }
           }
+          
+          .device-sync-title-container {
+            top: 200px;
+          }
+          
+          @media (min-width: 768px) {
+            .device-sync-title-container {
+              top: 250px;
+            }
+          }
         `}</style>
 
         {/* Device Screens with Title */}
         <div className="relative flex items-start justify-center overflow-visible" style={{ minWidth: '100%', height: '900px' }}>
           {/* Title and Sync - Positioned closer to screens */}
-          <div className="absolute left-1/2 -translate-x-1/2 z-40 text-center w-full" style={{ top: '420px', paddingTop: '0' }}>
+          <div className="absolute left-1/2 -translate-x-1/2 z-40 text-center w-full device-sync-title-container" style={{ paddingTop: '0' }}>
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 md:mb-6 text-gray-900 dark:text-white">
               Keep track where you left off on any device
             </h2>

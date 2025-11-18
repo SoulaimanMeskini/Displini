@@ -22,6 +22,17 @@ export function LandingFeatures() {
   const [activeFeature, setActiveFeature] = useState(0);
   const sectionRef = useRef<HTMLElement>(null);
   const lastChangeRef = useRef<number>(0);
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
+  const [isTablet, setIsTablet] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 768 && window.innerWidth < 1024);
+  
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+      setIsTablet(window.innerWidth >= 768 && window.innerWidth < 1024);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   
   // To-Do Demo State
   const [todoTasks, setTodoTasks] = useState<Task[]>([
@@ -361,7 +372,7 @@ The assistant helps you stay balanced from optimizing focus time to rearranging 
                         transition={{ duration: 0.2 }}
                       >
                         <IconComponent 
-                          className={`transition-all duration-300 ${activeFeature === index ? 'w-5 h-5 md:w-7 md:h-7' : 'w-4 h-4 md:w-6 md:h-6'}`}
+                          className={`transition-all duration-300 ${activeFeature === index ? 'w-4 h-4 md:w-7 md:h-7' : 'w-3 h-3 md:w-6 md:h-6'}`}
                           style={{ color: activeFeature === index ? feature.color : colors.neutral.gray }}
                         />
                         <span 
@@ -381,13 +392,20 @@ The assistant helps you stay balanced from optimizing focus time to rearranging 
                 {/* Glow effect behind phone */}
                 <div 
                   className="absolute inset-0 rounded-[3rem] blur-3xl opacity-50 transition-all duration-700"
-                  style={{ backgroundColor: features[activeFeature].color }}
+                  style={{ 
+                    backgroundColor: features[activeFeature].color,
+                    transform: 'scale(1.1)'
+                  }}
                 ></div>
                 
                 {/* iPhone Frame */}
-                <div className="relative bg-gray-900 rounded-[2.5rem] p-2.5 shadow-2xl mx-auto" style={{ width: '200px', height: '410px', maxWidth: '85vw' }}>
+                <div className="relative bg-gray-900 rounded-[2.5rem] p-2.5 shadow-2xl mx-auto" style={{ 
+                  width: isMobile ? '220px' : isTablet ? '240px' : '260px', 
+                  height: isMobile ? '440px' : isTablet ? '480px' : '520px', 
+                  maxWidth: '85vw' 
+                }}>
                   {/* Notch */}
-                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-gray-900 rounded-b-3xl z-20"></div>
+                  <div className={`absolute top-0 left-1/2 -translate-x-1/2 ${isMobile ? 'w-20 h-4' : isTablet ? 'w-28 h-5' : 'w-32 h-6'} bg-gray-900 rounded-b-3xl z-20`}></div>
                   
                   {/* Screen - Reflects dark/light mode */}
                   <div className="relative w-full h-full dark:bg-gray-900 bg-white rounded-[2.5rem] overflow-hidden flex flex-col">
@@ -404,22 +422,32 @@ The assistant helps you stay balanced from optimizing focus time to rearranging 
                     {activeFeature === 1 ? (
                       <div className="relative z-10 flex flex-col h-full bg-gray-50 dark:bg-gray-900">
                         {/* Header */}
-                        <div className="px-4 pt-4 pb-2 border-b border-gray-200 dark:border-gray-700">
-                          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">Today</h3>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</p>
+                        <div className={`${isMobile ? 'px-3 pt-4 pb-1.5' : isTablet ? 'px-3 pt-5 pb-1.5' : 'px-4 pt-6 pb-2'} border-b border-gray-200 dark:border-gray-700`}>
+                          <h3 className={`${isMobile ? 'text-sm' : isTablet ? 'text-base' : 'text-lg'} font-bold text-gray-900 dark:text-white ${isMobile ? 'mb-0.5' : 'mb-1'}`}>Today</h3>
+                          <p className={`${isMobile ? 'text-[10px]' : isTablet ? 'text-[10px]' : 'text-xs'} text-gray-500 dark:text-gray-400`}>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</p>
                         </div>
                         
                         {/* Timeline Container - Matching App Style */}
                         {(() => {
                           const timelineRange = getTimelineRange();
-                          const timelineHeight = 280; // Fixed height to fit in view - further reduced for mobile
+                          const timelineHeight = isMobile ? 240 : isTablet ? 300 : 320;
+                          const paddingLeft = isMobile ? '2rem' : isTablet ? '2.5rem' : '3rem';
+                          const paddingTop = isMobile ? '2.5rem' : isTablet ? '2rem' : '2.25rem';
+                          const paddingBottom = isMobile ? '1rem' : isTablet ? '1.5rem' : '2rem';
                           
                           return (
-                            <div className="flex-1 relative overflow-hidden" style={{ paddingLeft: '3rem', paddingRight: '0.5rem', paddingTop: '1.5rem', paddingBottom: '2rem', height: `${timelineHeight}px` }}>
+                            <div className="flex-1 relative overflow-hidden" style={{ 
+                              paddingLeft, 
+                              paddingRight: '0.5rem', 
+                              paddingTop, 
+                              paddingBottom, 
+                              height: `${timelineHeight}px`,
+                              marginTop: isMobile ? '1rem' : '0'
+                            }}>
                               {/* Timeline Items Container */}
                               <div className="relative" style={{ height: `${timelineHeight}px` }}>
                                 {/* Liquid Timeline Background */}
-                                <div className="absolute" style={{ left: '16px', top: '0px', width: '8px', height: `${timelineHeight}px`, zIndex: 0 }}>
+                                <div className="absolute" style={{ left: isMobile ? '32px' : isTablet ? '28px' : '30px', top: '0px', width: isMobile ? '6px' : isTablet ? '7px' : '8px', height: `${timelineHeight}px`, zIndex: 0 }}>
                                   {/* Background bar */}
                                   <div className="absolute inset-0 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
                                   {/* Liquid Fill */}
@@ -443,13 +471,13 @@ The assistant helps you stay balanced from optimizing focus time to rearranging 
                                         className="absolute"
                                         style={{ 
                                           top: `${wakeUpPositionPx}px`,
-                                          left: '-60px',
+                                          left: isMobile ? '-24px' : isTablet ? '-28px' : '-36px',
                                           transform: 'translateY(-50%)',
-                                          width: '28px',
+                                          width: isMobile ? '24px' : isTablet ? '28px' : '36px',
                                           textAlign: 'right'
                                         }}
                                       >
-                                        <span className="text-[11px] font-mono text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                                        <span className={`${isMobile ? 'text-[9px]' : isTablet ? 'text-[9px]' : 'text-[10px]'} font-mono text-gray-500 dark:text-gray-400 whitespace-nowrap`}>
                                           {formatTimeDisplay(timelineRange.start)}
                                         </span>
                                       </div>
@@ -459,9 +487,9 @@ The assistant helps you stay balanced from optimizing focus time to rearranging 
                                         className="absolute"
                                         style={{ 
                                           top: `${wakeUpPositionPx}px`,
-                                          left: '16px', // Timeline bar left edge
-                                          width: '8px', // Same as timeline bar width
-                                          height: '40px', // Dot height
+                                          left: isMobile ? '32px' : isTablet ? '28px' : '30px', // Timeline bar left edge
+                                          width: isMobile ? '6px' : isTablet ? '7px' : '8px', // Same as timeline bar width
+                                          height: isMobile ? '28px' : isTablet ? '32px' : '40px', // Dot height
                                           transform: 'translateY(-50%)',
                                           display: 'flex',
                                           alignItems: 'center',
@@ -469,8 +497,8 @@ The assistant helps you stay balanced from optimizing focus time to rearranging 
                                           zIndex: 20
                                         }}
                                       >
-                                        <div className="w-10 h-10 rounded-full border-2 flex items-center justify-center flex-shrink-0 shadow-lg bg-blue-500 border-blue-600">
-                                          <span className="text-white text-xs font-bold">☀️</span>
+                                        <div className={`${isMobile ? 'w-6 h-6' : isTablet ? 'w-7 h-7' : 'w-9 h-9'} rounded-full flex items-center justify-center flex-shrink-0 shadow-lg bg-blue-500`}>
+                                          <span className={`text-white ${isMobile ? 'text-[9px]' : isTablet ? 'text-[9px]' : 'text-[11px]'} font-bold`}>☀️</span>
                                         </div>
                                       </div>
                                     </>
@@ -489,13 +517,13 @@ The assistant helps you stay balanced from optimizing focus time to rearranging 
                                         className="absolute"
                                         style={{ 
                                           top: `${bedtimePositionPx}px`,
-                                          left: '-60px',
+                                          left: isMobile ? '-24px' : isTablet ? '-28px' : '-36px',
                                           transform: 'translateY(-50%)',
-                                          width: '28px',
+                                          width: isMobile ? '24px' : isTablet ? '28px' : '36px',
                                           textAlign: 'right'
                                         }}
                                       >
-                                        <span className="text-[11px] font-mono text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                                        <span className={`${isMobile ? 'text-[9px]' : isTablet ? 'text-[9px]' : 'text-[10px]'} font-mono text-gray-500 dark:text-gray-400 whitespace-nowrap`}>
                                           {formatTimeDisplay(timelineRange.end)}
                                         </span>
                                       </div>
@@ -505,9 +533,9 @@ The assistant helps you stay balanced from optimizing focus time to rearranging 
                                         className="absolute"
                                         style={{ 
                                           top: `${bedtimePositionPx}px`,
-                                          left: '16px', // Timeline bar left edge
-                                          width: '8px', // Same as timeline bar width
-                                          height: '40px', // Dot height
+                                          left: isMobile ? '32px' : isTablet ? '28px' : '30px', // Timeline bar left edge
+                                          width: isMobile ? '6px' : isTablet ? '7px' : '8px', // Same as timeline bar width
+                                          height: isMobile ? '28px' : isTablet ? '32px' : '40px', // Dot height
                                           transform: 'translateY(-50%)',
                                           display: 'flex',
                                           alignItems: 'center',
@@ -515,8 +543,8 @@ The assistant helps you stay balanced from optimizing focus time to rearranging 
                                           zIndex: 20
                                         }}
                                       >
-                                        <div className="w-10 h-10 rounded-full border-2 flex items-center justify-center flex-shrink-0 shadow-lg bg-blue-500 border-blue-600">
-                                          <span className="text-white text-xs font-bold">🌙</span>
+                                        <div className={`${isMobile ? 'w-6 h-6' : isTablet ? 'w-7 h-7' : 'w-9 h-9'} rounded-full flex items-center justify-center flex-shrink-0 shadow-lg bg-blue-500`}>
+                                          <span className={`text-white ${isMobile ? 'text-[9px]' : isTablet ? 'text-[9px]' : 'text-[11px]'} font-bold`}>🌙</span>
                                         </div>
                                       </div>
                                     </>
@@ -548,13 +576,13 @@ The assistant helps you stay balanced from optimizing focus time to rearranging 
                                         className="absolute"
                                         style={{ 
                                           top: `${currentPositionPx}px`,
-                                          left: '-60px',
+                                          left: isMobile ? '-18px' : isTablet ? '-28px' : '-36px',
                                           transform: 'translateY(-50%)',
-                                          width: '28px',
+                                          width: isMobile ? '20px' : isTablet ? '28px' : '36px',
                                           textAlign: 'right'
                                         }}
                                       >
-                                        <span className="text-[11px] font-mono font-bold text-blue-500 dark:text-blue-400 whitespace-nowrap">
+                                        <span className={`${isMobile ? 'text-[8px]' : isTablet ? 'text-[9px]' : 'text-[10px]'} font-mono font-bold text-blue-500 dark:text-blue-400 whitespace-nowrap`}>
                                           {formatTimeDisplay(currentTimeStr)}
                                         </span>
                                       </div>
@@ -564,9 +592,9 @@ The assistant helps you stay balanced from optimizing focus time to rearranging 
                                         className="absolute"
                                         style={{ 
                                           top: `${currentPositionPx}px`,
-                                          left: '16px', // Timeline bar left edge
-                                          width: '8px', // Same as timeline bar width
-                                          height: '20px', // Dot height
+                                          left: isMobile ? '32px' : isTablet ? '28px' : '30px', // Timeline bar left edge
+                                          width: isMobile ? '6px' : isTablet ? '7px' : '8px', // Same as timeline bar width
+                                          height: isMobile ? '16px' : isTablet ? '18px' : '20px', // Dot height
                                           transform: 'translateY(-50%)',
                                           display: 'flex',
                                           alignItems: 'center',
@@ -574,7 +602,7 @@ The assistant helps you stay balanced from optimizing focus time to rearranging 
                                           zIndex: 25
                                         }}
                                       >
-                                        <div className="w-3 h-3 rounded-full bg-blue-500 border-2 border-white dark:border-gray-900 shadow-lg flex items-center justify-center flex-shrink-0"></div>
+                                        <div className={`${isMobile ? 'w-2 h-2' : 'w-3 h-3'} rounded-full bg-blue-500 border-2 border-white dark:border-gray-900 shadow-lg flex items-center justify-center flex-shrink-0`}></div>
                                       </div>
                                     </>
                                   );
@@ -595,13 +623,13 @@ The assistant helps you stay balanced from optimizing focus time to rearranging 
                                           className="absolute"
                                           style={{ 
                                             top: `${positionPx}px`,
-                                            left: '-40px',
-                                            transform: 'translateY(-50%)',
-                                            width: '28px',
-                                            textAlign: 'right'
-                                          }}
-                                        >
-                                          <span className="text-[11px] font-mono text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                                          left: isMobile ? '-18px' : isTablet ? '-26px' : '-34px',
+                                          transform: 'translateY(-50%)',
+                                          width: isMobile ? '20px' : isTablet ? '26px' : '34px',
+                                             textAlign: 'right'
+                                           }}
+                                          >
+                                          <span className={`${isMobile ? 'text-[8px]' : isTablet ? 'text-[9px]' : 'text-[10px]'} font-mono text-gray-500 dark:text-gray-400 whitespace-nowrap`}>
                                             {formatTimeDisplay(task.time)}
                                           </span>
                                         </div>
@@ -612,7 +640,7 @@ The assistant helps you stay balanced from optimizing focus time to rearranging 
                                         className="absolute"
                                         style={{ 
                                           top: `${positionPx}px`,
-                                          left: '32px', // Right of timeline bar: 16px + 8px + 8px spacing
+                                          left: isMobile ? '44px' : isTablet ? '48px' : '52px', // Right of timeline bar: 12px/16px + 6px/8px + 6px/8px spacing
                                           transform: 'translateY(-50%)',
                                           zIndex: task.id === 'promo-task' ? 35 : 30,
                                           pointerEvents: 'auto'
@@ -620,8 +648,8 @@ The assistant helps you stay balanced from optimizing focus time to rearranging 
                                       >
                                         {task.id === 'promo-task' ? (
                                           <motion.div
-                                            className="bg-gradient-to-r from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 rounded-lg p-3 border border-blue-400 dark:border-blue-500 shadow-lg"
-                                            style={{ maxWidth: '160px' }}
+                                            className={`bg-gradient-to-r from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 rounded-lg ${isMobile ? 'p-1.5' : isTablet ? 'p-1.5' : 'p-2'} border border-blue-400 dark:border-blue-500 shadow-lg`}
+                                            style={{ maxWidth: isMobile ? '110px' : isTablet ? '115px' : '135px' }}
                                             animate={promoWiggle ? {
                                               rotate: [0, -10, 10, -10, 10, 0],
                                               scale: [1, 1.05, 1, 1.05, 1],
@@ -631,10 +659,10 @@ The assistant helps you stay balanced from optimizing focus time to rearranging 
                                               ease: "easeInOut"
                                             }}
                                           >
-                                            <div className="flex flex-col gap-1.5">
-                                              <div className="flex items-center gap-1.5">
-                                                <span className="text-sm flex-shrink-0">{task.emoji || '🚀'}</span>
-                                                <span className="text-xs font-medium text-white">
+                                            <div className={`flex flex-col ${isMobile ? 'gap-1' : 'gap-1.5'}`}>
+                                              <div className={`flex items-center ${isMobile ? 'gap-1' : 'gap-1.5'}`}>
+                                                <span className={`${isMobile ? 'text-[10px]' : isTablet ? 'text-[9px]' : 'text-[10px]'} flex-shrink-0`}>{task.emoji || '🚀'}</span>
+                                                <span className={`${isMobile ? 'text-[9px]' : isTablet ? 'text-[8px]' : 'text-[9px]'} font-medium text-white`}>
                                                   {task.title}
                                                 </span>
                                               </div>
@@ -646,7 +674,7 @@ The assistant helps you stay balanced from optimizing focus time to rearranging 
                                                   // Scroll to top or trigger get started action
                                                   window.scrollTo({ top: 0, behavior: 'smooth' });
                                                 }}
-                                                className="text-xs font-bold text-white bg-white/20 hover:bg-white/30 rounded px-2 py-1 text-center transition-all"
+                                                className={`${isMobile ? 'text-[9px] px-1 py-0.5' : isTablet ? 'text-[8px] px-0.5 py-0.5' : 'text-[9px] px-1 py-0.5'} font-bold text-white bg-white/20 hover:bg-white/30 rounded text-center transition-all`}
                                               >
                                                 Get started!
                                               </a>
@@ -660,16 +688,16 @@ The assistant helps you stay balanced from optimizing focus time to rearranging 
                                                 tasks.map(t => t.id === task.id ? { ...t, completed: !t.completed } : t)
                                               );
                                             }}
-                                            className={`bg-white dark:bg-gray-800 rounded-lg p-2 border transition-all text-left cursor-pointer ${
+                                            className={`bg-white dark:bg-gray-800 rounded-lg ${isMobile ? 'p-2' : isTablet ? 'p-1.5' : 'p-2'} border transition-all text-left cursor-pointer ${
                                               task.completed 
                                                 ? 'border-gray-200 dark:border-gray-700 opacity-60' 
                                                 : 'border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md'
                                             }`}
-                                            style={{ maxWidth: '130px' }}
+                                            style={{ maxWidth: isMobile ? '110px' : isTablet ? '110px' : '120px' }}
                                           >
-                                            <div className="flex items-center gap-1.5">
-                                              <span className="text-sm flex-shrink-0">{task.emoji || '📝'}</span>
-                                              <span className={`text-xs font-medium truncate ${
+                                            <div className={`flex items-center ${isMobile ? 'gap-1' : 'gap-1'}`}>
+                                              <span className={`${isMobile ? 'text-xs' : isTablet ? 'text-[10px]' : 'text-xs'} flex-shrink-0`}>{task.emoji || '📝'}</span>
+                                              <span className={`${isMobile ? 'text-[10px]' : isTablet ? 'text-[9px]' : 'text-[10px]'} font-medium truncate ${
                                                 task.completed 
                                                   ? 'line-through text-gray-400 dark:text-gray-500' 
                                                   : 'text-gray-900 dark:text-white'
@@ -692,7 +720,7 @@ The assistant helps you stay balanced from optimizing focus time to rearranging 
                         })()}
                         
                         {/* Floating + Button - Bottom Right */}
-                        <div className="absolute bottom-4 right-4 z-20">
+                        <div className={`absolute ${isMobile ? 'bottom-1.5 right-6' : 'bottom-4 right-4'} z-20`}>
                           <button
                             onClick={() => {
                               // Add a demo task
@@ -756,9 +784,9 @@ The assistant helps you stay balanced from optimizing focus time to rearranging 
                                 }
                               }
                             }}
-                            className="w-10 h-10 rounded-full bg-blue-500 text-white shadow-lg hover:bg-blue-600 hover:scale-110 transition-all flex items-center justify-center flex-shrink-0"
+                            className={`${isMobile ? 'w-8 h-8' : 'w-10 h-10'} rounded-full bg-blue-500 text-white shadow-lg hover:bg-blue-600 hover:scale-110 transition-all flex items-center justify-center flex-shrink-0`}
                           >
-                            <Plus className="w-5 h-5" />
+                            <Plus className={isMobile ? 'w-4 h-4' : 'w-5 h-5'} />
                           </button>
                         </div>
                       </div>
