@@ -23,7 +23,7 @@ export function LandingHero() {
           muted 
           loop 
           playsInline
-          preload="auto"
+          preload="metadata"
           poster="/images/OG_Image.png"
           width="1920"
           height="1080"
@@ -32,6 +32,10 @@ export function LandingHero() {
             clipPath: 'ellipse(120% 100% at 50% 0%)',
             WebkitClipPath: 'ellipse(120% 100% at 50% 0%)',
             backgroundColor: colors.neutral.black
+          }}
+          onLoadedMetadata={(e) => {
+            // Start playing after metadata loads
+            e.currentTarget.play().catch(() => {});
           }}
         >
           <source src="/placeholder.mp4" type="video/mp4" />
@@ -82,7 +86,8 @@ export function LandingHero() {
               width="200"
               height="64"
               className="h-12 md:h-16 w-auto dark:brightness-0 dark:invert"
-              loading="lazy"
+              fetchPriority="high"
+              loading="eager"
             />
           </div>
           <p className="text-base md:text-lg mb-4 max-w-3xl mx-auto animate-fade-in text-gray-900 dark:text-gray-100 font-medium" style={{animationDelay: '0.2s'}}>

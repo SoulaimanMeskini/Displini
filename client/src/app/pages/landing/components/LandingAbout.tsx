@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { BookHeart, Target, Users, Heart } from "lucide-react";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { colors } from "@/lib/designSystem";
 
 /**
@@ -47,25 +47,52 @@ export function LandingAbout() {
   const missionCardRef = useRef<HTMLDivElement>(null);
   const unityCardRef = useRef<HTMLDivElement>(null);
   const careCardRef = useRef<HTMLDivElement>(null);
+  
+  // Invalidate cached rect on resize
+  useEffect(() => {
+    const handleResize = () => {
+      cachedRectRef.current = null;
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
+  // Throttle mouse move to reduce reflows
+  const mouseMoveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const cachedRectRef = useRef<DOMRect | null>(null);
+  
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (sectionRef.current) {
-      const rect = sectionRef.current.getBoundingClientRect();
-      setMousePosition({
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top
-      });
-    }
+    if (mouseMoveTimeoutRef.current) return;
+    
+    mouseMoveTimeoutRef.current = setTimeout(() => {
+      if (sectionRef.current) {
+        // Cache rect to avoid repeated queries
+        if (!cachedRectRef.current) {
+          cachedRectRef.current = sectionRef.current.getBoundingClientRect();
+        }
+        const rect = cachedRectRef.current;
+        setMousePosition({
+          x: e.clientX - rect.left,
+          y: e.clientY - rect.top
+        });
+        mouseMoveTimeoutRef.current = null;
+      }
+    }, 16); // ~60fps throttling
   };
   
   const handleStoryCardMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (storyCardRef.current) {
-      const cardRect = storyCardRef.current.getBoundingClientRect();
-      setMousePosition({
-        x: e.clientX - cardRect.left,
-        y: e.clientY - cardRect.top
-      });
-    }
+    if (mouseMoveTimeoutRef.current) return;
+    
+    mouseMoveTimeoutRef.current = setTimeout(() => {
+      if (storyCardRef.current) {
+        const cardRect = storyCardRef.current.getBoundingClientRect();
+        setMousePosition({
+          x: e.clientX - cardRect.left,
+          y: e.clientY - cardRect.top
+        });
+        mouseMoveTimeoutRef.current = null;
+      }
+    }, 16);
   };
 
   return (
@@ -164,14 +191,19 @@ export function LandingAbout() {
               };
               
               const handleCardMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-                const cardRef = getCardRef();
-                if (cardRef?.current) {
-                  const cardRect = cardRef.current.getBoundingClientRect();
-                  setMousePosition({
-                    x: e.clientX - cardRect.left,
-                    y: e.clientY - cardRect.top
-                  });
-                }
+                if (mouseMoveTimeoutRef.current) return;
+                
+                mouseMoveTimeoutRef.current = setTimeout(() => {
+                  const cardRef = getCardRef();
+                  if (cardRef?.current) {
+                    const cardRect = cardRef.current.getBoundingClientRect();
+                    setMousePosition({
+                      x: e.clientX - cardRect.left,
+                      y: e.clientY - cardRect.top
+                    });
+                    mouseMoveTimeoutRef.current = null;
+                  }
+                }, 16); // ~60fps throttling
               };
               
               return (

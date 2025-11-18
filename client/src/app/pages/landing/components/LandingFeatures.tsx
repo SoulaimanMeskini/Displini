@@ -191,13 +191,23 @@ The assistant helps you stay balanced from optimizing focus time to rearranging 
   const [canChangeTab, setCanChangeTab] = useState(false);
   const snapCompleteRef = useRef(false);
   
+  // Cache viewport height to avoid repeated queries
+  const viewportHeightRef = useRef(window.innerHeight);
+  
   useEffect(() => {
+    // Update viewport height on resize
+    const handleResize = () => {
+      viewportHeightRef.current = window.innerHeight;
+    };
+    window.addEventListener('resize', handleResize);
+    
     // Detect when section is centered and stable
     const checkIfCentered = () => {
       if (!sectionRef.current || snapCompleteRef.current) return;
       
+      // Batch DOM reads
       const rect = sectionRef.current.getBoundingClientRect();
-      const viewportHeight = window.innerHeight;
+      const viewportHeight = viewportHeightRef.current;
       const isCentered = Math.abs(rect.top + rect.height / 2 - viewportHeight / 2) < 100;
       
       if (isCentered) {
@@ -209,8 +219,8 @@ The assistant helps you stay balanced from optimizing focus time to rearranging 
       }
     };
     
-    // Check more frequently
-    const interval = setInterval(checkIfCentered, 50);
+    // Check less frequently to reduce reflows
+    const interval = setInterval(checkIfCentered, 100);
     
     // Fallback timeout - quicker activation
     const fallbackTimer = setTimeout(() => {
@@ -221,6 +231,7 @@ The assistant helps you stay balanced from optimizing focus time to rearranging 
     return () => {
       clearInterval(interval);
       clearTimeout(fallbackTimer);
+      window.removeEventListener('resize', handleResize);
     };
   }, []);
 
@@ -231,9 +242,10 @@ The assistant helps you stay balanced from optimizing focus time to rearranging 
     const handleWheel = (e: WheelEvent) => {
       if (!sectionRef.current) return;
       
+      // Batch DOM reads
       const rect = sectionRef.current.getBoundingClientRect();
       const now = Date.now();
-      const viewportHeight = window.innerHeight;
+      const viewportHeight = viewportHeightRef.current;
       
       // Strict centering check - section must be centered
       const sectionCenter = rect.top + rect.height / 2;

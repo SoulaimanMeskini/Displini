@@ -99,6 +99,22 @@ export function LandingCarousel() {
 
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
+  // Cache container width to avoid repeated queries
+  const containerWidthRef = useRef<number>(0);
+  
+  useEffect(() => {
+    if (carouselRef.current) {
+      containerWidthRef.current = carouselRef.current.offsetWidth;
+    }
+    const handleResize = () => {
+      if (carouselRef.current) {
+        containerWidthRef.current = carouselRef.current.offsetWidth;
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -117,7 +133,8 @@ export function LandingCarousel() {
     if (carouselRef.current) {
       const container = carouselRef.current;
       const cardWidth = 400 + 24;
-      const containerWidth = container.offsetWidth;
+      const containerWidth = containerWidthRef.current || container.offsetWidth;
+      if (!containerWidthRef.current) containerWidthRef.current = containerWidth;
       const scrollPosition = (scrollIndex * cardWidth) - (containerWidth / 2) + (cardWidth / 2);
       
       container.scrollTo({
@@ -158,7 +175,8 @@ export function LandingCarousel() {
     if (carouselRef.current) {
       const container = carouselRef.current;
       const cardWidth = 400 + 24;
-      const containerWidth = container.offsetWidth;
+      const containerWidth = containerWidthRef.current || container.offsetWidth;
+      if (!containerWidthRef.current) containerWidthRef.current = containerWidth;
       const scrollPosition = (scrollIndex * cardWidth) - (containerWidth / 2) + (cardWidth / 2);
       
       container.scrollTo({
@@ -201,9 +219,18 @@ export function LandingCarousel() {
 
     container.scrollLeft = middlePosition;
 
+    // Cache dimensions to avoid repeated queries
+    let cachedScrollWidth = container.scrollWidth;
+    let cachedClientWidth = container.clientWidth;
+    
     const handleScroll = () => {
       const scrollLeft = container.scrollLeft;
-      const maxScroll = container.scrollWidth - container.clientWidth;
+      // Update cache periodically, not on every scroll
+      if (mobileScrollTimeoutRef.current === null) {
+        cachedScrollWidth = container.scrollWidth;
+        cachedClientWidth = container.clientWidth;
+      }
+      const maxScroll = cachedScrollWidth - cachedClientWidth;
 
       if (mobileScrollTimeoutRef.current) {
         clearTimeout(mobileScrollTimeoutRef.current);
