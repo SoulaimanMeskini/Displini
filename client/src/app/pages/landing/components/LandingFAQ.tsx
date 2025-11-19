@@ -69,11 +69,11 @@ export function LandingFAQ({ showHelpText = true }: LandingFAQProps = {}) {
 
   return (
     <section data-section="faq" className="py-12 md:py-20 flex flex-col items-center justify-center relative bg-gray-50 dark:bg-gray-900 transition-colors duration-300" style={{ scrollSnapAlign: 'center', minHeight: 'calc(100vh - 80px)' }}>
-      <div className="container mx-auto px-6 w-full">
-        <h2 className="text-2xl md:text-4xl lg:text-5xl font-bold text-center mb-8 md:mb-16 text-gray-900 dark:text-white" style={{ marginTop: '40px' }}>
+      <div className="container mx-auto px-6 w-full flex flex-col items-center">
+        <h2 className="text-2xl md:text-4xl lg:text-5xl font-bold text-center mb-8 md:mb-16 text-gray-900 dark:text-white">
           Frequently Asked Questions
         </h2>
-        <div className="max-w-3xl mx-auto">
+        <div className="max-w-3xl mx-auto w-full">
           <Card className="bg-white/60 backdrop-blur-xl border-white/80 overflow-hidden shadow-2xl">
             <div className="divide-y divide-gray-200">
               {faqs.map((faq, index) => (

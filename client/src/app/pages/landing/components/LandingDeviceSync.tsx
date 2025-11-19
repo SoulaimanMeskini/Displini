@@ -9,8 +9,8 @@ import { colors } from "@/lib/designSystem";
  */
 export function LandingDeviceSync() {
   return (
-    <section data-section="device-sync" className="relative pb-0 bg-gray-50 dark:bg-gray-900 transition-colors duration-300" style={{ scrollSnapAlign: 'start', scrollSnapStop: 'always', minHeight: 'calc(100vh - 80px)', paddingTop: '200px' }}>
-      <div className="container mx-auto max-w-7xl px-6 relative">
+    <section data-section="device-sync" className="relative pb-0 bg-gray-50 dark:bg-gray-900 transition-colors duration-300 flex items-center justify-center" style={{ scrollSnapAlign: 'start', scrollSnapStop: 'always', minHeight: 'calc(100vh - 80px)' }}>
+      <div className="container mx-auto max-w-7xl px-6 relative w-full">
         <style>{`
           @keyframes spin-smooth {
             from {
@@ -44,20 +44,20 @@ export function LandingDeviceSync() {
           }
           
           .device-sync-title-container {
-            top: 300px;
+            top: 0px;
           }
           
           @media (min-width: 768px) {
             .device-sync-title-container {
-              top: 250px;
+              top: 0px;
             }
           }
         `}</style>
 
         {/* Device Screens with Title */}
-        <div className="relative flex items-start justify-center overflow-visible" style={{ minWidth: '100%', height: '900px' }}>
-          {/* Title and Sync - Positioned closer to screens */}
-          <div className="absolute left-1/2 -translate-x-1/2 z-40 text-center w-full device-sync-title-container" style={{ paddingTop: '0' }}>
+        <div className="relative flex flex-col items-center justify-center overflow-visible" style={{ minWidth: '100%', minHeight: 'calc(100vh - 80px)', paddingTop: '2rem', paddingBottom: '2rem' }}>
+          {/* Title and Sync - Positioned at top, centered */}
+          <div className="relative z-40 text-center w-full device-sync-title-container mb-8 md:mb-12">
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 md:mb-6 text-gray-900 dark:text-white">
               Keep track where you left off on any device
             </h2>
@@ -77,8 +77,8 @@ export function LandingDeviceSync() {
 
           {/* MacBook - BELOW TITLE */}
           <div 
-            className="absolute left-1/2 -translate-x-1/2 transition-transform duration-500 hover:scale-105 z-10"
-            style={{ top: '500px', width: '560px', maxWidth: '90vw' }}
+            className="relative transition-transform duration-500 hover:scale-105 z-10"
+            style={{ width: '560px', maxWidth: '90vw', marginTop: '2rem' }}
           >
             <div className="flex flex-col items-center" style={{ width: '100%' }}>
               <div className="bg-gray-800 rounded-t-2xl shadow-2xl relative" style={{ width: '93%', aspectRatio: '520/320', padding: '8px 8px 0 8px' }}>
@@ -116,7 +116,7 @@ export function LandingDeviceSync() {
           {/* iPad - BELOW TITLE */}
           <div 
             className="absolute left-1/2 -translate-x-1/2 bg-gray-800 rounded-[2rem] shadow-2xl z-20 transition-transform duration-500 hover:scale-105"
-            style={{ top: '550px', width: '288px', height: '384px', padding: '10px', maxWidth: '70vw' }}
+            style={{ top: 'calc(50% + 60px)', transform: 'translate(-50%, -50%)', width: '288px', height: '384px', padding: '10px', maxWidth: '70vw' }}
           >
             <div className="w-full h-full bg-white rounded-[1.5rem] overflow-hidden relative">
               <div className="absolute top-3 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-900 rounded-full z-20"></div>
@@ -132,7 +132,7 @@ export function LandingDeviceSync() {
           {/* iPhone - BELOW TITLE */}
           <div 
             className="absolute left-1/2 -translate-x-1/2 bg-gray-900 rounded-[2.5rem] shadow-2xl z-30 transition-transform duration-500 hover:scale-105"
-            style={{ top: '640px', width: '192px', height: '384px', padding: '8px', maxWidth: '50vw' }}
+            style={{ top: 'calc(50% + 120px)', transform: 'translate(-50%, -50%)', width: '192px', height: '384px', padding: '8px', maxWidth: '50vw' }}
             data-device="iphone"
           >
             <div className="w-full h-full bg-white rounded-[2rem] overflow-hidden relative">
@@ -153,7 +153,8 @@ export function LandingDeviceSync() {
           <div 
             className="absolute transition-transform duration-500 hover:scale-105 z-20"
             style={{ 
-              top: '660px'
+              top: 'calc(50% + 140px)',
+              transform: 'translateY(-50%)'
             }}
             data-device="smartwatch"
           >

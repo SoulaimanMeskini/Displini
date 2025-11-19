@@ -14,11 +14,11 @@ export function LandingHero() {
   };
 
   return (
-    <section className="relative min-h-[calc(100vh-80px)] md:min-h-screen overflow-hidden dark:bg-gray-900" style={{ scrollSnapAlign: 'start', scrollSnapStop: 'always' }}>
+    <section className="relative min-h-[calc(100vh-80px)] md:min-h-screen overflow-hidden dark:bg-gray-900 flex flex-col items-center justify-center" style={{ scrollSnapAlign: 'start', scrollSnapStop: 'always' }}>
       {/* Video with Outward Curved Bottom */}
       <div className="relative w-full h-96 md:h-[500px] lg:h-[600px]">
         <video 
-          className="w-full h-full object-cover [&::-webkit-media-controls]:hidden [&::-webkit-media-controls-panel]:hidden [&::-webkit-media-controls-play-button]:hidden [&::-webkit-media-controls-start-playback-button]:hidden"
+          className="w-full h-full object-cover [&::-webkit-media-controls]:hidden [&::-webkit-media-controls-panel]:hidden [&::-webkit-media-controls-play-button]:hidden [&::-webkit-media-controls-start-playback-button]:hidden pointer-events-none"
           autoPlay 
           muted 
           loop 
@@ -53,26 +53,28 @@ export function LandingHero() {
         </video>
         
         {/* Apple and Google Play Icons overlay at bottom of video */}
-        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex items-center justify-center space-x-6 z-10">
+        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex items-end justify-center space-x-6 z-10">
           {/* Apple Icon - Left */}
-          <div className="hover:opacity-80 transition-opacity cursor-pointer">
+          <div className="hover:opacity-80 transition-opacity cursor-pointer flex items-end">
             <img 
               src="/icons/Apple_icon.svg" 
               alt="Download on App Store"
               width="24"
               height="24"
               className="w-6 h-6 filter brightness-0 invert object-contain"
+              style={{ display: 'block' }}
               loading="lazy"
             />
           </div>
           {/* Google Play Icon - Right */}
-          <div className="hover:opacity-80 transition-opacity cursor-pointer">
+          <div className="hover:opacity-80 transition-opacity cursor-pointer flex items-end">
             <img 
               src="/icons/Googleplay_icon.svg" 
               alt="Get it on Google Play"
               width="24"
               height="24"
               className="w-6 h-6 filter brightness-0 invert object-contain"
+              style={{ display: 'block' }}
               loading="lazy"
             />
           </div>

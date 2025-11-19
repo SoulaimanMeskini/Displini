@@ -96,10 +96,10 @@ export function LandingQR() {
           </a>
           
           {/* App Store buttons */}
-          <div className="flex gap-4 md:gap-8 items-center mb-8 md:mb-16">
+          <div className="flex gap-4 md:gap-8 items-end mb-8 md:mb-16">
             <a 
               href="#" 
-              className="transition-all duration-300 hover:scale-110 hover:opacity-70"
+              className="transition-all duration-300 hover:scale-110 hover:opacity-70 flex items-end"
               aria-label="Download on the App Store"
             >
               <img 
@@ -108,12 +108,13 @@ export function LandingQR() {
                 width="40"
                 height="40"
                 className="h-10 w-10 object-contain dark:invert"
+                style={{ display: 'block' }}
                 loading="lazy"
               />
             </a>
             <a 
               href="#" 
-              className="transition-all duration-300 hover:scale-110 hover:opacity-70"
+              className="transition-all duration-300 hover:scale-110 hover:opacity-70 flex items-end"
               aria-label="Get it on Google Play"
             >
               <img 
@@ -122,6 +123,7 @@ export function LandingQR() {
                 width="40"
                 height="40"
                 className="h-10 w-10 object-contain dark:invert"
+                style={{ display: 'block' }}
                 loading="lazy"
               />
             </a>

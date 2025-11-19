@@ -64,6 +64,17 @@ export function CircularQrOrbit({
   const radius = (size - 60) / 2; // Account for text size
   const text = words.join(' • '); // Increased spacing for better visibility
 
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   return (
     <div
       className="relative inline-block"
@@ -71,7 +82,8 @@ export function CircularQrOrbit({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* Rotating SVG Text */}
+      {/* Rotating SVG Text - Hidden on mobile */}
+      {!isMobile && (
       <motion.svg
         width={size}
         height={size}
@@ -107,6 +119,7 @@ export function CircularQrOrbit({
           </textPath>
         </text>
       </motion.svg>
+      )}
 
       {/* Center QR Code */}
       <div className="absolute inset-0 flex items-center justify-center">

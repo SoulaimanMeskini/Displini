@@ -86,10 +86,10 @@ export function LandingFooter() {
 
           {/* Download Section - Centered for mobile */}
           <div className="text-center mb-6">
-            <div className="flex justify-center items-center gap-3">
+            <div className="flex justify-center items-end gap-3">
               <button
                 onClick={scrollToApp}
-                className="bg-transparent hover:bg-white/10 rounded-xl transition-all p-2 focus:outline-none"
+                className="bg-transparent hover:bg-white/10 rounded-xl transition-all p-2 focus:outline-none flex items-end"
                 aria-label="Download on the App Store"
               >
                 <img
@@ -98,12 +98,13 @@ export function LandingFooter() {
                   width="96"
                   height="32"
                   className="w-20 h-7 object-contain filter brightness-0 invert"
+                  style={{ display: 'block' }}
                   loading="lazy"
                 />
               </button>
               <button
                 onClick={scrollToApp}
-                className="bg-transparent hover:bg-white/10 rounded-xl transition-all p-2 focus:outline-none"
+                className="bg-transparent hover:bg-white/10 rounded-xl transition-all p-2 focus:outline-none flex items-end"
                 aria-label="Download on Google Play"
               >
                 <img
@@ -112,6 +113,7 @@ export function LandingFooter() {
                   width="96"
                   height="32"
                   className="w-20 h-7 object-contain filter brightness-0 invert"
+                  style={{ display: 'block' }}
                   loading="lazy"
                 />
               </button>
@@ -195,10 +197,10 @@ export function LandingFooter() {
           </div>
 
           {/* Download Section - Centered below links */}
-          <div className="hidden md:flex md:justify-center md:items-center md:gap-3 md:mb-8">
+          <div className="hidden md:flex md:justify-center md:items-end md:gap-3 md:mb-8">
             <button
               onClick={scrollToApp}
-              className="bg-transparent hover:bg-white/10 rounded-xl transition-all p-2 focus:outline-none"
+              className="bg-transparent hover:bg-white/10 rounded-xl transition-all p-2 focus:outline-none flex items-end"
               aria-label="Download on the App Store"
             >
               <img
@@ -207,12 +209,13 @@ export function LandingFooter() {
                 width="96"
                 height="32"
                 className="w-24 h-8 object-contain filter brightness-0 invert"
+                style={{ display: 'block' }}
                 loading="lazy"
               />
             </button>
             <button
               onClick={scrollToApp}
-              className="bg-transparent hover:bg-white/10 rounded-xl transition-all p-2 focus:outline-none"
+              className="bg-transparent hover:bg-white/10 rounded-xl transition-all p-2 focus:outline-none flex items-end"
               aria-label="Download on Google Play"
             >
               <img
@@ -221,6 +224,7 @@ export function LandingFooter() {
                 width="96"
                 height="32"
                 className="w-24 h-8 object-contain filter brightness-0 invert"
+                style={{ display: 'block' }}
                 loading="lazy"
               />
             </button>
