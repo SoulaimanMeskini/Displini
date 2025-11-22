@@ -391,10 +391,10 @@ The assistant helps you stay balanced from optimizing focus time to rearranging 
               <div className="order-2 lg:order-1 relative">
                 {/* Glow effect behind phone */}
                 <div 
-                  className="absolute inset-0 rounded-[3rem] blur-3xl opacity-50 transition-all duration-700"
+                  className={`absolute inset-0 rounded-[3rem] transition-all duration-700 ${isMobile ? 'blur-2xl opacity-30' : 'blur-3xl opacity-50'}`}
                   style={{ 
                     backgroundColor: features[activeFeature].color,
-                    transform: 'scale(1.1)'
+                    transform: isMobile ? 'scale(1.05)' : 'scale(1.1)'
                   }}
                 ></div>
                 

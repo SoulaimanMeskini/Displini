@@ -14,7 +14,7 @@ export function LandingFooter() {
   };
 
   return (
-    <footer className="py-8 md:py-16" style={{ backgroundColor: '#1d1d1d', scrollSnapAlign: 'none', scrollSnapStop: 'normal', minHeight: 'auto', position: 'relative', zIndex: 10 }}>
+    <footer className="py-8 md:py-16" style={{ backgroundColor: '#1d1d1d', scrollSnapAlign: 'none', scrollSnapStop: 'normal', minHeight: 'auto', position: 'relative', zIndex: 10, marginTop: '100px', paddingTop: '0' }}>
       <div className="container mx-auto px-4 md:px-6">
         {/* Mobile Layout - Centered */}
         <div className="md:hidden">

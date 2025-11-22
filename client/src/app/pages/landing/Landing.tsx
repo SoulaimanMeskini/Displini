@@ -62,9 +62,6 @@ function Landing() {
           <LandingDeviceSync />
         </ErrorBoundary>
         <ErrorBoundary>
-          <LandingCTA />
-        </ErrorBoundary>
-        <ErrorBoundary>
           <LandingFooter />
         </ErrorBoundary>
       </Suspense>
