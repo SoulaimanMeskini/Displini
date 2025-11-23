@@ -14,23 +14,23 @@ export function LandingFooter() {
   };
 
   return (
-    <footer className="py-8 md:py-16" style={{ backgroundColor: '#1d1d1d', scrollSnapAlign: 'none', scrollSnapStop: 'normal', minHeight: 'auto', position: 'relative', zIndex: 10, marginTop: '100px', paddingTop: '0' }}>
-      <div className="container mx-auto px-4 md:px-6">
+    <footer className="py-6 md:py-12 lg:py-16" style={{ backgroundColor: '#1d1d1d', scrollSnapAlign: 'none', scrollSnapStop: 'normal', minHeight: 'auto', position: 'relative', zIndex: 40, marginTop: '-30px', marginBottom: 0, paddingTop: '24px', paddingBottom: 0 }}>
+      <div className="container mx-auto px-4 sm:px-6 md:px-8 lg:px-6 md:pt-8">
         {/* Mobile Layout - Centered */}
         <div className="md:hidden">
           {/* Brand and Social - Top */}
-          <div className="mb-8 text-center">
-            <div className="h-10 mb-4 flex justify-center">
+          <div className="mb-6 sm:mb-8 text-center">
+            <div className="h-14 mb-3 sm:mb-4 flex justify-center pt-6 sm:pt-8">
               <img 
                 src="/logos/Displini_Logo_text_white.svg" 
                 alt="Displini" 
-                width="200"
-                height="48"
+                width="240"
+                height="56"
                 className="h-full w-auto"
                 loading="lazy"
               />
             </div>
-            <div className="flex justify-center space-x-4">
+            <div className="flex justify-center space-x-3 sm:space-x-4">
               <a href="https://x.com/displini_" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors" aria-label="Follow us on X">
                 <svg className="w-5 h-5" viewBox="0 0 16 16" fill="currentColor">
                   <path d="M12.6 0.75h2.454l-5.36 6.142L16 15.25h-4.937l-3.867 -5.07 -4.425 5.07H0.316l5.733 -6.57L0 0.75h5.063l3.495 4.633L12.601 0.75Zm-0.86 13.028h1.36L4.323 2.145H2.865z"/>
@@ -51,42 +51,42 @@ export function LandingFooter() {
           </div>
 
           {/* Links Grid - Centered for mobile */}
-          <div className="flex justify-center mb-8">
-            <div className="grid grid-cols-3 gap-6 w-full max-w-4xl">
+          <div className="flex justify-center mb-6 sm:mb-8">
+            <div className="grid grid-cols-3 gap-4 sm:gap-6 w-full max-w-4xl">
               {/* Journey */}
               <div className="text-center">
-                <h3 className="text-base font-semibold mb-3 text-white">Journey</h3>
-                <ul className="space-y-1.5">
-                  <li><a href="/pricing" className="text-sm text-gray-400 hover:text-white hover:underline transition-colors">Pricing</a></li>
-                  <li><a href="/roadmap" className="text-sm text-gray-400 hover:text-white hover:underline transition-colors">Roadmap</a></li>
-                  <li><a href="/about" className="text-sm text-gray-400 hover:text-white hover:underline transition-colors">About</a></li>
+                <h3 className="text-sm sm:text-base font-semibold mb-2 sm:mb-3 text-white">Journey</h3>
+                <ul className="space-y-1 sm:space-y-1.5">
+                  <li><a href="/pricing" className="text-xs sm:text-sm text-gray-400 hover:text-white hover:underline transition-colors">Pricing</a></li>
+                  <li><a href="/roadmap" className="text-xs sm:text-sm text-gray-400 hover:text-white hover:underline transition-colors">Roadmap</a></li>
+                  <li><a href="/about" className="text-xs sm:text-sm text-gray-400 hover:text-white hover:underline transition-colors">About</a></li>
                 </ul>
               </div>
 
               {/* Support */}
               <div className="text-center">
-                <h3 className="text-base font-semibold mb-3 text-white">Support</h3>
-                <ul className="space-y-1.5">
-                  <li><a href="/contact" className="text-sm text-gray-400 hover:text-white hover:underline transition-colors">Contact</a></li>
-                  <li><a href="/feature-requests" className="text-sm text-gray-400 hover:text-white hover:underline transition-colors">Feature Requests</a></li>
-                  <li><a href="/collaboration" className="text-sm text-gray-400 hover:text-white hover:underline transition-colors">Collaborations</a></li>
+                <h3 className="text-sm sm:text-base font-semibold mb-2 sm:mb-3 text-white">Support</h3>
+                <ul className="space-y-1 sm:space-y-1.5">
+                  <li><a href="/contact" className="text-xs sm:text-sm text-gray-400 hover:text-white hover:underline transition-colors">Contact</a></li>
+                  <li><a href="/feature-requests" className="text-xs sm:text-sm text-gray-400 hover:text-white hover:underline transition-colors">Feature Requests</a></li>
+                  <li><a href="/collaboration" className="text-xs sm:text-sm text-gray-400 hover:text-white hover:underline transition-colors">Collaborations</a></li>
                 </ul>
               </div>
 
               {/* Legal */}
               <div className="text-center">
-                <h3 className="text-base font-semibold mb-3 text-white">Legal</h3>
-                <ul className="space-y-1.5">
-                  <li><a href="/privacy" className="text-sm text-gray-400 hover:text-white hover:underline transition-colors">Privacy Policy</a></li>
-                  <li><a href="/terms" className="text-sm text-gray-400 hover:text-white hover:underline transition-colors">Terms of Service</a></li>
+                <h3 className="text-sm sm:text-base font-semibold mb-2 sm:mb-3 text-white">Legal</h3>
+                <ul className="space-y-1 sm:space-y-1.5">
+                  <li><a href="/privacy" className="text-xs sm:text-sm text-gray-400 hover:text-white hover:underline transition-colors">Privacy Policy</a></li>
+                  <li><a href="/terms" className="text-xs sm:text-sm text-gray-400 hover:text-white hover:underline transition-colors">Terms of Service</a></li>
                 </ul>
               </div>
             </div>
           </div>
 
           {/* Download Section - Centered for mobile */}
-          <div className="text-center mb-6">
-            <div className="flex justify-center items-end gap-3">
+          <div className="text-center mb-5 sm:mb-6">
+            <div className="flex justify-center items-end gap-2 sm:gap-3">
               <button
                 onClick={scrollToApp}
                 className="bg-transparent hover:bg-white/10 rounded-xl transition-all p-2 focus:outline-none flex items-end"
@@ -121,8 +121,8 @@ export function LandingFooter() {
           </div>
 
           {/* Copyright - Mobile */}
-          <div className="text-center pt-6 border-t border-gray-700">
-            <p className="text-gray-400 text-xs">
+          <div className="text-center pt-4 sm:pt-6 border-t border-gray-700">
+            <p className="text-gray-400 text-xs sm:text-xs">
               © {new Date().getFullYear()} Displini. All rights reserved.
             </p>
           </div>
@@ -130,15 +130,15 @@ export function LandingFooter() {
 
         {/* Desktop Layout - Original wide screen layout */}
         <div className="hidden md:block">
-          <div className="grid md:grid-cols-12 md:gap-8 md:mb-8">
+          <div className="grid md:grid-cols-12 md:gap-8 md:mb-8 pt-8">
             {/* Left Column - Brand and Social */}
             <div className="md:col-span-4">
-              <div className="h-12 mb-4">
+              <div className="h-14 mb-4">
                 <img 
                   src="/logos/Displini_Logo_text_white.svg" 
                   alt="Displini" 
-                  width="200"
-                  height="48"
+                  width="240"
+                  height="56"
                   className="h-full w-auto"
                   loading="lazy"
                 />

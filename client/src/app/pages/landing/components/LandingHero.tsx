@@ -14,9 +14,9 @@ export function LandingHero() {
   };
 
   return (
-    <section className="relative min-h-[calc(100vh-80px)] md:min-h-screen overflow-hidden dark:bg-gray-900 flex flex-col items-center justify-center" style={{ scrollSnapAlign: 'start', scrollSnapStop: 'always' }}>
+    <section className="relative min-h-[calc(100vh-80px)] md:min-h-screen overflow-hidden dark:bg-gray-900 flex flex-col" style={{ scrollSnapAlign: 'start', scrollSnapStop: 'always', paddingTop: 0 }}>
       {/* Video with Outward Curved Bottom */}
-      <div className="relative w-full h-96 md:h-[500px] lg:h-[600px]">
+      <div className="relative w-full h-96 md:h-[500px] lg:h-[600px] mt-0">
         <video 
           className="w-full h-full object-cover [&::-webkit-media-controls]:hidden [&::-webkit-media-controls-panel]:hidden [&::-webkit-media-controls-play-button]:hidden [&::-webkit-media-controls-start-playback-button]:hidden pointer-events-none"
           autoPlay 
@@ -102,12 +102,12 @@ export function LandingHero() {
             Stay focused. Stay Displini.
           </p>
         </div>
-        
-        {/* Scroll Down Indicator - At Bottom */}
-        <div className="flex flex-col items-center gap-2 cursor-pointer animate-bounce mt-auto pb-4" onClick={scrollToFeatures}>
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Scroll</span>
-          <ChevronDown className="w-6 h-6 text-gray-700 dark:text-gray-300" />
-        </div>
+      </div>
+      
+      {/* Scroll Down Indicator - At Very Bottom of Section */}
+      <div className="absolute bottom-0 left-0 right-0 flex flex-col items-center gap-2 cursor-pointer animate-bounce pb-4" onClick={scrollToFeatures} style={{ zIndex: 10 }}>
+        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Scroll</span>
+        <ChevronDown className="w-6 h-6 text-gray-700 dark:text-gray-300" />
       </div>
     </section>
   );

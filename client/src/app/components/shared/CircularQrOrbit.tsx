@@ -24,6 +24,7 @@ export function CircularQrOrbit({
 }: CircularQrOrbitProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const rotation = useMotionValue(0);
 
   // Check for reduced motion preference
@@ -39,10 +40,25 @@ export function CircularQrOrbit({
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, []);
 
+  // Check for mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   // Animate rotation - seamless infinite loop (continues on mouse leave)
   useEffect(() => {
     if (prefersReducedMotion) {
       rotation.set(0);
+      return;
+    }
+
+    // Only animate if not on mobile (text is hidden on mobile)
+    if (isMobile) {
       return;
     }
 
@@ -59,21 +75,10 @@ export function CircularQrOrbit({
     return () => {
       controls.stop();
     };
-  }, [prefersReducedMotion, speedSec]);
+  }, [prefersReducedMotion, speedSec, isMobile, rotation]);
 
   const radius = (size - 60) / 2; // Account for text size
   const text = words.join(' • '); // Increased spacing for better visibility
-
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
 
   return (
     <div

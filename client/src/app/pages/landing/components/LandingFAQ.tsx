@@ -68,7 +68,7 @@ export function LandingFAQ({ showHelpText = true }: LandingFAQProps = {}) {
   ];
 
   return (
-    <section data-section="faq" className="py-12 md:py-20 flex flex-col items-center justify-center relative bg-gray-50 dark:bg-gray-900 transition-colors duration-300" style={{ scrollSnapAlign: 'center', minHeight: 'calc(100vh - 80px)' }}>
+    <section id="faq" data-section="faq" className="py-12 md:py-20 flex flex-col items-center justify-center relative bg-gray-50 dark:bg-gray-900 transition-colors duration-300" style={{ scrollSnapAlign: 'start', scrollSnapStop: 'normal', minHeight: 'calc(100vh - 80px)' }}>
       <div className="container mx-auto px-6 w-full flex flex-col items-center">
         <h2 className="text-2xl md:text-4xl lg:text-5xl font-bold text-center mb-8 md:mb-16 text-gray-900 dark:text-white">
           Frequently Asked Questions
@@ -130,6 +130,7 @@ export function LandingFAQ({ showHelpText = true }: LandingFAQProps = {}) {
                 {/* Text */}
                 <motion.p 
                   className="text-gray-900 dark:text-gray-300 font-medium text-sm whitespace-nowrap mb-4"
+                  style={{ marginTop: '20px' }}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 10, transition: { duration: 0.2 } }}
@@ -144,7 +145,8 @@ export function LandingFAQ({ showHelpText = true }: LandingFAQProps = {}) {
                 {/* Arrow below text */}
                 <motion.div
                   style={{ 
-                    marginLeft: '-20px'
+                    marginLeft: '-20px',
+                    marginTop: '4px'
                   }}
                   initial={{ opacity: 0, scale: 0, rotate: -45 }}
                   animate={{ opacity: 1, scale: 1, rotate: -15 }}

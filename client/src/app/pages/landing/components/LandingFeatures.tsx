@@ -24,6 +24,9 @@ export function LandingFeatures() {
   const lastChangeRef = useRef<number>(0);
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
   const [isTablet, setIsTablet] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 768 && window.innerWidth < 1024);
+  const tabsContainerRef = useRef<HTMLDivElement>(null);
+  const touchStartX = useRef<number>(0);
+  const touchEndX = useRef<number>(0);
   
   useEffect(() => {
     const handleResize = () => {
@@ -33,6 +36,57 @@ export function LandingFeatures() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+  
+  // Swipe functionality for tabs on mobile
+  useEffect(() => {
+    if (!isMobile || !tabsContainerRef.current) return;
+    
+    const handleTouchStart = (e: TouchEvent) => {
+      touchStartX.current = e.touches[0].clientX;
+    };
+    
+    const handleTouchMove = (e: TouchEvent) => {
+      touchEndX.current = e.touches[0].clientX;
+    };
+    
+    const handleTouchEnd = () => {
+      if (!touchStartX.current || !touchEndX.current) return;
+      
+      const distance = touchStartX.current - touchEndX.current;
+      const minSwipeDistance = 50;
+      
+      if (Math.abs(distance) > minSwipeDistance) {
+        if (distance > 0) {
+          // Swipe left - next tab
+          setActiveFeature((prev) => {
+            // We'll use a fixed number of features (4) since features array is defined later
+            if (prev < 3) return prev + 1;
+            return prev;
+          });
+        } else {
+          // Swipe right - previous tab
+          setActiveFeature((prev) => {
+            if (prev > 0) return prev - 1;
+            return prev;
+          });
+        }
+      }
+      
+      touchStartX.current = 0;
+      touchEndX.current = 0;
+    };
+    
+    const container = tabsContainerRef.current;
+    container.addEventListener('touchstart', handleTouchStart, { passive: true });
+    container.addEventListener('touchmove', handleTouchMove, { passive: true });
+    container.addEventListener('touchend', handleTouchEnd, { passive: true });
+    
+    return () => {
+      container.removeEventListener('touchstart', handleTouchStart);
+      container.removeEventListener('touchmove', handleTouchMove);
+      container.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [isMobile, activeFeature]);
   
   // To-Do Demo State
   const [todoTasks, setTodoTasks] = useState<Task[]>([
@@ -346,10 +400,11 @@ The assistant helps you stay balanced from optimizing focus time to rearranging 
             <div className="flex flex-col items-center mx-auto order-2 lg:order-2">
               {/* Feature Buttons - Above Phone on Mobile (order-1), Below on Desktop */}
               <div 
+                ref={tabsContainerRef}
                 className="order-1 lg:order-2 flex flex-row gap-2 md:gap-4 w-full max-w-md mb-4 lg:mb-0 lg:mt-8 overflow-x-auto scrollbar-hide pb-2 lg:pb-0 justify-center md:justify-start"
                 style={{
                   WebkitOverflowScrolling: 'touch',
-                  touchAction: 'pan-y pan-x'
+                  touchAction: isMobile ? 'pan-x' : 'pan-y pan-x'
                 }}
               >
                 {features.map((feature, index) => {
@@ -721,6 +776,22 @@ The assistant helps you stay balanced from optimizing focus time to rearranging 
                         
                         {/* Floating + Button - Bottom Right */}
                         <div className={`absolute ${isMobile ? 'bottom-1.5 right-6' : 'bottom-4 right-4'} z-20`}>
+                          <style>{`
+                            @keyframes breathe {
+                              0%, 100% {
+                                transform: scale(1);
+                                box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+                              }
+                              50% {
+                                transform: scale(1.05);
+                                box-shadow: 0 6px 20px rgba(59, 130, 246, 0.6);
+                              }
+                            }
+                            
+                            .breathing-button {
+                              animation: breathe 2s ease-in-out infinite;
+                            }
+                          `}</style>
                           <button
                             onClick={() => {
                               // Add a demo task
@@ -784,7 +855,7 @@ The assistant helps you stay balanced from optimizing focus time to rearranging 
                                 }
                               }
                             }}
-                            className={`${isMobile ? 'w-8 h-8' : 'w-10 h-10'} rounded-full bg-blue-500 text-white shadow-lg hover:bg-blue-600 hover:scale-110 transition-all flex items-center justify-center flex-shrink-0`}
+                            className={`${isMobile ? 'w-8 h-8' : 'w-10 h-10'} rounded-full bg-blue-500 text-white shadow-lg hover:bg-blue-600 hover:scale-110 transition-all flex items-center justify-center flex-shrink-0 breathing-button`}
                           >
                             <Plus className={isMobile ? 'w-4 h-4' : 'w-5 h-5'} />
                           </button>
