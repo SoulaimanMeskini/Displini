@@ -280,7 +280,7 @@ export function LandingDeviceSync() {
         <div 
           className="absolute transition-transform duration-500 hover:scale-105"
           style={{ 
-            top: '170px',
+            top: '200px',
             right: 'calc(50% - 300px)',
             zIndex: 20
           }}

@@ -20,7 +20,7 @@ export function LandingFooter() {
         <div className="md:hidden">
           {/* Brand and Social - Top */}
           <div className="mb-6 sm:mb-8 text-center">
-            <div className="h-14 mb-3 sm:mb-4 flex justify-center pt-6 sm:pt-8">
+            <div className="h-16 mb-3 sm:mb-4 flex justify-center pt-6 sm:pt-8">
               <img 
                 src="/logos/Displini_Logo_text_white.svg" 
                 alt="Displini" 
@@ -133,7 +133,7 @@ export function LandingFooter() {
           <div className="grid md:grid-cols-12 md:gap-8 md:mb-8 pt-8">
             {/* Left Column - Brand and Social */}
             <div className="md:col-span-4">
-              <div className="h-14 mb-4">
+              <div className="h-12 mb-4">
                 <img 
                   src="/logos/Displini_Logo_text_white.svg" 
                   alt="Displini" 

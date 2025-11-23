@@ -130,7 +130,7 @@ export function LandingFAQ({ showHelpText = true }: LandingFAQProps = {}) {
                 {/* Text */}
                 <motion.p 
                   className="text-gray-900 dark:text-gray-300 font-medium text-sm whitespace-nowrap mb-4"
-                  style={{ marginTop: '20px' }}
+                  style={{ marginTop: '60px' }}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 10, transition: { duration: 0.2 } }}
@@ -146,7 +146,7 @@ export function LandingFAQ({ showHelpText = true }: LandingFAQProps = {}) {
                 <motion.div
                   style={{ 
                     marginLeft: '-20px',
-                    marginTop: '4px'
+                    marginTop: '12px'
                   }}
                   initial={{ opacity: 0, scale: 0, rotate: -45 }}
                   animate={{ opacity: 1, scale: 1, rotate: -15 }}

@@ -1,14 +1,11 @@
 import tailwindcss from 'tailwindcss';
 import autoprefixer from 'autoprefixer';
-import cssnano from 'cssnano';
 
 export default {
   plugins: [
     tailwindcss,
     autoprefixer,
-    ...(process.env.NODE_ENV === 'production' 
-      ? [cssnano({ preset: 'default' })] 
-      : []
-    ),
+    // cssnano is only used in production builds via Vite, not in dev mode
+    // It's handled by Vite's build process, so we don't need to import it here
   ],
 }
