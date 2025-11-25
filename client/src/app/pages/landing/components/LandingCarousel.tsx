@@ -43,6 +43,31 @@ function LandingCarousel() {
   const [cursorDirection, setCursorDirection] = useState<'left' | 'right'>('right');
   const cursorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const mobileScrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const sectionRef = useRef<HTMLElement>(null);
+  const HEADER_HEIGHT = 80; // Header height in pixels
+
+  // Check if cursor should be visible based on position
+  const shouldShowCursor = useCallback((x: number, y: number): boolean => {
+    // Hide if cursor is in header area
+    if (y < HEADER_HEIGHT) {
+      return false;
+    }
+    
+    // Hide if cursor is outside page bounds
+    if (x < 0 || x > window.innerWidth || y < 0 || y > window.innerHeight) {
+      return false;
+    }
+    
+    // Check if cursor is within section bounds
+    if (sectionRef.current) {
+      const rect = sectionRef.current.getBoundingClientRect();
+      if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+        return false;
+      }
+    }
+    
+    return true;
+  }, []);
 
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -59,21 +84,111 @@ function LandingCarousel() {
       }, 30);
     }
     
+    // Check if cursor should be visible
+    const shouldShow = shouldShowCursor(e.clientX, e.clientY);
+    
     // Update position immediately for smooth movement
-    setCursorPosition({ x: e.clientX, y: e.clientY, show: true });
-  }, [cursorDirection]);
+    setCursorPosition({ x: e.clientX, y: e.clientY, show: shouldShow });
+  }, [cursorDirection, shouldShowCursor]);
 
   const handleMouseLeave = useCallback((e: React.MouseEvent<HTMLElement>) => {
-    // Only hide cursor if we're actually leaving the section
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX;
-    const y = e.clientY;
-    
-    // Check if mouse is still within section bounds
-    if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
-      setCursorPosition((prev) => ({ ...prev, show: false }));
-    }
+    // Hide cursor when leaving section
+    setCursorPosition((prev) => ({ ...prev, show: false }));
   }, []);
+
+  // Track last known mouse position
+  const lastMousePositionRef = useRef({ x: 0, y: 0 });
+
+  // Global mouse move listener to detect when cursor is outside section or in header
+  useEffect(() => {
+    if (isMobile) return; // Only on desktop
+    
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      // Store last known position
+      lastMousePositionRef.current = { x: e.clientX, y: e.clientY };
+      
+      // Only update if we're not already handling it in the section
+      if (sectionRef.current) {
+        const rect = sectionRef.current.getBoundingClientRect();
+        const isInSection = 
+          e.clientX >= rect.left && 
+          e.clientX <= rect.right && 
+          e.clientY >= rect.top && 
+          e.clientY <= rect.bottom;
+        
+        if (!isInSection) {
+          // Cursor is outside section, check if it should be hidden
+          const shouldShow = shouldShowCursor(e.clientX, e.clientY);
+          setCursorPosition({ x: e.clientX, y: e.clientY, show: shouldShow });
+        }
+      }
+    };
+    
+    window.addEventListener('mousemove', handleGlobalMouseMove);
+    return () => {
+      window.removeEventListener('mousemove', handleGlobalMouseMove);
+    };
+  }, [isMobile, shouldShowCursor]);
+
+  // Check cursor visibility on scroll to show it when section comes into view
+  useEffect(() => {
+    if (isMobile) return; // Only on desktop
+    
+    const checkCursorVisibility = () => {
+      if (!sectionRef.current) return;
+      
+      const rect = sectionRef.current.getBoundingClientRect();
+      const mouseX = lastMousePositionRef.current.x;
+      const mouseY = lastMousePositionRef.current.y;
+      
+      // Check if mouse is over the section
+      const isInSection = 
+        mouseX >= rect.left && 
+        mouseX <= rect.right && 
+        mouseY >= rect.top && 
+        mouseY <= rect.bottom;
+      
+      if (isInSection) {
+        // Mouse is over section, check if cursor should be visible
+        const shouldShow = shouldShowCursor(mouseX, mouseY);
+        setCursorPosition({ x: mouseX, y: mouseY, show: shouldShow });
+      }
+    };
+    
+    // Check on scroll
+    window.addEventListener('scroll', checkCursorVisibility, { passive: true });
+    
+    // Also check on any scroll container
+    const scrollContainer = document.querySelector('[data-scroll-container]');
+    if (scrollContainer) {
+      scrollContainer.addEventListener('scroll', checkCursorVisibility, { passive: true });
+    }
+    
+    // Use Intersection Observer to check when section enters viewport
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            // Section is in view, check if mouse is over it
+            checkCursorVisibility();
+          }
+        });
+      },
+      { threshold: 0.1 }
+    );
+    
+    if (sectionRef.current) {
+      observer.observe(sectionRef.current);
+    }
+    
+    return () => {
+      window.removeEventListener('scroll', checkCursorVisibility);
+      if (scrollContainer) {
+        scrollContainer.removeEventListener('scroll', checkCursorVisibility);
+      }
+      observer.disconnect();
+    };
+  }, [isMobile, shouldShowCursor]);
 
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
@@ -274,6 +389,7 @@ function LandingCarousel() {
 
   return (
     <section 
+      ref={sectionRef}
       data-section="carousel" 
       className={`flex items-center justify-center bg-gray-50 dark:bg-gray-900 transition-colors duration-300 px-6 section-viewport ${styles.scrollSnapStart}`}
       style={{ 
@@ -330,14 +446,14 @@ function LandingCarousel() {
       <div 
         className="fixed pointer-events-none z-[9999]"
         style={{ 
-          left: cursorPosition.show ? `${cursorPosition.x}px` : '-9999px', 
-          top: cursorPosition.show ? `${cursorPosition.y}px` : '-9999px',
+          left: `${cursorPosition.x}px`, 
+          top: `${cursorPosition.y}px`,
           transform: 'translate(-50%, -50%)',
-          willChange: 'transform',
+          willChange: 'transform, opacity',
           backfaceVisibility: 'hidden',
           pointerEvents: 'none',
           opacity: cursorPosition.show ? 1 : 0,
-          transition: 'opacity 0.1s ease-out'
+          transition: 'opacity 0.3s ease-in-out'
         }}
       >
         <div 
