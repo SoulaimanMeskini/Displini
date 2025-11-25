@@ -1,7 +1,8 @@
 import { motion } from "framer-motion";
 import { BookHeart, Target, Users, Heart } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, memo, useCallback } from "react";
 import { colors } from "@/lib/designSystem";
+import { useWindowSize } from "../hooks";
 
 /**
  * About Us / Our Story section
@@ -39,25 +40,15 @@ const smallCards: StoryCard[] = [
   }
 ];
 
-export function LandingAbout() {
+function LandingAbout() {
+  const { isMobile } = useWindowSize();
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-  const [isMobile, setIsMobile] = useState(false);
   const sectionRef = useRef<HTMLElement>(null);
   const storyCardRef = useRef<HTMLDivElement>(null);
   const missionCardRef = useRef<HTMLDivElement>(null);
   const unityCardRef = useRef<HTMLDivElement>(null);
   const careCardRef = useRef<HTMLDivElement>(null);
-  
-  // Detect mobile
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
   
   // Invalidate cached rect on resize
   useEffect(() => {
@@ -72,7 +63,7 @@ export function LandingAbout() {
   const mouseMoveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const cachedRectRef = useRef<DOMRect | null>(null);
   
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (mouseMoveTimeoutRef.current) return;
     
     mouseMoveTimeoutRef.current = setTimeout(() => {
@@ -89,9 +80,9 @@ export function LandingAbout() {
         mouseMoveTimeoutRef.current = null;
       }
     }, 16); // ~60fps throttling
-  };
+  }, []);
   
-  const handleStoryCardMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handleStoryCardMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (mouseMoveTimeoutRef.current) return;
     
     mouseMoveTimeoutRef.current = setTimeout(() => {
@@ -104,7 +95,7 @@ export function LandingAbout() {
         mouseMoveTimeoutRef.current = null;
       }
     }, 16);
-  };
+  }, []);
 
   return (
     <>
@@ -112,17 +103,17 @@ export function LandingAbout() {
       <section 
         ref={sectionRef}
         data-section="about"
-        className="hidden lg:flex relative py-20 px-6 bg-gray-50 dark:bg-gray-900 transition-colors duration-300 items-center justify-center"
-        style={{ scrollSnapAlign: 'center', scrollSnapStop: 'always', minHeight: 'calc(100vh - 80px)' }}
+        className="hidden lg:flex relative px-6 bg-gray-50 dark:bg-gray-900 transition-colors duration-300 items-center justify-center section-viewport"
+        style={{ scrollSnapAlign: 'start', scrollSnapStop: 'always' }}
         onMouseMove={handleMouseMove}
         onMouseLeave={() => setHoveredCard(null)}
       >
-        <div className="container mx-auto max-w-7xl">
+        <div className="container mx-auto max-w-7xl w-full flex items-center justify-center">
           {/* Desktop Layout: Left (Our Story) + Right (3 cards stacked) */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center justify-center mx-auto w-full max-w-6xl">
           {/* Left Side - Our Story (Large Card) */}
           <motion.div
-            className="relative h-full"
+            className="relative h-full flex items-center justify-center"
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.3 }}
@@ -132,7 +123,7 @@ export function LandingAbout() {
           >
             <motion.div
               ref={storyCardRef}
-              className="relative bg-white/40 dark:bg-gray-800/40 backdrop-blur-xl border border-white/50 dark:border-gray-700/50 rounded-3xl p-8 md:p-12 shadow-2xl overflow-hidden h-full flex items-center"
+              className="relative bg-white/40 dark:bg-gray-800/40 backdrop-blur-xl border border-white/50 dark:border-gray-700/50 rounded-3xl p-8 md:p-12 shadow-2xl overflow-hidden h-full flex items-center justify-center"
               animate={{
                 y: [0, -10, 0],
                 scale: hoveredCard === 'story' ? 1.02 : 1,
@@ -165,7 +156,7 @@ export function LandingAbout() {
                 />
               )}
 
-              <div className="relative z-10 flex flex-col items-center text-center">
+              <div className="relative z-10 flex flex-col items-center justify-center text-center w-full">
                 {/* Icon */}
                 <div 
                   className="w-16 h-16 rounded-full flex items-center justify-center mb-6"
@@ -175,12 +166,12 @@ export function LandingAbout() {
                 </div>
 
                 {/* Title */}
-                <h3 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-6">
+                <h3 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-6">
                   Our Story
                 </h3>
 
                 {/* Text */}
-                <p className="text-base md:text-lg text-gray-700 dark:text-gray-300 leading-relaxed">
+                <p className="text-base md:text-lg text-gray-700 dark:text-gray-300 leading-relaxed max-w-md">
                   Displini was born from the idea that structure brings freedom. We built a space where focus, balance, and wellbeing work together — helping you stay consistent without losing calm.
                 </p>
               </div>
@@ -297,8 +288,8 @@ export function LandingAbout() {
       <section
         ref={sectionRef}
         data-section="about-story"
-        className="lg:hidden relative py-20 px-6 bg-gray-50 dark:bg-gray-900 transition-colors duration-300 flex items-center justify-center"
-        style={{ scrollSnapAlign: 'center', minHeight: 'calc(100vh - 80px)' }}
+        className="lg:hidden relative px-6 bg-gray-50 dark:bg-gray-900 transition-colors duration-300 flex items-center justify-center section-viewport"
+        style={{ scrollSnapAlign: 'start', scrollSnapStop: 'always' }}
         onMouseMove={handleMouseMove}
         onMouseLeave={() => setHoveredCard(null)}
       >
@@ -372,13 +363,13 @@ export function LandingAbout() {
       <section
         ref={sectionRef}
         data-section="about-values"
-        className="lg:hidden relative py-12 px-6 bg-gray-50 dark:bg-gray-900 transition-colors duration-300 flex items-center justify-center"
-        style={{ scrollSnapAlign: 'center', minHeight: 'calc(100vh - 80px)' }}
+        className="lg:hidden relative px-6 bg-gray-50 dark:bg-gray-900 transition-colors duration-300 flex items-center justify-center section-viewport"
+        style={{ scrollSnapAlign: 'start', scrollSnapStop: 'always' }}
         onMouseMove={handleMouseMove}
         onMouseLeave={() => setHoveredCard(null)}
       >
-        <div className="container mx-auto max-w-md">
-          <div className="flex flex-col gap-4 md:gap-8">
+        <div className="container mx-auto max-w-md w-full flex items-center justify-center px-4">
+          <div className="flex flex-col gap-4 md:gap-8 items-center justify-center w-full max-w-sm mx-auto">
             {smallCards.map((card, index) => {
               const Icon = card.icon;
               const cardId = `${card.title.toLowerCase()}-mobile`;
@@ -386,7 +377,7 @@ export function LandingAbout() {
               return (
                 <motion.div
                   key={cardId}
-                  className="relative"
+                  className="relative w-full flex justify-center"
                   initial={{ opacity: 0, scale: 0.9 }}
                   whileInView={{ opacity: 1, scale: 1 }}
                   viewport={{ once: true, amount: 0.3 }}
@@ -394,7 +385,7 @@ export function LandingAbout() {
                   onMouseEnter={() => setHoveredCard(cardId)}
                 >
                   <motion.div
-                    className="relative bg-white/40 dark:bg-gray-800/40 backdrop-blur-xl border border-white/50 dark:border-gray-700/50 rounded-2xl p-4 md:p-6 shadow-xl overflow-hidden"
+                    className="relative bg-white/40 dark:bg-gray-800/40 backdrop-blur-xl border border-white/50 dark:border-gray-700/50 rounded-2xl p-4 md:p-6 shadow-xl overflow-hidden w-full"
                     animate={{
                       y: [0, -8, 0],
                       scale: hoveredCard === cardId ? 1.02 : 1,
@@ -455,3 +446,7 @@ export function LandingAbout() {
     </>
   );
 }
+
+// Memoize component for performance
+export const LandingAboutMemo = memo(LandingAbout);
+export { LandingAboutMemo as LandingAbout };

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Pill, Plus, CheckCircle, Clock, Edit, Trash2, X, ArrowLeft } from "lucide-react";
+import { Pill, Plus, CheckCircle, Clock, Edit, Trash2, X, ArrowLeft, Info } from "lucide-react";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/app/components/ui/dialog";
@@ -30,6 +30,7 @@ interface MedicationTrackerProps {
 export default function MedicationTracker({ isOpen, onClose }: MedicationTrackerProps) {
   const [showAddMedication, setShowAddMedication] = useState(false);
   const [showEditTime, setShowEditTime] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
   const [editingMedication, setEditingMedication] = useState<Medication | null>(null);
   const [editingMode, setEditingMode] = useState(false);
   const [newTime, setNewTime] = useState('08:00');
@@ -309,6 +310,7 @@ export default function MedicationTracker({ isOpen, onClose }: MedicationTracker
   };
 
   return (
+    <>
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto p-0 [&>button]:hidden">
         {/* Header for when medications exist */}
@@ -321,20 +323,30 @@ export default function MedicationTracker({ isOpen, onClose }: MedicationTracker
               </DialogTitle>
               <div className="flex items-center gap-2">
                 <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setShowInfo(true)}
+                  aria-label="Show information"
+                >
+                  <Info className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={onClose}
+                  aria-label="Close"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+                <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setShowAddMedication(true)}
                   className="rounded-full h-9 w-9 p-0"
                 >
                   <Plus className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={onClose}
-                  className="rounded-full"
-                >
-                  <X className="w-4 h-4" />
                 </Button>
               </div>
             </div>
@@ -369,6 +381,26 @@ export default function MedicationTracker({ isOpen, onClose }: MedicationTracker
                     </>
                   )}
                 </DialogTitle>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setShowInfo(true)}
+                    aria-label="Show information"
+                  >
+                    <Info className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={onClose}
+                    aria-label="Close"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </div>
               
@@ -642,5 +674,41 @@ export default function MedicationTracker({ isOpen, onClose }: MedicationTracker
           )}
       </DialogContent>
     </Dialog>
+    
+    {/* Info Dialog */}
+    <Dialog open={showInfo} onOpenChange={setShowInfo}>
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogHeader className="relative">
+          <div className="flex items-center justify-between gap-2">
+            <DialogTitle>Medication Reminder Information</DialogTitle>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setShowInfo(false)}
+              aria-label="Close"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </DialogHeader>
+        <div className="py-4 space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Medication Reminder helps you track and manage your medications. You can:
+          </p>
+          <ul className="text-sm text-muted-foreground space-y-2 list-disc list-inside">
+            <li>Add medications with specific dosages</li>
+            <li>Set custom times for taking medications</li>
+            <li>Track medication intake throughout the day</li>
+            <li>Receive reminders at scheduled times</li>
+            <li>View medication history and completion status</li>
+          </ul>
+          <p className="text-sm text-muted-foreground">
+            Medications will appear as tasks in your timeline at the scheduled times.
+          </p>
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

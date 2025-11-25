@@ -317,8 +317,38 @@
     @apply border-border;
   }
 
+  html {
+    height: 100%;
+    width: 100%;
+    overflow-x: hidden;
+    /* Fallback for browsers that don't support dvh */
+    height: 100vh;
+    height: 100dvh;
+  }
+
   body {
     @apply font-sans antialiased bg-background text-foreground;
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+    position: relative;
+    /* Fallback for browsers that don't support dvh */
+    height: 100vh;
+    height: 100dvh;
+  }
+
+  #root {
+    min-height: 100%;
+    width: 100%;
+    position: relative;
+  }
+  
+  /* Viewport height fallback for sections - accounts for 80px header */
+  .section-viewport {
+    height: calc(100vh - 80px);
+    height: calc(100dvh - 80px);
   }
 
   /* Headings use Satoshi */

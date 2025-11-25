@@ -9,6 +9,7 @@ import { colors } from '@/lib/designSystem';
 import { handleSuccess, handleError } from '@/lib/errorHandling';
 import { Header } from '@/app/pages/landing/components/Header';
 import { LandingFooter } from '@/app/pages/landing/components/LandingFooter';
+import { ChatButton } from '@/app/components/shared/ChatButton';
 
 export default function Contact() {
   const [formData, setFormData] = useState({
@@ -53,21 +54,21 @@ export default function Contact() {
           url="https://displini.com/contact"
         />
       
-      <div className="py-20">
-        <div className="container mx-auto px-6 max-w-4xl">
-          <div className="text-center mb-12">
-            <h1 className="text-5xl font-bold mb-4 text-gray-900 dark:text-white">Get in Touch</h1>
-            <p className="text-xl text-gray-600 dark:text-gray-400">
+      <div className="py-8 md:py-12 lg:py-20">
+        <div className="container mx-auto px-4 sm:px-6 max-w-4xl">
+          <div className="text-center mb-8 md:mb-12">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-3 md:mb-4 text-gray-900 dark:text-white">Get in Touch</h1>
+            <p className="text-base sm:text-lg md:text-xl text-gray-600 dark:text-gray-400">
               Have questions? We'd love to hear from you.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-12">
+          <div className="grid md:grid-cols-2 gap-8 md:gap-12">
             {/* Contact Info */}
             <div>
-              <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">Contact Information</h2>
+              <h2 className="text-xl sm:text-2xl font-bold mb-4 md:mb-6 text-gray-900 dark:text-white">Contact Information</h2>
               
-              <div className="space-y-6">
+              <div className="space-y-4 md:space-y-6">
                 <div className="flex items-start gap-4">
                   <div 
                     className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0"
@@ -99,9 +100,9 @@ export default function Contact() {
                 </div>
               </div>
 
-              <div className="mt-8 p-6 bg-gradient-to-br from-primary/10 to-secondary/10 rounded-xl">
-                <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Quick Response Time</h3>
-                <p className="text-gray-600 dark:text-gray-400 text-sm">
+              <div className="mt-6 md:mt-8 p-4 md:p-6 bg-gradient-to-br from-primary/10 to-secondary/10 rounded-xl">
+                <h3 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white mb-2">Quick Response Time</h3>
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                   We typically respond within 24 hours on business days.
                 </p>
               </div>
@@ -177,6 +178,7 @@ export default function Contact() {
       </div>
       </div>
       <LandingFooter />
+      <ChatButton />
     </>
   );
 }

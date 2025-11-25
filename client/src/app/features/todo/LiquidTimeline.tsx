@@ -499,10 +499,23 @@ export default function LiquidTimeline({ tasks, date, onToggleTask, onUpdateTask
     return sortedItems;
   }, [timeBasedTasks, refreshKey, date]);
 
+  // Check if we only have system tasks (wake up, go to bed, startup, winddown) or reminders
+  const hasOnlySystemTasks = timelineItems.every(item => 
+    item.isWakeUp || 
+    item.isBedTime || 
+    item.tasks.every(t => t.source === 'startup' || t.source === 'winddown' || t.source === 'sleep') ||
+    (item.waterReminder && !item.tasks.length) ||
+    (item.medicationReminder && !item.tasks.length) ||
+    (item.stepReminder && !item.tasks.length) ||
+    (item.meditationReminder && !item.tasks.length) ||
+    (item.glucoseReminder && !item.tasks.length)
+  );
+
   // Check if we only have one task with no end time (can't create a timeline)
   const hasOnlyOneTaskNoEndTime = timelineItems.length === 1 && timelineItems[0].tasks.length === 1 && !timelineItems[0].tasks[0].endTime && 
     !timelineItems[0].waterReminder && !timelineItems[0].medicationReminder && !timelineItems[0].stepReminder && 
-    !timelineItems[0].meditationReminder && !timelineItems[0].glucoseReminder;
+    !timelineItems[0].meditationReminder && !timelineItems[0].glucoseReminder &&
+    !timelineItems[0].isWakeUp && !timelineItems[0].isBedTime;
 
   if (timelineItems.length === 0) {
     return (
@@ -523,7 +536,11 @@ export default function LiquidTimeline({ tasks, date, onToggleTask, onUpdateTask
     );
   }
 
-  // If we only have one task with no end time, show it without timeline
+  // If we only have system tasks (wake up/go to bed/startup/winddown), show add tasks message above timeline
+  // But still show the timeline so users can see their schedule
+  const showAddTasksPrompt = hasOnlySystemTasks;
+
+  // If we only have one task with no end time, show it with a simple timeline
   if (hasOnlyOneTaskNoEndTime) {
     const task = timelineItems[0].tasks[0];
     return (
@@ -534,11 +551,11 @@ export default function LiquidTimeline({ tasks, date, onToggleTask, onUpdateTask
             <div className="flex items-center gap-3">
               <button
                 onClick={() => onToggleTask(task.id)}
-                className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
-                  task.completed ? "bg-success border-success" : "border-muted-foreground"
+                className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
+                  task.completed ? "bg-success border-success" : "border-muted-foreground hover:border-primary"
                 }`}
               >
-                {task.completed && "✓"}
+                {task.completed && <span className="text-white text-sm">✓</span>}
               </button>
               <div className="text-2xl">{task.emoji || "📝"}</div>
               <div className="flex-1">
@@ -553,19 +570,17 @@ export default function LiquidTimeline({ tasks, date, onToggleTask, onUpdateTask
                   <span className="text-sm text-muted-foreground">{timelineItems[0].time}</span>
                 </div>
               </div>
-
             </div>
           </CardContent>
         </Card>
 
-        {/* Show empty timeline message */}
-        <div className="text-center py-12 text-muted-foreground">
-          <p className="text-lg">No timeline available</p>
-          <p className="text-sm mt-2">Add more tasks with specific times to see your timeline</p>
+        {/* Show add more tasks message */}
+        <div className="text-center py-8 text-muted-foreground">
+          <p className="text-sm mb-4">Add more tasks to see your full timeline</p>
           {onAddTaskClick && (
             <Button 
               onClick={() => onAddTaskClick("")} 
-              className="mt-4 rounded-full"
+              className="rounded-full"
               variant="outline"
             >
               <Plus className="w-4 h-4 mr-2" />
@@ -579,15 +594,44 @@ export default function LiquidTimeline({ tasks, date, onToggleTask, onUpdateTask
 
   const currentTimeStr = formatTimeString(currentTime);
   
+  // Helper function to convert time string to minutes
+  const timeToMinutes = (time: string) => {
+    const [h, m] = time.split(':').map(Number);
+    return h * 60 + m;
+  };
+  
   // Find wake up and bed time from timeline items
   const wakeUpItem = timelineItems.find(item => item.isWakeUp);
   const bedTimeItem = timelineItems.find(item => item.isBedTime);
   
   // Use wake up time as start if available, otherwise use first item
-  const startTime = wakeUpItem ? wakeUpItem.time : timelineItems[0].time;
+  // If no wake up, use first task time or default to 07:00
+  const startTime = wakeUpItem ? wakeUpItem.time : (timelineItems.length > 0 ? timelineItems[0].time : '07:00');
   
   // Use bed time as end if available, otherwise use last item
-  const endTime = bedTimeItem ? bedTimeItem.time : timelineItems[timelineItems.length - 1].time;
+  // If no bed time, use last task time or default to 23:00
+  const endTime = bedTimeItem ? bedTimeItem.time : (timelineItems.length > 0 ? timelineItems[timelineItems.length - 1].time : '23:00');
+  
+  // If we have tasks with end times, extend the timeline to include them
+  const allTaskEndTimes = timelineItems.flatMap(item => 
+    item.tasks.filter(t => t.endTime).map(t => {
+      const endMinutes = timeToMinutes(t.endTime!);
+      return endMinutes;
+    })
+  );
+  
+  const maxEndMinutes = allTaskEndTimes.length > 0 ? Math.max(...allTaskEndTimes) : timeToMinutes(endTime);
+  const minStartMinutes = timelineItems.length > 0 ? Math.min(...timelineItems.map(item => timeToMinutes(item.time))) : timeToMinutes(startTime);
+  
+  // Adjust end time if tasks extend beyond bed time
+  const adjustedEndTime = maxEndMinutes > timeToMinutes(endTime) 
+    ? `${Math.floor(maxEndMinutes / 60)}:${String(maxEndMinutes % 60).padStart(2, '0')}`
+    : endTime;
+  
+  // Adjust start time if tasks start before wake time
+  const adjustedStartTime = minStartMinutes < timeToMinutes(startTime)
+    ? `${Math.floor(minStartMinutes / 60)}:${String(minStartMinutes % 60).padStart(2, '0')}`
+    : startTime;
 
   // Check if viewing today, past, or future date
   const today = new Date().toISOString().split('T')[0];
@@ -616,13 +660,8 @@ export default function LiquidTimeline({ tasks, date, onToggleTask, onUpdateTask
   const isFutureDate = viewingDate > today;
 
   // Calculate fill percentage
-  const timeToMinutes = (time: string) => {
-    const [h, m] = time.split(':').map(Number);
-    return h * 60 + m;
-  };
-
-  const startMinutes = timeToMinutes(startTime);
-  const endMinutes = timeToMinutes(endTime);
+  const startMinutes = timeToMinutes(adjustedStartTime);
+  const endMinutes = timeToMinutes(adjustedEndTime);
   const currentMinutes = timeToMinutes(currentTimeStr);
   
   // Calculate fill percentage based on task completion, not just time
@@ -1263,6 +1302,9 @@ export default function LiquidTimeline({ tasks, date, onToggleTask, onUpdateTask
     // Skip if next item has winddown or startup (don't show free time before these routines)
     if (nextItem.tasks.some(t => t.source === 'winddown' || t.source === 'startup')) return null;
     
+    // Skip if current item has startup (don't show free time after startup)
+    if (currentItem.tasks.some(t => t.source === 'startup')) return null;
+    
     // Use end time of current task if available, otherwise use start time
     const currentTask = currentItem.tasks.find(t => t.endTime);
     const currentEndTime = currentTask?.endTime || currentItem.time;
@@ -1288,10 +1330,33 @@ export default function LiquidTimeline({ tasks, date, onToggleTask, onUpdateTask
 
   // Calculate timeline height based on time range (more accurate for positioning)
   const timeRangeMinutes = endMinutes - startMinutes;
-  const timelineHeight = Math.max(timeRangeMinutes * 2.5, timelineItems.length * 180); // 2.5px per minute for better spacing
+  // Calculate dynamic timeline height based on number of tasks
+  // More tasks = taller timeline, fewer tasks = shorter timeline
+  const taskCount = timelineItems.reduce((sum, item) => sum + item.tasks.length, 0);
+  const baseHeight = Math.max(timeRangeMinutes * 1.5, 400); // Minimum 400px, 1.5px per minute
+  const taskBasedHeight = taskCount * 80; // 80px per task
+  // Use the larger of base height or task-based height, but cap at reasonable max
+  const timelineHeight = Math.min(Math.max(baseHeight, taskBasedHeight), timeRangeMinutes * 3);
 
   return (
     <div className="w-full mx-auto pl-2 pr-0 sm:px-2 md:px-4 mb-12">
+      {/* Show add tasks prompt if only system tasks */}
+      {showAddTasksPrompt && (
+        <div className="text-center py-6 mb-4 text-muted-foreground">
+          <p className="text-lg mb-2">Add tasks for your day</p>
+          <p className="text-sm mb-4">Start planning your day by adding tasks</p>
+          {onAddTaskClick && (
+            <Button 
+              onClick={() => onAddTaskClick("")} 
+              className="rounded-full"
+              size="lg"
+            >
+              <Plus className="w-5 h-5 mr-2" />
+              Add Task
+            </Button>
+          )}
+        </div>
+      )}
       <div className="py-8 pb-12 pl-24 sm:pl-28 md:pl-32 pr-1 sm:pr-2 overflow-visible">
 
 
@@ -1404,7 +1469,34 @@ export default function LiquidTimeline({ tasks, date, onToggleTask, onUpdateTask
                 
                 // Calculate the full duration of this missed task
                 const taskStartMinutes = timeToMinutes(task.time!);
-                const taskEndMinutes = task.endTime ? timeToMinutes(task.endTime) : taskStartMinutes + 60; // Default 1 hour if no end time
+                // For tasks with endTime, use actual end time
+                // For tasks without endTime, calculate based on actual rendered container height
+                let taskEndMinutes: number;
+                if (task.endTime) {
+                  taskEndMinutes = timeToMinutes(task.endTime);
+                } else {
+                  // For tasks without endTime, the rendered container has a minHeight of 80px
+                  // Convert that to minutes based on timeline scale
+                  // Calculate what 80px represents in minutes for this timeline
+                  const timelineRangeMinutes = endMinutes - startMinutes;
+                  const pixelsPerMinute = timelineHeight / timelineRangeMinutes;
+                  const minHeightInMinutes = 80 / pixelsPerMinute;
+                  
+                  // Check if there's a next task to use as end boundary
+                  const nextTask = timelineItems.flatMap(i => i.tasks).find(t => 
+                    t.time && timeToMinutes(t.time) > taskStartMinutes && t.id !== task.id &&
+                    t.source !== 'medication' && t.source !== 'water' && t.source !== 'steps' && t.source !== 'sleep'
+                  );
+                  
+                  if (nextTask) {
+                    const nextTaskMinutes = timeToMinutes(nextTask.time);
+                    // Use the smaller of: next task time or start + minHeight
+                    taskEndMinutes = Math.min(nextTaskMinutes, taskStartMinutes + minHeightInMinutes);
+                  } else {
+                    // Default to minHeight representation (80px worth of time)
+                    taskEndMinutes = taskStartMinutes + minHeightInMinutes;
+                  }
+                }
                 const totalHeight = endMinutes - startMinutes;
                 
                 const startPercent = ((taskStartMinutes - startMinutes) / totalHeight) * 100;
@@ -1831,27 +1923,29 @@ export default function LiquidTimeline({ tasks, date, onToggleTask, onUpdateTask
                   );
                 })}
 
-                {/* Startup and Winddown Duration Bars - Separate rendering */}
-                {item.tasks.filter(t => t.endTime && t.time && (t.source === 'startup' || t.source === 'winddown')).map((task, idx) => {
+                {/* Startup and Winddown Duration Bars - Use exact times (no minimum height) */}
+                {timelineItems.flatMap(i => i.tasks)
+                  .filter(t => t.endTime && t.time && (t.source === 'startup' || t.source === 'winddown'))
+                  .map((task) => {
                   const taskStartMinutes = timeToMinutes(task.time!);
                   const taskEndMinutes = timeToMinutes(task.endTime!);
                   const taskStartPos = ((taskStartMinutes - startMinutes) / (endMinutes - startMinutes)) * 100;
                   const taskEndPos = ((taskEndMinutes - startMinutes) / (endMinutes - startMinutes)) * 100;
                   
-                  // Calculate minimum height equivalent to 1 hour
-                  const oneHourHeight = (60 / (endMinutes - startMinutes)) * 100;
-                  const taskDurHeight = Math.max(taskEndPos - taskStartPos, oneHourHeight);
+                    // Use exact duration - no minimum height enforcement
+                    const taskDurHeight = taskEndPos - taskStartPos;
+                    const taskDurPx = (taskDurHeight / 100) * timelineHeight;
                   
                   return (
                     <div key={`duration-${task.id}`}>
-                      {/* Duration bar */}
+                        {/* Duration bar - exact time representation */}
                       <div
                         className="absolute left-0 z-30"
                         style={{
                           top: `${taskStartPos}%`,
                           width: '8px',
-                          height: `${taskDurHeight}%`,
-                          minHeight: '20px',
+                            height: `${taskDurPx}px`,
+                            minHeight: '4px', // Very small minimum just for visibility
                           borderRadius: '4px',
                           backgroundColor: task.source === 'winddown' ? 'rgba(139, 92, 246, 0.3)' : 'rgba(245, 158, 11, 0.3)',
                           borderLeft: '2px solid',
@@ -1880,7 +1974,7 @@ export default function LiquidTimeline({ tasks, date, onToggleTask, onUpdateTask
                       <div 
                         className="absolute z-40"
                         style={{ 
-                          top: `${taskDurHeight}%`,
+                            top: `${taskEndPos}%`,
                           left: '-7rem',
                           transform: 'translateY(-50%)',
                         }}
@@ -1892,6 +1986,170 @@ export default function LiquidTimeline({ tasks, date, onToggleTask, onUpdateTask
                     </div>
                   );
                 })}
+
+                {/* Startup and Winddown Container Tasks - Render task cards with child tasks */}
+                {timelineItems.flatMap(i => i.tasks)
+                  .filter(t => (t.source === 'startup' || t.source === 'winddown') && t.time)
+                  .map((task) => {
+                    const taskStartMinutes = timeToMinutes(task.time!);
+                    const taskStartPos = ((taskStartMinutes - startMinutes) / (endMinutes - startMinutes)) * 100;
+                    
+                    // Calculate center position: if endTime exists, center between start and end; otherwise center at start
+                    let centerPos = taskStartPos;
+                    let taskDurPx = 100; // Default height if no endTime
+                    
+                    if (task.endTime) {
+                      const taskEndMinutes = timeToMinutes(task.endTime);
+                      const taskEndPos = ((taskEndMinutes - startMinutes) / (endMinutes - startMinutes)) * 100;
+                      // Center position between start and end
+                      centerPos = (taskStartPos + taskEndPos) / 2;
+                      // Use exact duration
+                      const taskDurHeight = taskEndPos - taskStartPos;
+                      taskDurPx = (taskDurHeight / 100) * timelineHeight;
+                    }
+                    
+                    // Find child tasks
+                    const childTasks = tasks.filter(t => t.parentId === task.id).sort((a, b) => (a.order || 0) - (b.order || 0));
+                    const badge = getSourceBadge?.(task.source || "manual");
+                    
+                    // Calculate max height to prevent overflow - use at least the calculated height or minimum
+                    const maxHeightPx = Math.max(taskDurPx, 100);
+                    
+                    return (
+                      <div 
+                        key={`container-${task.id}`}
+                        className="absolute"
+                        style={{
+                          top: `${centerPos}%`,
+                          left: '3rem',
+                          right: '1rem',
+                          maxHeight: `${maxHeightPx}px`,
+                          minHeight: '100px',
+                          maxWidth: 'calc(100% - 4rem)',
+                          transform: 'translateY(-50%)', // Center vertically
+                        }}
+                      >
+                        <div 
+                          className="bg-card border border-border relative flex flex-col cursor-pointer hover:bg-muted/30 transition-colors w-full"
+                          style={{
+                            borderRadius: '8px',
+                            borderLeft: `4px solid ${task.source === 'winddown' ? 'rgba(139, 92, 246, 0.5)' : 'rgba(245, 158, 11, 0.5)'}`,
+                            maxHeight: '100%',
+                            overflow: 'hidden',
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleTaskToggle(task.id);
+                          }}
+                        >
+                          <div className="p-2 sm:p-3 relative overflow-y-auto" style={{ maxHeight: '100%' }}>
+                            <div className="flex items-start gap-2 sm:gap-3 w-full">
+                              {/* Emoji on the left */}
+                              <div className="flex-shrink-0">
+                                <div 
+                                  className="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-all"
+                                  style={{
+                                    backgroundColor: task.completed ? (task.color || 'hsl(var(--primary))') : 'transparent',
+                                    borderWidth: '2px',
+                                    borderStyle: 'solid',
+                                    borderColor: task.color ? `${task.color}${task.completed ? '' : '50'}` : (task.completed ? 'hsl(var(--primary))' : 'hsl(var(--primary) / 0.3)'),
+                                  }}
+                                >
+                                  <span className="text-xl sm:text-2xl">{task.emoji || '📝'}</span>
+                                </div>
+                              </div>
+                              
+                              {/* Content on the right */}
+                              <div className="flex-1 min-w-0">
+                                {/* Task Title and Badge */}
+                                <div className="mb-1">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <div className={`text-sm font-semibold break-words ${
+                                      task.completed ? 'line-through opacity-60' : ''
+                                    }`}>
+                                      {task.title}
+                                    </div>
+                                  </div>
+                                  {showTaskTags && badge && (
+                                    <Badge variant="secondary" className={`${badge.className} text-xs mt-1`}>
+                                      {badge.label}
+                                    </Badge>
+                                  )}
+                                </div>
+                                
+                                {/* Time display for winddown and startup tasks */}
+                                {task.time && task.endTime && (
+                                  <div className="text-xs text-muted-foreground mb-1.5 flex items-center gap-1.5">
+                                    <Clock className="w-3 h-3 flex-shrink-0" />
+                                    <span className="whitespace-nowrap">{task.time} - {task.endTime}</span>
+                                  </div>
+                                )}
+                                
+                                {/* Notes below title */}
+                                {task.notes && (
+                                  <div className="text-xs text-muted-foreground mb-2 italic break-words line-clamp-2">
+                                    {task.notes}
+                                  </div>
+                                )}
+                                
+                                {/* Child Tasks for Containers (Winddown/Startup) */}
+                                {childTasks.length > 0 && (
+                                  <div className="w-full mt-2 space-y-1.5">
+                                    <div className="text-xs text-muted-foreground mb-1">
+                                      {childTasks.filter(ct => ct.completed).length}/{childTasks.length} completed
+                                    </div>
+                                    <div className="space-y-1 max-h-32 overflow-y-auto">
+                                      {childTasks.map((childTask) => (
+                                        <div 
+                                          key={childTask.id}
+                                          className="flex items-center gap-1.5 text-xs p-1.5 rounded-md bg-muted/30 hover:bg-muted/50 transition-colors"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleTaskToggle(childTask.id);
+                                          }}
+                                        >
+                                          <button
+                                            className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                                              childTask.completed 
+                                                ? 'bg-success border-success' 
+                                                : 'border-muted-foreground'
+                                            }`}
+                                          >
+                                            {childTask.completed && (
+                                              <span className="text-[10px] text-white">✓</span>
+                                            )}
+                                          </button>
+                                          <span className={`flex-1 break-words text-xs ${childTask.completed ? 'line-through opacity-60' : ''}`}>
+                                            {childTask.title}
+                                          </span>
+                                          {childTask.journalPrompt && (
+                                            <Button
+                                              size="sm"
+                                              variant="ghost"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                // Open journal dialog
+                                                window.dispatchEvent(new CustomEvent('openJournal', { 
+                                                  detail: { prompt: childTask.journalPrompt } 
+                                                }));
+                                              }}
+                                              className="h-5 px-1.5 text-[10px] flex-shrink-0"
+                                            >
+                                              📖
+                                            </Button>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
 
                 {/* Dot Container - Only show for: wake/sleep, reminders (NOT for tasks without end time) */}
                 {/* Don't show dots for winddown/startup tasks - they already have their own container */}
@@ -2072,17 +2330,19 @@ export default function LiquidTimeline({ tasks, date, onToggleTask, onUpdateTask
                 })()}
 
                 {/* Task Info Container - Only show for actual tasks, not reminders/sleep */}
-                {/* Regular tasks - includes winddown/startup */}
+                {/* Regular tasks - excludes winddown/startup (they're rendered separately) */}
                 {item.tasks.length > 0 && 
-                 item.tasks.some(t => t.source !== 'medication' && t.source !== 'sleep' && t.source !== 'water' && t.source !== 'steps') && 
+                 item.tasks.some(t => t.source !== 'medication' && t.source !== 'sleep' && t.source !== 'water' && t.source !== 'steps' && t.source !== 'startup' && t.source !== 'winddown') && 
                  !item.isWakeUp && 
                  !item.isBedTime && (() => {
-                   // Filter out system tasks and child tasks, but include winddown/startup
+                   // Filter out system tasks, child tasks, and startup/winddown (they're rendered separately)
                    const actualTasks = item.tasks.filter(t => {
                      return t.source !== 'medication' && 
                             t.source !== 'sleep' && 
                             t.source !== 'water' && 
                             t.source !== 'steps' &&
+                            t.source !== 'startup' &&
+                            t.source !== 'winddown' &&
                             !t.parentId;
                    });
                    
@@ -2092,6 +2352,8 @@ export default function LiquidTimeline({ tasks, date, onToggleTask, onUpdateTask
                      t.source !== 'sleep' && 
                      t.source !== 'water' && 
                      t.source !== 'steps' &&
+                     t.source !== 'startup' &&
+                     t.source !== 'winddown' &&
                      !t.parentId);
                    
                    // Find overlapping group for the current task
@@ -2104,6 +2366,9 @@ export default function LiquidTimeline({ tasks, date, onToggleTask, onUpdateTask
                      // Find all tasks that overlap with this task
                      // But don't group startup and winddown tasks together even if they overlap
                      overlappingGroup = allTimelineTasks.filter(t => {
+                       // Skip if it's the same task
+                       if (t.id === currentTask.id) return true;
+                       
                        const tStart = timeToMinutes(t.time!);
                        const tEnd = timeToMinutes(t.endTime!);
                        const overlaps = (currentStart < tEnd && currentEnd > tStart);
@@ -2114,6 +2379,11 @@ export default function LiquidTimeline({ tasks, date, onToggleTask, onUpdateTask
                        
                        return overlaps;
                      });
+                     
+                     // Always include the current task in the group
+                     if (!overlappingGroup.find(t => t.id === currentTask.id)) {
+                       overlappingGroup.push(currentTask);
+                     }
                    }
                    
                    const hasOverlap = overlappingGroup.length > 1;
@@ -2173,7 +2443,10 @@ export default function LiquidTimeline({ tasks, date, onToggleTask, onUpdateTask
                    }
                    
                                    // If overlapping, render all tasks in the group
-                   const tasksToRender = hasOverlap ? overlappingGroup : actualTasks;
+                   // Sort overlapping group by start time to ensure consistent rendering
+                   const tasksToRender = hasOverlap 
+                     ? [...overlappingGroup].sort((a, b) => timeToMinutes(a.time!) - timeToMinutes(b.time!))
+                     : actualTasks;
                    
                                       // Create border styling
                    const taskColor = actualTasks[0]?.color || 'hsl(var(--primary))';
@@ -2185,8 +2458,9 @@ export default function LiquidTimeline({ tasks, date, onToggleTask, onUpdateTask
                       className="absolute"
                       style={{
                         top: `${actualPosition}%`,
-                        // Don't center winddown/startup tasks - they start at their start time
-                        transform: mergedContainerHeight > 0 || isWinddownTask || isStartupOrWinddown ? undefined : 'translateY(-50%)',
+                        // Don't center winddown/startup tasks or tasks with end time - they start at their start time
+                        // Only center tasks without end time
+                        transform: mergedContainerHeight > 0 || isWinddownTask || isStartupOrWinddown || actualTasks[0]?.endTime ? undefined : 'translateY(-50%)',
                         left: '3rem',
                         right: '0',
                         height: mergedContainerHeight > 0 ? `${mergedContainerPx}px` : 'auto',

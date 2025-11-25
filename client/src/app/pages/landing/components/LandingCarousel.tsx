@@ -1,7 +1,9 @@
-import { useState, useEffect, useRef } from "react";
-import { Heart, Moon, Droplet, Dumbbell, Briefcase, BookOpen, Pill, GraduationCap, ChevronLeft, ChevronRight } from "lucide-react";
-import { colors } from "@/lib/designSystem";
+import { useState, useEffect, useRef, useCallback, memo } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { CarouselScrollIndicator } from "@/app/components/shared/CarouselScrollIndicator";
+import { CAROUSEL_FEATURES, CAROUSEL } from "../constants";
+import { useThrottle } from "../hooks";
+import type { CarouselFeature } from "../constants";
 
 /**
  * Dynamic carousel showcasing additional features
@@ -10,62 +12,9 @@ import { CarouselScrollIndicator } from "@/app/components/shared/CarouselScrollI
  * - QR code section below carousel
  * - Drag support on desktop
  */
-export function LandingCarousel() {
-  // Features ordered as requested: Sleep, Water, Medication, Menstrual, Sport, Journal, Office, School
-  const carouselFeatures = [
-    {
-      title: "Sleep Schedule",
-      description: "Schedule your sleep routine with gentle reminders for wind-down activities.",
-      icon: Moon,
-      color: colors.features.sleep
-    },
-    {
-      title: "Water Intake",
-      description: "Set daily goals, track every glass and celebrate your streaks.",
-      icon: Droplet,
-      color: colors.features.water
-    },
-    {
-      title: "Medication",
-      description: "Track daily medication and supplements with gentle reminders.",
-      icon: Pill,
-      color: colors.features.medication
-    },
-    {
-      title: "Menstrual Cycle",
-      description: "Track your cycle with gentle reminders. Understand your body's rhythm and plan accordingly.",
-      icon: Heart,
-      color: colors.features.menstrual
-    },
-    {
-      title: "Sport",
-      description: "Track workouts, log reps and weights, map your running routes.",
-      icon: Dumbbell,
-      color: colors.features.sport
-    },
-    {
-      title: "Journal",
-      description: "Reflect and unwind. Let AI help you summarize your day.",
-      icon: BookOpen,
-      color: colors.features.journal
-    },
-    {
-      title: "Office",
-      description: "Organize your work life with deadlines, paydays, and tasks directly in your calendar.",
-      icon: Briefcase,
-      color: colors.features.office
-    },
-    {
-      title: "School",
-      description: "Organize your study life with class times, assignments, and exam schedules.",
-      icon: GraduationCap,
-      color: colors.features.school
-    }
-  ];
-
-  const TOTAL_COPIES = 50;
+function LandingCarousel() {
   const [currentIndex, setCurrentIndex] = useState(1);
-  const [scrollIndex, setScrollIndex] = useState((TOTAL_COPIES / 2) * carouselFeatures.length + 1);
+  const [scrollIndex, setScrollIndex] = useState((CAROUSEL.TOTAL_COPIES / 2) * CAROUSEL_FEATURES.length + 1);
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
@@ -76,7 +25,7 @@ export function LandingCarousel() {
   const cursorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const mobileScrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handleMouseMove = useThrottle((e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const direction = x < rect.width / 2 ? 'left' : 'right';
@@ -91,11 +40,11 @@ export function LandingCarousel() {
     }
     
     setCursorPosition({ x: e.clientX, y: e.clientY, show: true });
-  };
+  }, 16); // ~60fps
 
-  const handleMouseLeave = () => {
-    setCursorPosition({ ...cursorPosition, show: false });
-  };
+  const handleMouseLeave = useCallback(() => {
+    setCursorPosition((prev) => ({ ...prev, show: false }));
+  }, []);
 
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
@@ -115,18 +64,18 @@ export function LandingCarousel() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
   
-  const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handleClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
     
     if (x < rect.width / 2) {
       setScrollIndex(prev => prev - 1);
-      setCurrentIndex((currentIndex - 1 + carouselFeatures.length) % carouselFeatures.length);
+      setCurrentIndex((prev) => (prev - 1 + CAROUSEL_FEATURES.length) % CAROUSEL_FEATURES.length);
     } else {
       setScrollIndex(prev => prev + 1);
-      setCurrentIndex((currentIndex + 1) % carouselFeatures.length);
+      setCurrentIndex((prev) => (prev + 1) % CAROUSEL_FEATURES.length);
     }
-  };
+  }, []);
 
   // Auto-scroll when scrollIndex changes
   useEffect(() => {
@@ -142,7 +91,7 @@ export function LandingCarousel() {
         behavior: 'smooth'
       });
       
-      const totalCards = TOTAL_COPIES * carouselFeatures.length;
+      const totalCards = CAROUSEL.TOTAL_COPIES * CAROUSEL_FEATURES.length;
       const safeZoneStart = 5;
       const safeZoneEnd = totalCards - 5;
       
@@ -152,7 +101,7 @@ export function LandingCarousel() {
         }
         
         scrollTimeoutRef.current = setTimeout(() => {
-          const middlePosition = (TOTAL_COPIES / 2) * carouselFeatures.length + currentIndex;
+          const middlePosition = (CAROUSEL.TOTAL_COPIES / 2) * CAROUSEL_FEATURES.length + currentIndex;
           setScrollIndex(middlePosition);
           const newScrollPosition = (middlePosition * cardWidth) - (containerWidth / 2) + (cardWidth / 2);
           container.scrollTo({
@@ -191,7 +140,7 @@ export function LandingCarousel() {
     const handleResize = () => {
       if (carouselRef.current) {
         const container = carouselRef.current;
-        const cardWidth = 400 + 24;
+        const cardWidth = CAROUSEL.CARD_WIDTH_DESKTOP + CAROUSEL.CARD_GAP;
         const containerWidth = container.offsetWidth;
         const scrollPosition = (scrollIndex * cardWidth) - (containerWidth / 2) + (cardWidth / 2);
         
@@ -213,8 +162,8 @@ export function LandingCarousel() {
     if (!mobileCarouselRef.current) return;
 
     const container = mobileCarouselRef.current;
-    const cardWidth = 280 + 24;
-    const totalCards = 10 * carouselFeatures.length;
+    const cardWidth = CAROUSEL.CARD_WIDTH_MOBILE + CAROUSEL.CARD_GAP;
+    const totalCards = 10 * CAROUSEL_FEATURES.length;
     const middlePosition = (totalCards / 2) * cardWidth;
 
     container.scrollLeft = middlePosition;
@@ -260,8 +209,8 @@ export function LandingCarousel() {
     const handleResize = () => {
       if (mobileCarouselRef.current) {
         const container = mobileCarouselRef.current;
-        const cardWidth = 280 + 24;
-        const totalCards = 10 * carouselFeatures.length;
+        const cardWidth = CAROUSEL.CARD_WIDTH_MOBILE + CAROUSEL.CARD_GAP;
+        const totalCards = 10 * CAROUSEL_FEATURES.length;
         const middlePosition = (totalCards / 2) * cardWidth;
         container.scrollLeft = middlePosition;
       }
@@ -271,33 +220,33 @@ export function LandingCarousel() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const handleDragStart = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handleDragStart = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     setIsDragging(true);
     setStartX(e.clientX);
     setScrollLeft(carouselRef.current?.scrollLeft || 0);
-  };
+  }, []);
 
-  const handleDragEnd = () => {
+  const handleDragEnd = useCallback(() => {
     setIsDragging(false);
-  };
+  }, []);
 
-  const handleDragMove = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handleDragMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (!isDragging || !carouselRef.current) return;
     e.preventDefault();
     const x = e.clientX;
     const walk = (startX - x) * 1.5;
     carouselRef.current.scrollLeft = scrollLeft + walk;
-  };
+  }, [isDragging, startX, scrollLeft]);
 
   return (
     <section 
       data-section="carousel" 
-      className="py-20 flex items-center bg-gray-50 dark:bg-gray-900 transition-colors duration-300" 
-      style={{ scrollSnapAlign: 'center', minHeight: 'calc(100vh - 80px)' }}
+      className="flex items-center bg-gray-50 dark:bg-gray-900 transition-colors duration-300 px-6 section-viewport" 
+      style={{ scrollSnapAlign: 'start', scrollSnapStop: 'always' }}
     >
       <div className="w-full">
         {/* Title */}
-        <div className="text-center mb-12 px-6">
+        <div className="text-center mb-12 px-6 w-full flex justify-center">
           <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-3">
             Not just a generic Timeline!
           </h2>
@@ -322,17 +271,22 @@ export function LandingCarousel() {
               e.preventDefault();
               e.stopPropagation();
               
-              // Throttle scroll updates for better performance
+              // Throttle scroll updates for better performance using requestAnimationFrame
               if (carouselRef.current.dataset.scrolling === 'true') return;
               carouselRef.current.dataset.scrolling = 'true';
               
+              const scrollContainer = carouselRef.current;
+              const delta = Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+              // Reduce sensitivity for smoother scrolling
+              const scrollAmount = delta * 0.3;
+              
               requestAnimationFrame(() => {
-                if (carouselRef.current) {
-                  const delta = Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
-                  // Reduce sensitivity for smoother scrolling
-                  const scrollAmount = delta * 0.5;
-                  carouselRef.current.scrollLeft += scrollAmount;
-                  carouselRef.current.dataset.scrolling = 'false';
+                if (scrollContainer) {
+                  scrollContainer.scrollBy({
+                    left: scrollAmount,
+                    behavior: 'auto' // Use auto for instant scrolling, smoother performance
+                  });
+                  scrollContainer.dataset.scrolling = 'false';
                 }
               });
             }
@@ -364,17 +318,18 @@ export function LandingCarousel() {
             ref={carouselRef}
             className="flex gap-6 overflow-x-auto scrollbar-hide pb-8 pt-4"
             style={{ 
-              scrollBehavior: 'smooth',
+              scrollBehavior: 'auto',
               paddingLeft: 'calc(50vw - 200px)',
               paddingRight: 'calc(50vw - 200px)',
-              overflowY: 'visible'
+              overflowY: 'visible',
+              willChange: 'scroll-position'
             }}
             onMouseDown={handleDragStart}
             onMouseUp={handleDragEnd}
             onMouseLeave={handleDragEnd}
             onMouseMove={handleDragMove}
           >
-            {Array.from({ length: TOTAL_COPIES }).flatMap(() => carouselFeatures).map((feature, idx) => {
+            {Array.from({ length: CAROUSEL.TOTAL_COPIES }).flatMap(() => CAROUSEL_FEATURES).map((feature, idx) => {
               const IconComponent = feature.icon;
               
               return (
@@ -411,10 +366,11 @@ export function LandingCarousel() {
             className="overflow-x-auto scrollbar-hide w-full"
             style={{ 
               WebkitOverflowScrolling: 'touch',
-              touchAction: 'pan-x pan-y',
+              touchAction: 'pan-x',
               overscrollBehaviorX: 'contain',
               overscrollBehaviorY: 'auto',
-              scrollBehavior: 'smooth'
+              scrollBehavior: 'auto',
+              willChange: 'scroll-position'
             }}
             onTouchStart={(e) => {
               const touch = e.touches[0];
@@ -445,7 +401,7 @@ export function LandingCarousel() {
               paddingLeft: 'calc(50vw - 140px)',
               paddingRight: 'calc(50vw - 140px)'
             }}>
-              {Array.from({ length: 10 }).flatMap(() => carouselFeatures).map((feature, idx) => {
+              {Array.from({ length: 10 }).flatMap(() => CAROUSEL_FEATURES).map((feature, idx) => {
                 const IconComponent = feature.icon;
                 return (
                   <div
@@ -483,8 +439,12 @@ export function LandingCarousel() {
           -ms-overflow-style: none;
           scrollbar-width: none;
         }
-      `}</style>
+      `}      </style>
     </section>
   );
 }
+
+// Memoize component for performance
+export const LandingCarouselMemo = memo(LandingCarousel);
+export { LandingCarouselMemo as LandingCarousel };
 

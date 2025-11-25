@@ -4,6 +4,7 @@ import { Header } from '@/app/pages/landing/components/Header';
 import { LandingFooter } from '@/app/pages/landing/components/LandingFooter';
 import { LandingAbout } from '@/app/pages/landing/components/LandingAbout';
 import { LandingMadeBy } from '@/app/pages/landing/components/LandingMadeBy';
+import { ChatButton } from '@/app/components/shared/ChatButton';
 
 export default function About() {
   return (
@@ -21,6 +22,7 @@ export default function About() {
         </div>
       </div>
       <LandingFooter />
+      <ChatButton />
     </>
   );
 }

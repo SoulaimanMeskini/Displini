@@ -4,33 +4,101 @@ import { colors } from "@/lib/designSystem";
 import { useLandingScroll } from "@/hooks/useLandingScroll";
 import { Header, LandingHero, LandingFeatures } from "./components";
 import { ErrorBoundary } from "@/app/components/shared/ErrorBoundary";
+import { ChatButton } from "@/app/components/shared/ChatButton";
 
-// Lazy load heavy sections for better initial load performance with error handling
-const LandingCarousel = lazy(() => import("./components").then(m => ({ default: m.LandingCarousel })).catch(() => ({ default: () => <div /> })));
-const LandingQR = lazy(() => import("./components").then(m => ({ default: m.LandingQR })).catch(() => ({ default: () => <div /> })));
-const LandingAbout = lazy(() => import("./components").then(m => ({ default: m.LandingAbout })).catch(() => ({ default: () => <div /> })));
-const LandingFAQ = lazy(() => import("./components").then(m => ({ default: m.LandingFAQ })).catch(() => ({ default: () => <div /> })));
-const LandingDeviceSync = lazy(() => import("./components").then(m => ({ default: m.LandingDeviceSync })).catch(() => ({ default: () => <div /> })));
-const LandingCTA = lazy(() => import("./components").then(m => ({ default: m.LandingCTA })).catch(() => ({ default: () => <div /> })));
-const LandingFooter = lazy(() => import("./components").then(m => ({ default: m.LandingFooter })).catch(() => ({ default: () => <div /> })));
+// Lazy load heavy sections for better initial load performance
+const LandingCarousel = lazy(() => import("./components").then(m => ({ default: m.LandingCarousel })));
+const LandingQR = lazy(() => import("./components").then(m => ({ default: m.LandingQR })));
+const LandingAbout = lazy(() => import("./components").then(m => ({ default: m.LandingAbout })));
+const LandingFAQ = lazy(() => import("./components").then(m => ({ default: m.LandingFAQ })));
+const LandingDeviceSync = lazy(() => import("./components").then(m => ({ default: m.LandingDeviceSync })));
+const LandingFooter = lazy(() => import("./components").then(m => ({ default: m.LandingFooter })));
 
 // Main Landing Component - Memoized for performance
 function Landing() {
   // Track scroll position for restoration on reload
   useLandingScroll();
-  const [isMobile, setIsMobile] = useState(false);
   
+  // Prevent scrolling past footer and past hero section
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
+    const scrollContainer = document.querySelector('[style*="scrollSnapType"]') as HTMLElement | null;
+    if (!scrollContainer) return;
+    
+    const handleWheel = (e: WheelEvent) => {
+      const hero = document.querySelector('[data-section="hero"]') || document.querySelector('section:first-of-type');
+      const footer = document.querySelector('footer');
+      
+      // Prevent scrolling up past hero
+      if (hero) {
+        const heroRect = hero.getBoundingClientRect();
+        const isAtTop = scrollContainer.scrollTop <= 5;
+        
+        // If hero is at top and user tries to scroll up, prevent it
+        if (heroRect.top >= 0 && heroRect.top <= 100 && e.deltaY < 0 && isAtTop) {
+          e.preventDefault();
+          e.stopPropagation();
+          return;
+        }
+      }
+      
+      // Prevent scrolling down past footer
+      if (footer) {
+        const footerRect = footer.getBoundingClientRect();
+        const isAtBottom = scrollContainer.scrollTop + scrollContainer.clientHeight >= scrollContainer.scrollHeight - 5;
+        
+        // If footer is visible and user tries to scroll down, prevent it
+        if (footerRect.top < window.innerHeight && e.deltaY > 0 && isAtBottom) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }
     };
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    
+    const handleTouchMove = (e: TouchEvent) => {
+      const hero = document.querySelector('[data-section="hero"]') || document.querySelector('section:first-of-type');
+      const footer = document.querySelector('footer');
+      
+      // Prevent scrolling up past hero
+      if (hero) {
+        const heroRect = hero.getBoundingClientRect();
+        const isAtTop = scrollContainer.scrollTop <= 5;
+        
+        if (heroRect.top >= 0 && heroRect.top <= 100 && isAtTop) {
+          const touch = e.touches[0];
+          const startTouch = (e as TouchEvent & { startTouch?: Touch }).startTouch || touch;
+          if (touch.clientY > startTouch.clientY) {
+            e.preventDefault();
+            return;
+          }
+        }
+      }
+      
+      // Prevent scrolling down past footer
+      if (footer) {
+        const footerRect = footer.getBoundingClientRect();
+        const isAtBottom = scrollContainer.scrollTop + scrollContainer.clientHeight >= scrollContainer.scrollHeight - 5;
+        
+        if (footerRect.top < window.innerHeight && isAtBottom) {
+          const touch = e.touches[0];
+          const startTouch = (e as TouchEvent & { startTouch?: Touch }).startTouch || touch;
+          if (touch.clientY < startTouch.clientY) {
+            e.preventDefault();
+          }
+        }
+      }
+    };
+    
+    scrollContainer.addEventListener('wheel', handleWheel, { passive: false });
+    scrollContainer.addEventListener('touchmove', handleTouchMove, { passive: false });
+    
+    return () => {
+      scrollContainer.removeEventListener('wheel', handleWheel);
+      scrollContainer.removeEventListener('touchmove', handleTouchMove);
+    };
   }, []);
   
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-white transition-colors duration-300" style={{ scrollSnapType: 'y proximity', height: '100vh', overflowY: 'scroll', paddingTop: '80px' }}>
+    <div className="min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-white transition-colors duration-300 overflow-x-hidden" style={{ scrollSnapType: 'y mandatory', height: '100vh', overflowY: 'auto', paddingTop: '0', overscrollBehavior: 'none', WebkitOverflowScrolling: 'touch' }}>
       <SEO
         title="Stay Focused, Build Better Habits"
         description="Displini helps you build structure, improve your health and routines. Track water intake, sleep schedule, menstrual cycle, medication, workouts, and more."
@@ -67,6 +135,7 @@ function Landing() {
       </Suspense>
 
       </main>
+      <ChatButton />
     </div>
   );
 }

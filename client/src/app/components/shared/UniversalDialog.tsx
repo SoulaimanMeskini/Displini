@@ -1,6 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/app/components/ui/dialog";
 import { Button } from "@/app/components/ui/button";
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
+import { X, Info } from "lucide-react";
 
 interface UniversalDialogProps {
   open: boolean;
@@ -15,6 +16,8 @@ interface UniversalDialogProps {
   cancelLabel?: string;
   hideDefaultFooter?: boolean;
   scrollable?: boolean; // Enable scrolling for long content
+  infoContent?: ReactNode; // Info content to show in info dialog
+  infoTitle?: string; // Title for info dialog
 }
 
 export default function UniversalDialog({
@@ -30,13 +33,44 @@ export default function UniversalDialog({
   cancelLabel = "Cancel",
   hideDefaultFooter = false,
   scrollable = true,
+  infoContent,
+  infoTitle,
 }: UniversalDialogProps) {
+  const [showInfo, setShowInfo] = useState(false);
+
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={`max-w-md ${scrollable ? 'max-h-[90vh] overflow-y-auto' : ''}`}>
-        <DialogHeader>
+          <DialogHeader className="relative">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex-1">
           <DialogTitle>{title}</DialogTitle>
           {description && <DialogDescription>{description}</DialogDescription>}
+              </div>
+              <div className="flex items-center gap-2">
+                {infoContent && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setShowInfo(true)}
+                    aria-label="Show information"
+                  >
+                    <Info className="h-4 w-4" />
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => onOpenChange(false)}
+                  aria-label="Close"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
         </DialogHeader>
         
         <div className="space-y-4 py-4">
@@ -72,6 +106,32 @@ export default function UniversalDialog({
         )}
       </DialogContent>
     </Dialog>
+    
+    {/* Info Dialog */}
+    {infoContent && (
+      <Dialog open={showInfo} onOpenChange={setShowInfo}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="relative">
+            <div className="flex items-center justify-between gap-2">
+              <DialogTitle>{infoTitle || `${title} Information`}</DialogTitle>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setShowInfo(false)}
+                aria-label="Close"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </DialogHeader>
+          <div className="py-4">
+            {infoContent}
+          </div>
+        </DialogContent>
+      </Dialog>
+    )}
+    </>
   );
 }
 

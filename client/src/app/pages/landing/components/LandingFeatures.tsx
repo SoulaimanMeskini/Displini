@@ -1,7 +1,10 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback, memo } from "react";
 import { motion } from "framer-motion";
-import { Bell, CheckSquare, Calendar, Sparkles, Plus, Circle, Clock } from "lucide-react";
+import { Plus } from "lucide-react";
+import { FEATURES, TIMELINE, ANIMATION, SCROLL } from "../constants";
+import { useWindowSize } from "../hooks";
 import { colors } from "@/lib/designSystem";
+import type { Feature } from "../constants";
 
 /**
  * Interactive feature showcase with tab switching
@@ -10,7 +13,7 @@ import { colors } from "@/lib/designSystem";
  * - iPhone mockup with glow effects
  * - Wheel event hijacking for smooth tab switching
  */
-interface Task {
+export interface Task {
   id: string;
   title: string;
   time?: string;
@@ -18,53 +21,66 @@ interface Task {
   emoji?: string;
 }
 
-export function LandingFeatures() {
+function LandingFeatures() {
+  const { isMobile, isTablet } = useWindowSize();
   const [activeFeature, setActiveFeature] = useState(0);
+  
   const sectionRef = useRef<HTMLElement>(null);
   const lastChangeRef = useRef<number>(0);
-  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
-  const [isTablet, setIsTablet] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 768 && window.innerWidth < 1024);
   const tabsContainerRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef<number>(0);
   const touchEndX = useRef<number>(0);
+  const touchStartY = useRef<number>(0);
+  const touchEndY = useRef<number>(0);
   
+  // Ensure activeFeature is always within bounds
   useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-      setIsTablet(window.innerWidth >= 768 && window.innerWidth < 1024);
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-  
-  // Swipe functionality for tabs on mobile
+    if (activeFeature < 0 || activeFeature >= FEATURES.length) {
+      setActiveFeature(0);
+    }
+  }, [activeFeature]);
+
+  // Swipe functionality for tabs - works on both mobile and desktop
   useEffect(() => {
-    if (!isMobile || !tabsContainerRef.current) return;
+    if (!sectionRef.current) return;
+    
+    let touchStartTime = 0;
     
     const handleTouchStart = (e: TouchEvent) => {
       touchStartX.current = e.touches[0].clientX;
+      touchStartY.current = e.touches[0].clientY;
+      touchStartTime = Date.now();
     };
     
     const handleTouchMove = (e: TouchEvent) => {
       touchEndX.current = e.touches[0].clientX;
+      touchEndY.current = e.touches[0].clientY;
     };
     
     const handleTouchEnd = () => {
       if (!touchStartX.current || !touchEndX.current) return;
       
-      const distance = touchStartX.current - touchEndX.current;
+      const deltaX = touchStartX.current - touchEndX.current;
+      const deltaY = Math.abs(touchStartY.current - touchEndY.current);
+      const deltaTime = Date.now() - touchStartTime;
       const minSwipeDistance = 50;
+      const maxSwipeTime = 500;
       
-      if (Math.abs(distance) > minSwipeDistance) {
-        if (distance > 0) {
+      // Only trigger if horizontal swipe is dominant and fast enough
+      if (Math.abs(deltaX) > Math.abs(deltaY) * 1.5 && Math.abs(deltaX) > minSwipeDistance && deltaTime < maxSwipeTime) {
+        const now = Date.now();
+        if (now - lastChangeRef.current < SCROLL.COOLDOWN) return;
+        
+        if (deltaX > 0) {
           // Swipe left - next tab
+          lastChangeRef.current = now;
           setActiveFeature((prev) => {
-            // We'll use a fixed number of features (4) since features array is defined later
-            if (prev < 3) return prev + 1;
+            if (prev < FEATURES.length - 1) return prev + 1;
             return prev;
           });
         } else {
           // Swipe right - previous tab
+          lastChangeRef.current = now;
           setActiveFeature((prev) => {
             if (prev > 0) return prev - 1;
             return prev;
@@ -74,19 +90,21 @@ export function LandingFeatures() {
       
       touchStartX.current = 0;
       touchEndX.current = 0;
+      touchStartY.current = 0;
+      touchStartTime = 0;
     };
     
-    const container = tabsContainerRef.current;
-    container.addEventListener('touchstart', handleTouchStart, { passive: true });
-    container.addEventListener('touchmove', handleTouchMove, { passive: true });
-    container.addEventListener('touchend', handleTouchEnd, { passive: true });
+    const section = sectionRef.current;
+    section.addEventListener('touchstart', handleTouchStart, { passive: true });
+    section.addEventListener('touchmove', handleTouchMove, { passive: true });
+    section.addEventListener('touchend', handleTouchEnd, { passive: true });
     
     return () => {
-      container.removeEventListener('touchstart', handleTouchStart);
-      container.removeEventListener('touchmove', handleTouchMove);
-      container.removeEventListener('touchend', handleTouchEnd);
+      section.removeEventListener('touchstart', handleTouchStart);
+      section.removeEventListener('touchmove', handleTouchMove);
+      section.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [isMobile, activeFeature]);
+  }, [activeFeature]);
   
   // To-Do Demo State
   const [todoTasks, setTodoTasks] = useState<Task[]>([
@@ -94,60 +112,55 @@ export function LandingFeatures() {
     { id: '2', title: 'Team meeting', time: '10:00', completed: false, emoji: '👥' },
   ]);
   
-  // Helper to format time for display
-  const formatTimeDisplay = (time: string) => {
+  // Helper to format time for display - memoized
+  const formatTimeDisplay = useCallback((time: string): string => {
     if (!time) return '';
     const [hours, minutes] = time.split(':');
-    const hour = parseInt(hours);
+    const hour = parseInt(hours, 10);
     const ampm = hour >= 12 ? 'PM' : 'AM';
     const displayHour = hour % 12 || 12;
     return `${displayHour}:${minutes} ${ampm}`;
-  };
+  }, []);
   
-  // Sort tasks by time and remove duplicates
-  const sortedTasks = [...todoTasks]
-    .filter((task, index, self) => 
-      index === self.findIndex(t => t.title === task.title && t.time === task.time)
-    )
-    .sort((a, b) => {
-      if (!a.time) return 1;
-      if (!b.time) return -1;
-      return a.time.localeCompare(b.time);
-    });
-  
-  // Helper functions
-  const timeToMinutes = (time: string) => {
+  // Helper functions - memoized
+  const timeToMinutes = useCallback((time: string): number => {
     const [hours, minutes] = time.split(':').map(Number);
     return hours * 60 + minutes;
-  };
+  }, []);
   
-  const minutesToTime = (minutes: number) => {
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
-  };
+  // Sort tasks by time and remove duplicates - memoized
+  const sortedTasks = useMemo(() => {
+    return [...todoTasks]
+      .filter((task, index, self) => 
+        index === self.findIndex(t => t.title === task.title && t.time === task.time)
+      )
+      .sort((a, b) => {
+        if (!a.time) return 1;
+        if (!b.time) return -1;
+        return a.time.localeCompare(b.time);
+      });
+  }, [todoTasks]);
   
-  // Get start and end times for timeline - always fixed wake-up and bedtime
-  const getTimelineRange = () => {
-    // Always use fixed wake-up (06:00) and bedtime (23:30) times
-    return { start: '06:00', end: '23:30' };
-  };
+  // Get start and end times for timeline - memoized
+  const timelineRange = useMemo(() => ({
+    start: TIMELINE.WAKE_UP,
+    end: TIMELINE.BEDTIME,
+  }), []);
   
-  // Calculate timeline positions (percentage from top)
-  const getTaskPositionPercent = (time: string, startTime: string, endTime: string) => {
+  // Calculate timeline positions (percentage from top) - memoized
+  const getTaskPositionPercent = useCallback((time: string, startTime: string, endTime: string): number => {
     if (!time) return 0;
     const taskMinutes = timeToMinutes(time);
     const startMinutes = timeToMinutes(startTime);
     const endMinutes = timeToMinutes(endTime);
     const position = ((taskMinutes - startMinutes) / (endMinutes - startMinutes)) * 100;
     return Math.max(0, Math.min(100, position));
-  };
+  }, [timeToMinutes]);
   
-  // Calculate liquid fill percentage
-  const calculateFillPercentage = () => {
+  // Calculate liquid fill percentage - memoized
+  const calculateFillPercentage = useCallback((): number => {
     if (sortedTasks.length === 0) return 0;
     
-    const timelineRange = getTimelineRange();
     const now = new Date();
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
     const startMinutes = timeToMinutes(timelineRange.start);
@@ -159,7 +172,7 @@ export function LandingFeatures() {
     
     const fill = ((currentMinutes - startMinutes) / (endMinutes - startMinutes)) * 100;
     return Math.max(0, Math.min(100, fill));
-  };
+  }, [sortedTasks.length, timeToMinutes, timelineRange]);
   
   const [fillPercentage, setFillPercentage] = useState(0);
   const [hasAnimated, setHasAnimated] = useState(false);
@@ -187,69 +200,56 @@ export function LandingFeatures() {
       setHasAnimated(false);
       setFillPercentage(0);
     }
-  }, [activeFeature, sortedTasks.length, sortedTasks, currentTime]);
-  
-  const features = [
-    {
-      id: 'reminders',
-      title: 'Reminders',
-      description: `Have ideas, tasks, or notes that don't yet fit your schedule?
+  }, [activeFeature, calculateFillPercentage, currentTime]);
 
-Write them down in Reminders, your flexible inbox for everything you want to remember.`,
-      icon: Bell,
-      color: colors.features.reminders
-    },
-    {
-      id: 'todo',
-      title: 'To-Do',
-      description: `Keep track of tasks in an intuitive timeline that flows like your day.
-
-Plan your time into focused blocks and mark each one complete as you go.`,
-      icon: CheckSquare,
-      color: colors.features.todo
-    },
-    {
-      id: 'calendar',
-      title: 'Calendar',
-      description: `Easily manage appointments, meetings and events in one connected calendar.
-
-Never forget a birthday or a call and let Displini's AI automatically add important tasks from your emails.`,
-      icon: Calendar,
-      color: colors.features.calendar
-    },
-    {
-      id: 'ai',
-      title: 'AI Assistant',
-      description: `With Displini AI, you can plan, reschedule and structure your entire day in seconds.
-
-The assistant helps you stay balanced from optimizing focus time to rearranging your timeline automatically.`,
-      icon: Sparkles,
-      color: colors.features.ai
-    }
-  ];
-
-  const [displayedText, setDisplayedText] = useState(features[0].description);
+  const [displayedText, setDisplayedText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
 
   // Typewriter animation
   useEffect(() => {
+    // Reset when feature changes
+    setDisplayedText('');
+    setIsTyping(false);
+    
+    if (!FEATURES || FEATURES.length === 0) return;
+    if (activeFeature < 0 || activeFeature >= FEATURES.length) return;
+    if (!FEATURES[activeFeature] || !FEATURES[activeFeature].description) return;
+    
+    const fullText = FEATURES[activeFeature].description;
+    if (!fullText) return;
+    
     setIsTyping(true);
     setDisplayedText('');
     
-    const fullText = features[activeFeature].description;
     let currentIndex = 0;
+    let typingInterval: NodeJS.Timeout | null = null;
     
-    const typingInterval = setInterval(() => {
-      if (currentIndex <= fullText.length) {
-        setDisplayedText(fullText.slice(0, currentIndex));
-        currentIndex++;
-      } else {
+    const startTyping = () => {
+      typingInterval = setInterval(() => {
+        if (currentIndex < fullText.length) {
+          setDisplayedText(fullText.slice(0, currentIndex + 1));
+          currentIndex++;
+        } else {
+          if (typingInterval) {
+            clearInterval(typingInterval);
+            typingInterval = null;
+          }
+          setIsTyping(false);
+        }
+      }, ANIMATION.TYPING_SPEED);
+    };
+    
+    // Small delay to ensure state is ready
+    const timeoutId = setTimeout(startTyping, 50);
+    
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      if (typingInterval) {
         clearInterval(typingInterval);
-        setIsTyping(false);
+        typingInterval = null;
       }
-    }, 15);
-    
-    return () => clearInterval(typingInterval);
+      setIsTyping(false);
+    };
   }, [activeFeature]);
 
   // Improved snap detection with faster activation
@@ -300,12 +300,34 @@ The assistant helps you stay balanced from optimizing focus time to rearranging 
     };
   }, []);
 
-  // Wheel event - change tabs on scroll, lock section in place
+  // Keyboard navigation for tabs
   useEffect(() => {
-    if (!canChangeTab) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!sectionRef.current) return;
+      const rect = sectionRef.current.getBoundingClientRect();
+      const isVisible = rect.top < window.innerHeight && rect.bottom > 0;
+      
+      if (!isVisible) return;
+      
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        setActiveFeature((prev) => (prev > 0 ? prev - 1 : prev));
+      } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        setActiveFeature((prev) => (prev < FEATURES.length - 1 ? prev + 1 : prev));
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // Wheel event - change tabs on vertical OR horizontal scroll
+  useEffect(() => {
+    if (!canChangeTab || !FEATURES || FEATURES.length === 0) return;
     
     const handleWheel = (e: WheelEvent) => {
-      if (!sectionRef.current) return;
+      if (!sectionRef.current || !FEATURES || FEATURES.length === 0) return;
       
       // Batch DOM reads
       const rect = sectionRef.current.getBoundingClientRect();
@@ -319,44 +341,68 @@ The assistant helps you stay balanced from optimizing focus time to rearranging 
       
       if (isCentered) {
         // Prevent rapid changes
-        if (now - lastChangeRef.current < 800) {
+        if (now - lastChangeRef.current < SCROLL.COOLDOWN) {
           e.preventDefault();
           return;
         }
         
-        // Require significant scroll
-        const scrollThreshold = 40;
-        if (Math.abs(e.deltaY) < scrollThreshold) {
-          e.preventDefault();
+        const scrollThreshold = SCROLL.THRESHOLD;
+        const deltaX = Math.abs(e.deltaX);
+        const deltaY = Math.abs(e.deltaY);
+        
+        // Check for horizontal scrolling (swiping sideways with trackpad/mouse wheel)
+        // More sensitive: horizontal movement must be at least 1.5x vertical movement
+        if (deltaX > 0 && deltaX > deltaY * 1.5 && deltaX > scrollThreshold) {
+          // Horizontal scroll detected
+          if (e.deltaX > 0) {
+            // Scroll right - next tab
+            if (activeFeature < FEATURES.length - 1) {
+              e.preventDefault();
+              e.stopPropagation();
+              lastChangeRef.current = now;
+              setActiveFeature((prev) => prev + 1);
+            }
+          } else {
+            // Scroll left - previous tab
+            if (activeFeature > 0) {
+              e.preventDefault();
+              e.stopPropagation();
+              lastChangeRef.current = now;
+              setActiveFeature((prev) => prev - 1);
+            }
+          }
           return;
         }
         
-        if (e.deltaY > 0) {
-          // Scrolling down
-          if (activeFeature < features.length - 1) {
-            // Not at last tab - prevent scroll and change tab
-            e.preventDefault();
-            e.stopPropagation();
-            lastChangeRef.current = now;
-            setActiveFeature((prev) => prev + 1);
+        // Vertical scrolling (existing functionality)
+        if (deltaY > scrollThreshold && deltaY > deltaX * 1.5) {
+          if (e.deltaY > 0) {
+            // Scrolling down
+            if (activeFeature < FEATURES.length - 1) {
+              // Not at last tab - prevent scroll and change tab
+              e.preventDefault();
+              e.stopPropagation();
+              lastChangeRef.current = now;
+              setActiveFeature((prev) => prev + 1);
+            }
+            // At last tab - allow normal scroll to next section
+          } else if (e.deltaY < 0) {
+            // Scrolling up
+            if (activeFeature > 0) {
+              // Not at first tab - prevent scroll and change tab
+              e.preventDefault();
+              e.stopPropagation();
+              lastChangeRef.current = now;
+              setActiveFeature((prev) => prev - 1);
+            }
+            // At first tab - allow normal scroll to previous section
           }
-          // At last tab - allow normal scroll to next section
-        } else if (e.deltaY < 0) {
-          // Scrolling up
-          if (activeFeature > 0) {
-            // Not at first tab - prevent scroll and change tab
-            e.preventDefault();
-            e.stopPropagation();
-            lastChangeRef.current = now;
-            setActiveFeature((prev) => prev - 1);
-          }
-          // At first tab - allow normal scroll to previous section
         }
       }
     };
     
     window.addEventListener('wheel', handleWheel, { passive: false, capture: true });
-    return () => window.removeEventListener('wheel', handleWheel, { capture: true } as any);
+    return () => window.removeEventListener('wheel', handleWheel, { capture: true });
   }, [activeFeature, canChangeTab]);
 
   return (
@@ -364,13 +410,11 @@ The assistant helps you stay balanced from optimizing focus time to rearranging 
       ref={sectionRef}
       data-section="interactive-showcase"
       id="features"
-      className="px-6 bg-gray-50 dark:bg-gray-900 transition-colors duration-300" 
+      className="px-6 bg-gray-50 dark:bg-gray-900 transition-colors duration-300 overflow-x-hidden section-viewport"
       style={{
-        minHeight: 'calc(100vh - 80px)',
         display: 'flex',
         alignItems: 'center',
-        paddingTop: '2rem',
-        paddingBottom: '2rem',
+        justifyContent: 'center',
         scrollSnapAlign: 'center',
         scrollSnapStop: 'always'
       }}
@@ -381,75 +425,163 @@ The assistant helps you stay balanced from optimizing focus time to rearranging 
     >
       <div className="container mx-auto max-w-7xl w-full">
         {/* Glassmorphic Container */}
-        <div className="relative bg-white/40 backdrop-blur-2xl rounded-3xl p-8 md:p-12 border border-white/60 shadow-2xl overflow-hidden">
+        <div className="relative bg-white/40 backdrop-blur-2xl rounded-3xl p-8 md:p-12 border border-white/60 shadow-2xl overflow-visible">
           {/* Gradient glow effect */}
           <div className="absolute inset-0 bg-gradient-to-br from-white/30 via-transparent to-white/10 pointer-events-none"></div>
           
           <div className="relative z-10 flex flex-col lg:grid lg:grid-cols-[300px_1fr_300px] lg:gap-4 lg:items-center">
             {/* Description Text - Bottom on mobile (order-3), Left on desktop */}
-            <div className="order-3 mt-6 lg:mt-0 lg:order-1">
-              <div className="transition-all duration-300 ease-in-out text-justify">
+            <div className="order-3 mt-6 lg:mt-0 lg:order-1" role="tabpanel" id={`feature-panel-${activeFeature}`} aria-live="polite">
+              <div className="transition-all duration-300 ease-in-out text-justify min-h-[100px]">
                 <p className="text-gray-600 text-sm md:text-base lg:text-lg leading-relaxed whitespace-pre-line max-w-xs mx-auto lg:mx-0 lg:max-w-none">
-                  {displayedText}
-                  {isTyping && <span className="animate-pulse">|</span>}
+                  {displayedText || (FEATURES[activeFeature]?.description || '')}
+                  {isTyping && <span className="animate-pulse" aria-hidden="true">|</span>}
                 </p>
               </div>
             </div>
 
             {/* Center Container - Phone and Buttons */}
             <div className="flex flex-col items-center mx-auto order-2 lg:order-2">
-              {/* Feature Buttons - Above Phone on Mobile (order-1), Below on Desktop */}
-              <div 
-                ref={tabsContainerRef}
-                className="order-1 lg:order-2 flex flex-row gap-2 md:gap-4 w-full max-w-md mb-4 lg:mb-0 lg:mt-8 overflow-x-auto scrollbar-hide pb-2 lg:pb-0 justify-center md:justify-start"
-                style={{
-                  WebkitOverflowScrolling: 'touch',
-                  touchAction: isMobile ? 'pan-x' : 'pan-y pan-x'
-                }}
-              >
-                {features.map((feature, index) => {
-                  const IconComponent = feature.icon;
-                  const isTodo = feature.id === 'todo';
-                  return (
-                    <motion.button
-                      key={feature.id}
-                      onClick={() => setActiveFeature(index)}
-                      className="relative group flex-shrink-0 px-2 md:px-4 py-2 md:py-3 font-medium transition-all duration-300"
-                      whileHover={{ scale: 1.05, y: -5 }}
-                      whileTap={{ scale: 0.95 }}
-                      transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                    >
-                      <motion.div 
-                        className="flex flex-col items-center gap-1 md:gap-2"
-                        animate={{
-                          scale: activeFeature === index ? 1.1 : 1,
-                        }}
-                        transition={{ duration: 0.2 }}
+              {/* Feature Buttons - Below Phone on Desktop */}
+              {!isMobile && (
+                <div 
+                  ref={tabsContainerRef}
+                  className="order-1 lg:order-2 flex flex-row gap-2 md:gap-4 w-full max-w-md mb-4 lg:mb-0 lg:mt-8 overflow-x-auto scrollbar-hide pb-2 lg:pb-0 justify-center md:justify-start"
+                  style={{
+                    WebkitOverflowScrolling: 'touch',
+                    touchAction: 'pan-y pan-x'
+                  }}
+                  role="tablist"
+                  aria-label="Feature selection tabs"
+                >
+                  {FEATURES.map((feature, index) => {
+                    if (!feature || !feature.icon) return null;
+                    const IconComponent = feature.icon;
+                    return (
+                      <motion.button
+                        key={feature.id || index}
+                        onClick={() => setActiveFeature(index)}
+                        className="relative group flex-shrink-0 px-2 md:px-4 py-2 md:py-3 font-medium transition-all duration-300"
+                        whileHover={{ scale: 1.05, y: -5 }}
+                        whileTap={{ scale: 0.95 }}
+                        transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                        role="tab"
+                        aria-selected={activeFeature === index}
+                        aria-controls={`feature-panel-${index}`}
+                        aria-label={`Switch to ${feature.title} feature`}
+                        tabIndex={activeFeature === index ? 0 : -1}
                       >
-                        <IconComponent 
-                          className={`transition-all duration-300 ${activeFeature === index ? 'w-4 h-4 md:w-7 md:h-7' : 'w-3 h-3 md:w-6 md:h-6'}`}
-                          style={{ color: activeFeature === index ? feature.color : colors.neutral.gray }}
-                        />
-                        <span 
-                          className={`text-xs md:text-sm transition-all duration-300 whitespace-nowrap ${activeFeature === index ? 'font-bold' : 'font-normal'}`}
-                          style={{ color: activeFeature === index ? feature.color : colors.text.secondary }}
+                        <motion.div 
+                          className="flex flex-col items-center gap-1 md:gap-2"
+                          animate={{
+                            scale: activeFeature === index ? 1.1 : 1,
+                          }}
+                          transition={{ duration: 0.2 }}
                         >
-                          {feature.title}
-                        </span>
-                      </motion.div>
-                    </motion.button>
-                  );
-                })}
-              </div>
+                          <IconComponent 
+                            className={`transition-all duration-300 ${activeFeature === index ? 'w-4 h-4 md:w-7 md:h-7' : 'w-3 h-3 md:w-6 md:h-6'}`}
+                            style={{ color: activeFeature === index ? (feature.color || colors.neutral.gray) : colors.neutral.gray }}
+                          />
+                          <span 
+                            className={`text-xs md:text-sm transition-all duration-300 whitespace-nowrap ${activeFeature === index ? 'font-bold' : 'font-normal'}`}
+                            style={{ color: activeFeature === index ? (feature.color || colors.text.secondary) : colors.text.secondary }}
+                          >
+                            {feature.title || `Feature ${index + 1}`}
+                          </span>
+                        </motion.div>
+                      </motion.button>
+                    );
+                  })}
+                </div>
+              )}
 
-              {/* iPhone Mockup - Center */}
-              <div className="order-2 lg:order-1 relative">
+              {/* iPhone Mockup - Center with icons positioned relative to it */}
+              <div className="order-2 lg:order-1 relative overflow-visible mx-auto">
+                {/* Feature Buttons - Positioned relative to phone on mobile */}
+                {isMobile && (
+                  <>
+                    {/* Left side icons - Reminders and To-Do - Positioned to the left of phone */}
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2 flex flex-col gap-3 z-10" style={{ transform: 'translate(-100%, -50%)', marginLeft: '-12px' }}>
+                      {FEATURES.slice(0, 2).map((feature, idx) => {
+                        const IconComponent = feature.icon;
+                        return (
+                          <motion.button
+                            key={feature.id}
+                            onClick={() => setActiveFeature(idx)}
+                            className="relative group flex-shrink-0 px-2 py-2 font-medium transition-all duration-300"
+                            whileHover={{ scale: 1.05, y: -5 }}
+                            whileTap={{ scale: 0.95 }}
+                            transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                          >
+                            <motion.div 
+                              className="flex flex-col items-center gap-1"
+                              animate={{
+                                scale: activeFeature === idx ? 1.1 : 1,
+                              }}
+                              transition={{ duration: 0.2 }}
+                            >
+                              <IconComponent 
+                                className={`transition-all duration-300 ${activeFeature === idx ? 'w-4 h-4' : 'w-3 h-3'}`}
+                                style={{ color: activeFeature === idx ? feature.color : colors.neutral.gray }}
+                              />
+                              <span 
+                                className={`text-xs transition-all duration-300 whitespace-nowrap ${activeFeature === idx ? 'font-bold' : 'font-normal'}`}
+                                style={{ color: activeFeature === idx ? feature.color : colors.text.secondary }}
+                              >
+                                {feature.title}
+                              </span>
+                            </motion.div>
+                          </motion.button>
+                        );
+                      })}
+                    </div>
+                    
+                    {/* Right side icons - Calendar and AI - Positioned to the right of phone */}
+                    <div className="absolute right-0 top-1/2 -translate-y-1/2 flex flex-col gap-3 z-10" style={{ transform: 'translate(100%, -50%)', marginRight: '-12px' }}>
+                      {FEATURES.slice(2, 4).map((feature, idx) => {
+                        const IconComponent = feature.icon;
+                        const actualIndex = idx + 2;
+                        return (
+                          <motion.button
+                            key={feature.id}
+                            onClick={() => setActiveFeature(actualIndex)}
+                            className="relative group flex-shrink-0 px-2 py-2 font-medium transition-all duration-300"
+                            whileHover={{ scale: 1.05, y: -5 }}
+                            whileTap={{ scale: 0.95 }}
+                            transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                          >
+                            <motion.div 
+                              className="flex flex-col items-center gap-1"
+                              animate={{
+                                scale: activeFeature === actualIndex ? 1.1 : 1,
+                              }}
+                              transition={{ duration: 0.2 }}
+                            >
+                              <IconComponent 
+                                className={`transition-all duration-300 ${activeFeature === actualIndex ? 'w-4 h-4' : 'w-3 h-3'}`}
+                                style={{ color: activeFeature === actualIndex ? feature.color : colors.neutral.gray }}
+                              />
+                              <span 
+                                className={`text-xs transition-all duration-300 whitespace-nowrap ${activeFeature === actualIndex ? 'font-bold' : 'font-normal'}`}
+                                style={{ color: activeFeature === actualIndex ? feature.color : colors.text.secondary }}
+                              >
+                                {feature.title}
+                              </span>
+                            </motion.div>
+                          </motion.button>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+                
                 {/* Glow effect behind phone */}
                 <div 
                   className={`absolute inset-0 rounded-[3rem] transition-all duration-700 ${isMobile ? 'blur-2xl opacity-30' : 'blur-3xl opacity-50'}`}
                   style={{ 
-                    backgroundColor: features[activeFeature].color,
-                    transform: isMobile ? 'scale(1.05)' : 'scale(1.1)'
+                    backgroundColor: FEATURES[activeFeature]?.color || colors.features.todo,
+                    transform: isMobile ? 'scale(1.05)' : 'scale(1.1)',
+                    overflow: 'visible'
                   }}
                 ></div>
                 
@@ -475,7 +607,7 @@ The assistant helps you stay balanced from optimizing focus time to rearranging 
                     
                     {/* To-Do Demo Content */}
                     {activeFeature === 1 ? (
-                      <div className="relative z-10 flex flex-col h-full bg-gray-50 dark:bg-gray-900">
+                      <div className="relative z-10 flex flex-col h-full bg-gray-50 dark:bg-gray-900" style={{ position: 'relative' }}>
                         {/* Header */}
                         <div className={`${isMobile ? 'px-3 pt-4 pb-1.5' : isTablet ? 'px-3 pt-5 pb-1.5' : 'px-4 pt-6 pb-2'} border-b border-gray-200 dark:border-gray-700`}>
                           <h3 className={`${isMobile ? 'text-sm' : isTablet ? 'text-base' : 'text-lg'} font-bold text-gray-900 dark:text-white ${isMobile ? 'mb-0.5' : 'mb-1'}`}>Today</h3>
@@ -484,14 +616,13 @@ The assistant helps you stay balanced from optimizing focus time to rearranging 
                         
                         {/* Timeline Container - Matching App Style */}
                         {(() => {
-                          const timelineRange = getTimelineRange();
                           const timelineHeight = isMobile ? 280 : isTablet ? 300 : 320;
                           const paddingLeft = isMobile ? '2rem' : isTablet ? '2.5rem' : '3rem';
                           const paddingTop = isMobile ? '1.5rem' : isTablet ? '2rem' : '2.25rem';
                           const paddingBottom = isMobile ? '1rem' : isTablet ? '1.5rem' : '2rem';
                           
                           return (
-                            <div className="flex-1 relative overflow-hidden" style={{ 
+                            <div className="flex-1 relative overflow-visible" style={{ 
                               paddingLeft, 
                               paddingRight: '0.5rem', 
                               paddingTop, 
@@ -774,8 +905,14 @@ The assistant helps you stay balanced from optimizing focus time to rearranging 
                           );
                         })()}
                         
-                        {/* Floating + Button - Bottom Right */}
-                        <div className={`absolute ${isMobile ? 'bottom-1.5 right-6' : 'bottom-4 right-4'} z-20`}>
+                        {/* Floating + Button - Bottom Right - Positioned relative to screen container */}
+                        <div 
+                          className={`absolute ${isMobile ? 'bottom-1.5 right-6' : 'bottom-4 right-4'} z-20`} 
+                          style={{ 
+                            position: 'absolute',
+                            pointerEvents: 'auto'
+                          }}
+                        >
                           <style>{`
                             @keyframes breathe {
                               0%, 100% {
@@ -789,6 +926,21 @@ The assistant helps you stay balanced from optimizing focus time to rearranging 
                             }
                             
                             .breathing-button {
+                              animation: breathe 2s ease-in-out infinite;
+                            }
+                            
+                            @keyframes breathe {
+                              0%, 100% {
+                                transform: scale(1);
+                                opacity: 1;
+                              }
+                              50% {
+                                transform: scale(1.1);
+                                opacity: 0.9;
+                              }
+                            }
+                            
+                            .try-me-text {
                               animation: breathe 2s ease-in-out infinite;
                             }
                           `}</style>
@@ -855,7 +1007,8 @@ The assistant helps you stay balanced from optimizing focus time to rearranging 
                                 }
                               }
                             }}
-                            className={`${isMobile ? 'w-8 h-8' : 'w-10 h-10'} rounded-full bg-blue-500 text-white shadow-lg hover:bg-blue-600 hover:scale-110 transition-all flex items-center justify-center flex-shrink-0 breathing-button`}
+                            className={`${isMobile ? 'w-8 h-8' : 'w-10 h-10'} rounded-full bg-blue-500 text-white shadow-lg hover:bg-blue-600 hover:scale-110 active:scale-95 transition-transform flex items-center justify-center flex-shrink-0 breathing-button`}
+                            style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }}
                           >
                             <Plus className={isMobile ? 'w-4 h-4' : 'w-5 h-5'} />
                           </button>
@@ -881,4 +1034,8 @@ The assistant helps you stay balanced from optimizing focus time to rearranging 
     </motion.section>
   );
 }
+
+// Memoize component for performance
+export const LandingFeaturesMemo = memo(LandingFeatures);
+export { LandingFeaturesMemo as LandingFeatures };
 

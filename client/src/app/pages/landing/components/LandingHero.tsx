@@ -14,9 +14,9 @@ export function LandingHero() {
   };
 
   return (
-    <section className="relative min-h-[calc(100vh-80px)] md:min-h-screen overflow-hidden dark:bg-gray-900 flex flex-col" style={{ scrollSnapAlign: 'start', scrollSnapStop: 'always', paddingTop: 0 }}>
-      {/* Video with Outward Curved Bottom */}
-      <div className="relative w-full h-96 md:h-[500px] lg:h-[600px] mt-0">
+    <section data-section="hero" className="relative overflow-hidden dark:bg-gray-900 flex flex-col" style={{ scrollSnapAlign: 'start', scrollSnapStop: 'always', border: 'none', height: '100vh' }}>
+      {/* Video with Outward Curved Bottom - Starts at top, header overlays it */}
+      <div className="relative w-full h-96 md:h-[500px] lg:h-[600px]" style={{ border: 'none', outline: 'none', overflow: 'hidden' }}>
         <video 
           className="w-full h-full object-cover [&::-webkit-media-controls]:hidden [&::-webkit-media-controls-panel]:hidden [&::-webkit-media-controls-play-button]:hidden [&::-webkit-media-controls-start-playback-button]:hidden pointer-events-none"
           autoPlay 
@@ -34,7 +34,10 @@ export function LandingHero() {
           style={{
             clipPath: 'ellipse(120% 100% at 50% 0%)',
             WebkitClipPath: 'ellipse(120% 100% at 50% 0%)',
-            backgroundColor: colors.neutral.black
+            backgroundColor: colors.neutral.black,
+            border: 'none',
+            outline: 'none',
+            display: 'block'
           }}
           onLoadedMetadata={(e) => {
             // Start playing after metadata loads
@@ -82,7 +85,7 @@ export function LandingHero() {
       </div>
 
       {/* Text Section Below Curved Video */}
-      <div className="relative pt-16 pb-8 flex flex-col bg-gray-50 dark:bg-gray-900 transition-colors duration-300" style={{ minHeight: '50vh' }}>
+      <div className="relative pt-16 pb-8 flex flex-col bg-gray-50 dark:bg-gray-900 transition-colors duration-300 flex-1" style={{ minHeight: 0 }}>
         <div className="text-center px-6 flex-1 flex flex-col justify-center">
           <div className="flex justify-center mb-6 animate-fade-in">
             <img 
@@ -105,7 +108,7 @@ export function LandingHero() {
       </div>
       
       {/* Scroll Down Indicator - At Very Bottom of Section */}
-      <div className="absolute bottom-0 left-0 right-0 flex flex-col items-center gap-2 cursor-pointer animate-bounce pb-4" onClick={scrollToFeatures} style={{ zIndex: 10 }}>
+      <div className="absolute bottom-4 left-0 right-0 flex flex-col items-center gap-2 cursor-pointer animate-bounce" onClick={scrollToFeatures} style={{ zIndex: 10 }}>
         <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Scroll</span>
         <ChevronDown className="w-6 h-6 text-gray-700 dark:text-gray-300" />
       </div>

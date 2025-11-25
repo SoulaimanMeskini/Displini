@@ -10,6 +10,7 @@ import { colors } from '@/lib/designSystem';
 import { handleSuccess, handleError } from '@/lib/errorHandling';
 import { Header } from '@/app/pages/landing/components/Header';
 import { LandingFooter } from '@/app/pages/landing/components/LandingFooter';
+import { ChatButton } from '@/app/components/shared/ChatButton';
 import { useFeatureRequests, useCreateFeatureRequest, useLikeFeatureRequest } from '@/hooks/useFeatureRequests';
 import type { SortOption } from '@/api/featureRequests';
 
@@ -73,53 +74,53 @@ export default function FeatureRequests() {
           url="https://displini.com/feature-requests"
         />
       
-      <div className="py-20">
-        <div className="container mx-auto px-6 max-w-6xl">
-          <div className="text-center mb-12">
-            <h1 className="text-5xl font-bold mb-4 text-gray-900 dark:text-white">Feature Requests</h1>
-            <p className="text-xl text-gray-600 dark:text-gray-400">
+      <div className="py-8 md:py-12 lg:py-20">
+        <div className="container mx-auto px-4 sm:px-6 max-w-6xl">
+          <div className="text-center mb-8 md:mb-12">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-3 md:mb-4 text-gray-900 dark:text-white">Feature Requests</h1>
+            <p className="text-base sm:text-lg md:text-xl text-gray-600 dark:text-gray-400">
               Help us build the features you want. Share your ideas!
             </p>
           </div>
 
           {/* How It Works - Above Popular Requests, side-by-side on mobile */}
-          <div className="mb-12">
-            <div className="grid grid-cols-3 gap-4 md:gap-8">
+          <div className="mb-8 md:mb-12">
+            <div className="grid grid-cols-3 gap-2 sm:gap-4 md:gap-8">
               <div className="text-center">
                 <div 
-                  className="w-12 h-12 mx-auto mb-4 rounded-full flex items-center justify-center text-white font-bold"
+                  className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-2 sm:mb-3 md:mb-4 rounded-full flex items-center justify-center text-white text-sm sm:text-base font-bold"
                   style={{ backgroundColor: colors.brand.primary }}
                 >
                   1
                 </div>
-                <h3 className="font-semibold mb-2 text-gray-900 dark:text-white">Submit</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Share your feature idea with us</p>
+                <h3 className="text-xs sm:text-sm font-semibold mb-1 sm:mb-2 text-gray-900 dark:text-white">Submit</h3>
+                <p className="text-xs text-gray-600 dark:text-gray-400 px-1">Share your feature idea with us</p>
               </div>
               <div className="text-center">
                 <div 
-                  className="w-12 h-12 mx-auto mb-4 rounded-full flex items-center justify-center text-white font-bold"
+                  className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-2 sm:mb-3 md:mb-4 rounded-full flex items-center justify-center text-white text-sm sm:text-base font-bold"
                   style={{ backgroundColor: colors.brand.primary }}
                 >
                   2
                 </div>
-                <h3 className="font-semibold mb-2 text-gray-900 dark:text-white">Review</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">We review and prioritize requests</p>
+                <h3 className="text-xs sm:text-sm font-semibold mb-1 sm:mb-2 text-gray-900 dark:text-white">Review</h3>
+                <p className="text-xs text-gray-600 dark:text-gray-400 px-1">We review and prioritize requests</p>
               </div>
               <div className="text-center">
                 <div 
-                  className="w-12 h-12 mx-auto mb-4 rounded-full flex items-center justify-center text-white font-bold"
+                  className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-2 sm:mb-3 md:mb-4 rounded-full flex items-center justify-center text-white text-sm sm:text-base font-bold"
                   style={{ backgroundColor: colors.brand.primary }}
                 >
                   3
                 </div>
-                <h3 className="font-semibold mb-2 text-gray-900 dark:text-white">Build</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Top requests get built into the app</p>
+                <h3 className="text-xs sm:text-sm font-semibold mb-1 sm:mb-2 text-gray-900 dark:text-white">Build</h3>
+                <p className="text-xs text-gray-600 dark:text-gray-400 px-1">Top requests get built into the app</p>
               </div>
             </div>
           </div>
 
           {/* Sort Toggle */}
-          <div className="flex justify-center items-center gap-4 mb-8">
+          <div className="flex flex-wrap justify-center items-center gap-2 sm:gap-4 mb-6 md:mb-8">
             <Button
               variant={sort === 'top' ? 'default' : 'outline'}
               onClick={() => {
@@ -148,10 +149,10 @@ export default function FeatureRequests() {
             </Button>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-12">
+          <div className="grid md:grid-cols-2 gap-6 md:gap-8 lg:gap-12">
             {/* Feature Requests List */}
             <div>
-              <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white flex items-center gap-2">
+              <h2 className="text-xl sm:text-2xl font-bold mb-4 md:mb-6 text-gray-900 dark:text-white flex items-center gap-2">
                 <TrendingUp className="w-6 h-6" style={{ color: colors.brand.primary }} />
                 {sort === 'top' ? 'Popular Requests' : 'Recent Requests'}
               </h2>
@@ -230,7 +231,7 @@ export default function FeatureRequests() {
 
             {/* Submit Request Form */}
             <div>
-              <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white flex items-center gap-2">
+              <h2 className="text-xl sm:text-2xl font-bold mb-4 md:mb-6 text-gray-900 dark:text-white flex items-center gap-2">
                 <Lightbulb className="w-6 h-6" style={{ color: colors.brand.secondary }} />
                 Submit Your Idea
               </h2>
@@ -314,6 +315,7 @@ export default function FeatureRequests() {
       </div>
       </div>
       <LandingFooter />
+      <ChatButton />
     </>
   );
 }

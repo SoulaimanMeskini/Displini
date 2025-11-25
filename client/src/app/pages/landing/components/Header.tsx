@@ -34,7 +34,8 @@ export function Header() {
       // Also try to find custom scroll container (for Landing page)
       const scrollContainer = Array.from(document.querySelectorAll('div')).find(el => {
         const style = el.getAttribute('style');
-        return style?.includes('overflowY: scroll') || style?.includes('overflow-y: scroll');
+        return style?.includes('overflowY') || style?.includes('overflow-y') || 
+               (el.scrollHeight > el.clientHeight && getComputedStyle(el).overflowY !== 'hidden');
       }) as HTMLElement | null;
       
       const containerScrollY = scrollContainer ? scrollContainer.scrollTop : 0;
@@ -51,7 +52,9 @@ export function Header() {
     const tryAttachToContainer = () => {
       const scrollContainer = Array.from(document.querySelectorAll('div')).find(el => {
         const style = el.getAttribute('style');
-        return style?.includes('overflowY: scroll') || style?.includes('overflow-y: scroll');
+        const computedStyle = getComputedStyle(el);
+        return style?.includes('overflowY') || style?.includes('overflow-y') || 
+               (el.scrollHeight > el.clientHeight && computedStyle.overflowY !== 'hidden');
       }) as HTMLElement | null;
       
       if (scrollContainer) {

@@ -68,13 +68,13 @@ export function LandingFAQ({ showHelpText = true }: LandingFAQProps = {}) {
   ];
 
   return (
-    <section id="faq" data-section="faq" className="py-12 md:py-20 flex flex-col items-center justify-center relative bg-gray-50 dark:bg-gray-900 transition-colors duration-300" style={{ scrollSnapAlign: 'start', scrollSnapStop: 'normal', minHeight: 'calc(100vh - 80px)' }}>
-      <div className="container mx-auto px-6 w-full flex flex-col items-center">
-        <h2 className="text-2xl md:text-4xl lg:text-5xl font-bold text-center mb-8 md:mb-16 text-gray-900 dark:text-white">
+    <section id="faq" data-section="faq" className="flex flex-col items-center justify-center relative bg-gray-50 dark:bg-gray-900 transition-colors duration-300 px-6 section-viewport" style={{ scrollSnapAlign: 'start', scrollSnapStop: 'always', zIndex: 10 }}>
+      <div className="container mx-auto px-6 w-full flex flex-col items-center relative z-30">
+        <h2 className="text-2xl md:text-3xl font-bold text-center mb-8 md:mb-16 text-gray-900 dark:text-white">
           Frequently Asked Questions
         </h2>
-        <div className="max-w-3xl mx-auto w-full">
-          <Card className="bg-white/60 backdrop-blur-xl border-white/80 overflow-hidden shadow-2xl">
+        <div className="max-w-3xl mx-auto w-full relative z-30">
+          <Card className="bg-white/60 backdrop-blur-xl border-white/80 overflow-hidden shadow-2xl relative z-30">
             <div className="divide-y divide-gray-200">
               {faqs.map((faq, index) => (
                 <div key={index}>
@@ -113,13 +113,13 @@ export function LandingFAQ({ showHelpText = true }: LandingFAQProps = {}) {
         
         {/* Arrow & Text - ABSOLUTE AT BOTTOM OF SECTION - Hidden on mobile and when showHelpText is false */}
         {showHelpText && (
-        <div ref={arrowRef} className="hidden md:block absolute bottom-16 md:bottom-32 left-4 md:left-12">
+        <div ref={arrowRef} className="hidden md:block absolute" style={{ zIndex: 40, bottom: '-200px', left: '40px', transform: 'translateY(0)' }}>
           <AnimatePresence mode="wait">
             {showArrow && (
               <motion.div 
                 className="relative z-40"
                 style={{
-                  marginLeft: '24px',
+                  marginLeft: '0px',
                   width: 'fit-content'
                 }}
                 initial={{ opacity: 0 }}
@@ -130,7 +130,7 @@ export function LandingFAQ({ showHelpText = true }: LandingFAQProps = {}) {
                 {/* Text */}
                 <motion.p 
                   className="text-gray-900 dark:text-gray-300 font-medium text-sm whitespace-nowrap mb-4"
-                  style={{ marginTop: '60px' }}
+                  style={{ marginTop: '20px' }}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 10, transition: { duration: 0.2 } }}

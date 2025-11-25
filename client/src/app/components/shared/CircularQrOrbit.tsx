@@ -84,8 +84,6 @@ export function CircularQrOrbit({
     <div
       className="relative inline-block"
       style={{ width: size, height: size }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
     >
       {/* Rotating SVG Text - Hidden on mobile */}
       {!isMobile && (
@@ -93,7 +91,7 @@ export function CircularQrOrbit({
         width={size}
         height={size}
         viewBox={`0 0 ${size} ${size}`}
-        className="absolute inset-0"
+        className="absolute inset-0 pointer-events-none"
         style={{ 
           rotate: rotation,
           transformOrigin: 'center'
@@ -128,7 +126,14 @@ export function CircularQrOrbit({
 
       {/* Center QR Code */}
       <div className="absolute inset-0 flex items-center justify-center">
-        <div className="relative group">
+        <a 
+          href="https://linktr.ee/displini"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="relative group block"
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+        >
           <div 
             className="absolute inset-0 rounded-3xl blur-2xl opacity-30 group-hover:opacity-50 transition-opacity duration-500"
             style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)' }}
@@ -155,7 +160,7 @@ export function CircularQrOrbit({
               loading="lazy"
             />
           </div>
-        </div>
+        </a>
       </div>
     </div>
   );

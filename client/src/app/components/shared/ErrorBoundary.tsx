@@ -1,6 +1,7 @@
 import React, { Component, ReactNode } from 'react';
 import { Button } from '@/app/components/ui/button';
 import { AlertCircle, RefreshCw } from 'lucide-react';
+import { ErrorDetails } from './ErrorDetails';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -95,19 +96,10 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
             </p>
 
             {process.env.NODE_ENV === 'development' && this.state.error && (
-              <details className="mb-6 text-left">
-                <summary className="cursor-pointer text-sm font-medium text-gray-700 mb-2">
-                  Error Details (Development Only)
-                </summary>
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-xs font-mono overflow-auto max-h-48">
-                  <p className="text-red-800 font-bold mb-2">{this.state.error.toString()}</p>
-                  {this.state.errorInfo && (
-                    <pre className="text-red-700 whitespace-pre-wrap">
-                      {this.state.errorInfo.componentStack}
-                    </pre>
-                  )}
-                </div>
-              </details>
+              <ErrorDetails 
+                error={this.state.error} 
+                errorInfo={this.state.errorInfo} 
+              />
             )}
 
             <div className="flex flex-col sm:flex-row gap-3 justify-center">

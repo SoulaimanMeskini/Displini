@@ -12,7 +12,6 @@ import BottomNav from "@/app/shared/BottomNav";
 import PageTransition from "@/app/shared/PageTransition";
 import OnboardingDialog from "@/app/components/shared/OnboardingDialog";
 import { LoadingScreen } from "@/app/components/shared/LoadingScreen";
-import { ChatButton } from "@/app/components/shared/ChatButton";
 
 // Lazy load pages for better performance
 const Login = lazy(() => import("@/app/pages/auth/Login"));
@@ -114,8 +113,6 @@ function Router() {
           />
         </>
       )}
-      {/* Show chat button on all pages */}
-      <ChatButton />
     </>
   );
 }

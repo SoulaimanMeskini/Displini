@@ -10,10 +10,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export default defineConfig(async () => ({
   plugins: [
     react(),
-    runtimeErrorOverlay(),
+    // Only enable runtime error overlay in Replit environment (when REPL_ID is defined)
     ...(process.env.NODE_ENV !== "production" &&
     process.env.REPL_ID !== undefined
       ? [
+          runtimeErrorOverlay(),
           (await import("@replit/vite-plugin-cartographer")).cartographer(),
           (await import("@replit/vite-plugin-dev-banner")).devBanner(),
         ]

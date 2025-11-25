@@ -13,8 +13,11 @@ export function LandingFooter() {
     document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  // Check if we're on the landing page
+  const isLandingPage = typeof window !== 'undefined' && window.location.pathname === '/';
+  
   return (
-    <footer className="py-6 md:py-12 lg:py-16" style={{ backgroundColor: '#1d1d1d', scrollSnapAlign: 'none', scrollSnapStop: 'normal', minHeight: 'auto', position: 'relative', zIndex: 40, marginTop: '-30px', marginBottom: 0, paddingTop: '24px', paddingBottom: 0 }}>
+    <footer className="py-6 md:py-12 lg:py-16" style={{ backgroundColor: '#1d1d1d', scrollSnapAlign: 'end', scrollSnapStop: 'always', minHeight: 'auto', position: 'relative', zIndex: 100, marginTop: 0, marginBottom: 0, paddingTop: '24px', paddingBottom: '40px' }}>
       <div className="container mx-auto px-4 sm:px-6 md:px-8 lg:px-6 md:pt-8">
         {/* Mobile Layout - Centered */}
         <div className="md:hidden">
@@ -30,6 +33,7 @@ export function LandingFooter() {
                 loading="lazy"
               />
             </div>
+            {!isLandingPage && (
             <div className="flex justify-center space-x-3 sm:space-x-4">
               <a href="https://x.com/displini_" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors" aria-label="Follow us on X">
                 <svg className="w-5 h-5" viewBox="0 0 16 16" fill="currentColor">
@@ -48,6 +52,7 @@ export function LandingFooter() {
                 <Youtube className="w-5 h-5" />
               </a>
             </div>
+            )}
           </div>
 
           {/* Links Grid - Centered for mobile */}
@@ -122,7 +127,7 @@ export function LandingFooter() {
 
           {/* Copyright - Mobile */}
           <div className="text-center pt-4 sm:pt-6 border-t border-gray-700">
-            <p className="text-gray-400 text-xs sm:text-xs">
+            <p className="text-gray-400 text-xs sm:text-xs text-center">
               © {new Date().getFullYear()} Displini. All rights reserved.
             </p>
           </div>
@@ -143,6 +148,7 @@ export function LandingFooter() {
                   loading="lazy"
                 />
               </div>
+              {!isLandingPage && (
               <div className="flex space-x-4 mb-6">
                 <a href="https://x.com/displini_" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors" aria-label="Follow us on X">
                   <svg className="w-6 h-6" viewBox="0 0 16 16" fill="currentColor">
@@ -161,6 +167,7 @@ export function LandingFooter() {
                   <Youtube className="w-6 h-6" />
                 </a>
               </div>
+              )}
             </div>
 
             {/* Middle Columns - Links */}
@@ -233,7 +240,7 @@ export function LandingFooter() {
 
         {/* Copyright - Desktop */}
         <div className="hidden md:block text-center pt-8 border-t border-gray-700">
-          <p className="text-gray-400 text-sm">
+          <p className="text-gray-400 text-sm text-center">
             © {new Date().getFullYear()} Displini. All rights reserved.
           </p>
         </div>

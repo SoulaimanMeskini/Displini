@@ -23,15 +23,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/app/componen
 import { UniversalDialog, PageHeader, FeatureDialogs, FeaturesSidebar } from "@/app/components/shared";
 import { Input } from "@/app/components/ui/input";
 import { Label } from "@/app/components/ui/label";
-import { useDarkMode } from "@/hooks/useDarkMode";
 import { Textarea } from "@/app/components/ui/textarea";
-import { Menu, Sun, Moon } from "lucide-react";
+import { Menu } from "lucide-react";
 import { format, addDays, startOfWeek, isToday, isSameDay, subDays } from "date-fns";
 import { useOptimizedLocalStorage } from "@/hooks/useLocalStorage";
 import { useTasksOptimized } from "@/hooks/useTasksOptimized";
 
 export default function Todo() {
-  const { isDark, toggle: toggleDarkMode } = useDarkMode();
   const [showStats, setShowStats] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showFeaturesMenu, setShowFeaturesMenu] = useState(false);
@@ -47,8 +45,6 @@ export default function Todo() {
   const [isOfficeDialogOpen, setIsOfficeDialogOpen] = useState(false);
   const [isStudentDialogOpen, setIsStudentDialogOpen] = useState(false);
   const [isJournalDialogOpen, setIsJournalDialogOpen] = useState(false);
-  const [showBreakReminder, setShowBreakReminder] = useState(false);
-  const breakReminderTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [quoteSettings, setQuoteSettings] = useState(getQuoteSettings());
   
   // Listen for openAddTask event from bottom nav
@@ -116,14 +112,6 @@ export default function Todo() {
     return () => window.removeEventListener('openJournal', handleOpenJournal);
   }, []);
 
-  // Cleanup break reminder timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (breakReminderTimeoutRef.current) {
-        clearTimeout(breakReminderTimeoutRef.current);
-      }
-    };
-  }, []);
 
   // Listen for quote settings changes
   useEffect(() => {
@@ -389,28 +377,7 @@ export default function Todo() {
         return false;
       });
       
-      // Show break reminder if 6 or more tasks scheduled (excluding reminders)
-      const userTasks = tasksForDate.filter(t => 
-        t.source !== 'water' && 
-        t.source !== 'medication' && 
-        t.source !== 'steps' && 
-        t.source !== 'sleep'
-      );
-      
-      if (userTasks.length >= 6) {
-        // Clear any existing timeout
-        if (breakReminderTimeoutRef.current) {
-          clearTimeout(breakReminderTimeoutRef.current);
-        }
-        
-        // Show the reminder
-        setShowBreakReminder(true);
-        
-        // Hide after 4 seconds
-        breakReminderTimeoutRef.current = setTimeout(() => {
-          setShowBreakReminder(false);
-        }, 4000);
-      }
+      // Break reminder removed per user request
       
       return updatedTasks;
     });
@@ -561,7 +528,10 @@ export default function Todo() {
       t.source !== 'water' && 
       t.source !== 'sleep' && 
       t.source !== 'steps' &&
-      !t.parentId // Exclude child tasks
+      t.source !== 'startup' && // Exclude startup container tasks
+      t.source !== 'winddown' && // Exclude winddown container tasks
+      !t.parentId && // Exclude child tasks
+      !t.isContainer // Exclude container tasks
     );
     const completed = countable.filter(t => t.completed).length;
     const total = countable.length;
@@ -590,14 +560,6 @@ export default function Todo() {
             </h1>
           </div>
           <div className="flex items-center gap-2">
-            <Button 
-              variant="ghost" 
-              size="icon"
-              onClick={toggleDarkMode}
-              aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-            >
-              {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-            </Button>
             <Button 
               variant="ghost" 
               size="icon"
@@ -864,26 +826,6 @@ export default function Todo() {
         )}
       </Suspense>
 
-      {/* Friendly Break Reminder */}
-      {showBreakReminder && (
-        <div 
-          className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-bottom-5 duration-300"
-        >
-          <div className="bg-card border border-primary/20 rounded-2xl shadow-xl px-6 py-4 max-w-sm">
-            <div className="flex items-center gap-3">
-              <span className="text-3xl">☕</span>
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-foreground">
-                  Hey, remember to take a break!
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  You've got quite a few tasks planned. Don't forget to rest! 💙
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Features Sidebar */}
       <FeaturesSidebar
