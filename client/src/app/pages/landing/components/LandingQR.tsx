@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { motion, useInView } from "framer-motion";
 import { CircularQrOrbit } from "@/app/components/shared/CircularQrOrbit";
 import { CheckSquare, Users, TrendingUp } from "lucide-react";
+import styles from "../landing.module.css";
 
 /**
  * QR Code download section with animated stats
@@ -59,16 +60,13 @@ export function LandingQR() {
     return () => window.removeEventListener('resize', updateSize);
   }, []);
 
+  const sectionRef = useRef<HTMLElement>(null);
+  const isSectionInView = useInView(sectionRef, { once: false, amount: 0.1 });
+
   return (
     <section 
-      className="relative px-6 bg-gray-50 dark:bg-gray-900 transition-colors duration-300 section-viewport"
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        scrollSnapAlign: 'start',
-        scrollSnapStop: 'always',
-      }}
+      ref={sectionRef}
+      className={`relative px-6 bg-gray-50 dark:bg-gray-900 transition-colors duration-300 section-viewport ${styles.scrollSnapStart} flex items-center justify-center`}
       data-section="qr-code"
     >
       <div className="container mx-auto max-w-4xl w-full">
@@ -81,14 +79,19 @@ export function LandingQR() {
           </p>
           
           {/* QR Code - Clickable */}
-          <div className="mb-4 md:mb-6 inline-block">
+          <motion.div 
+            className="mb-4 md:mb-6 inline-block"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={isSectionInView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.8 }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
+          >
             <CircularQrOrbit 
               qrSrc="/images/Qr_code.svg"
               size={qrSize}
               speedSec={8}
               words={['Discipline', 'Improve', 'Benefit', 'Energy', 'Calm', 'Focus', 'Growth', 'Balance', 'Aware']}
             />
-          </div>
+          </motion.div>
           
           {/* App Store buttons */}
           <div className="flex gap-4 md:gap-8 items-end mb-4 md:mb-6">

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Card } from "@/app/components/ui/card";
 import { Plus } from "lucide-react";
 import { colors } from "@/lib/designSystem";
+import styles from "../landing.module.css";
 
 /**
  * FAQ section with expandable questions and sticky arrow
@@ -14,7 +15,7 @@ interface LandingFAQProps {
   showHelpText?: boolean;
 }
 
-export function LandingFAQ({ showHelpText = true }: LandingFAQProps = {}) {
+export function LandingFAQ({ showHelpText = true }: LandingFAQProps) {
   const [openIndices, setOpenIndices] = useState<number[]>([]);
   const [showArrow, setShowArrow] = useState(false);
   const [animationKey, setAnimationKey] = useState(0);
@@ -68,7 +69,7 @@ export function LandingFAQ({ showHelpText = true }: LandingFAQProps = {}) {
   ];
 
   return (
-    <section id="faq" data-section="faq" className="flex flex-col items-center justify-center relative bg-gray-50 dark:bg-gray-900 transition-colors duration-300 px-6 section-viewport" style={{ scrollSnapAlign: 'start', scrollSnapStop: 'always', zIndex: 10 }}>
+    <section id="faq" data-section="faq" className={`flex flex-col items-center justify-center relative bg-gray-50 dark:bg-gray-900 transition-colors duration-300 px-6 section-viewport ${styles.scrollSnapStart}`} style={{ zIndex: 10 }}>
       <div className="container mx-auto px-6 w-full flex flex-col items-center relative z-30">
         <h2 className="text-2xl md:text-3xl font-bold text-center mb-8 md:mb-16 text-gray-900 dark:text-white">
           Frequently Asked Questions

@@ -4,6 +4,7 @@ import { Plus } from "lucide-react";
 import { FEATURES, TIMELINE, ANIMATION, SCROLL } from "../constants";
 import { useWindowSize } from "../hooks";
 import { colors } from "@/lib/designSystem";
+import styles from "../landing.module.css";
 import type { Feature } from "../constants";
 
 /**
@@ -410,14 +411,7 @@ function LandingFeatures() {
       ref={sectionRef}
       data-section="interactive-showcase"
       id="features"
-      className="px-6 bg-gray-50 dark:bg-gray-900 transition-colors duration-300 overflow-x-hidden section-viewport"
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        scrollSnapAlign: 'center',
-        scrollSnapStop: 'always'
-      }}
+      className={`px-6 bg-gray-50 dark:bg-gray-900 transition-colors duration-300 overflow-x-hidden section-viewport ${styles.featuresSection}`}
       initial={{ opacity: 0 }}
       whileInView={{ opacity: 1 }}
       transition={{ duration: 0.6 }}
@@ -501,7 +495,7 @@ function LandingFeatures() {
                 {isMobile && (
                   <>
                     {/* Left side icons - Reminders and To-Do - Positioned to the left of phone */}
-                    <div className="absolute left-0 top-1/2 -translate-y-1/2 flex flex-col gap-3 z-10" style={{ transform: 'translate(-100%, -50%)', marginLeft: '-12px' }}>
+                    <div className={`absolute left-0 top-1/2 -translate-y-1/2 flex flex-col gap-3 z-10 ${styles.mobileIconLeft}`}>
                       {FEATURES.slice(0, 2).map((feature, idx) => {
                         const IconComponent = feature.icon;
                         return (
@@ -537,7 +531,7 @@ function LandingFeatures() {
                     </div>
                     
                     {/* Right side icons - Calendar and AI - Positioned to the right of phone */}
-                    <div className="absolute right-0 top-1/2 -translate-y-1/2 flex flex-col gap-3 z-10" style={{ transform: 'translate(100%, -50%)', marginRight: '-12px' }}>
+                    <div className={`absolute right-0 top-1/2 -translate-y-1/2 flex flex-col gap-3 z-10 ${styles.mobileIconRight}`}>
                       {FEATURES.slice(2, 4).map((feature, idx) => {
                         const IconComponent = feature.icon;
                         const actualIndex = idx + 2;

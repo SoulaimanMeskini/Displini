@@ -75,7 +75,8 @@ export function CircularQrOrbit({
     return () => {
       controls.stop();
     };
-  }, [prefersReducedMotion, speedSec, isMobile, rotation]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefersReducedMotion, speedSec, isMobile]);
 
   const radius = (size - 60) / 2; // Account for text size
   const text = words.join(' • '); // Increased spacing for better visibility

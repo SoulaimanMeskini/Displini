@@ -3,6 +3,7 @@ import { BookHeart, Target, Users, Heart } from "lucide-react";
 import { useState, useRef, useEffect, memo, useCallback } from "react";
 import { colors } from "@/lib/designSystem";
 import { useWindowSize } from "../hooks";
+import styles from "../landing.module.css";
 
 /**
  * About Us / Our Story section
@@ -103,8 +104,7 @@ function LandingAbout() {
       <section 
         ref={sectionRef}
         data-section="about"
-        className="hidden lg:flex relative px-6 bg-gray-50 dark:bg-gray-900 transition-colors duration-300 items-center justify-center section-viewport"
-        style={{ scrollSnapAlign: 'start', scrollSnapStop: 'always' }}
+        className={`hidden lg:flex relative px-6 bg-gray-50 dark:bg-gray-900 transition-colors duration-300 items-center justify-center section-viewport ${styles.scrollSnapStart}`}
         onMouseMove={handleMouseMove}
         onMouseLeave={() => setHoveredCard(null)}
       >
@@ -288,8 +288,7 @@ function LandingAbout() {
       <section
         ref={sectionRef}
         data-section="about-story"
-        className="lg:hidden relative px-6 bg-gray-50 dark:bg-gray-900 transition-colors duration-300 flex items-center justify-center section-viewport"
-        style={{ scrollSnapAlign: 'start', scrollSnapStop: 'always' }}
+        className={`lg:hidden relative px-6 bg-gray-50 dark:bg-gray-900 transition-colors duration-300 flex items-center justify-center section-viewport ${styles.scrollSnapStart}`}
         onMouseMove={handleMouseMove}
         onMouseLeave={() => setHoveredCard(null)}
       >
@@ -363,8 +362,7 @@ function LandingAbout() {
       <section
         ref={sectionRef}
         data-section="about-values"
-        className="lg:hidden relative px-6 bg-gray-50 dark:bg-gray-900 transition-colors duration-300 flex items-center justify-center section-viewport"
-        style={{ scrollSnapAlign: 'start', scrollSnapStop: 'always' }}
+        className={`lg:hidden relative px-6 bg-gray-50 dark:bg-gray-900 transition-colors duration-300 flex items-center justify-center section-viewport ${styles.scrollSnapStart}`}
         onMouseMove={handleMouseMove}
         onMouseLeave={() => setHoveredCard(null)}
       >

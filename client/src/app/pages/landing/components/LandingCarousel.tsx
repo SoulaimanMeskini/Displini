@@ -2,7 +2,9 @@ import { useState, useEffect, useRef, useCallback, memo } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { CarouselScrollIndicator } from "@/app/components/shared/CarouselScrollIndicator";
 import { CAROUSEL_FEATURES, CAROUSEL } from "../constants";
-import { useThrottle } from "../hooks";
+import { useThrottle, useWindowSize } from "../hooks";
+import { colors } from "@/lib/designSystem";
+import styles from "../landing.module.css";
 import type { CarouselFeature } from "../constants";
 
 /**
@@ -13,6 +15,23 @@ import type { CarouselFeature } from "../constants";
  * - Drag support on desktop
  */
 function LandingCarousel() {
+  const { isMobile } = useWindowSize();
+  
+  // Defensive check for constants
+  if (!CAROUSEL_FEATURES || CAROUSEL_FEATURES.length === 0) {
+    return (
+      <section 
+        data-section="carousel" 
+        className={`flex items-center bg-gray-50 dark:bg-gray-900 transition-colors duration-300 px-6 section-viewport ${styles.scrollSnapStart}`}
+        style={{ scrollSnapStop: 'always', minHeight: 'calc(100vh - 80px)' }}
+      >
+        <div className="w-full text-center">
+          <p className="text-gray-600">Loading carousel...</p>
+        </div>
+      </section>
+    );
+  }
+
   const [currentIndex, setCurrentIndex] = useState(1);
   const [scrollIndex, setScrollIndex] = useState((CAROUSEL.TOTAL_COPIES / 2) * CAROUSEL_FEATURES.length + 1);
   const [isDragging, setIsDragging] = useState(false);
@@ -25,25 +44,35 @@ function LandingCarousel() {
   const cursorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const mobileScrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const handleMouseMove = useThrottle((e: React.MouseEvent<HTMLDivElement>) => {
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const direction = x < rect.width / 2 ? 'left' : 'right';
     
+    // Update direction immediately for responsive feel
     if (direction !== cursorDirection) {
       if (cursorTimeoutRef.current) {
         clearTimeout(cursorTimeoutRef.current);
       }
       cursorTimeoutRef.current = setTimeout(() => {
         setCursorDirection(direction);
-      }, 50);
+      }, 30);
     }
     
+    // Update position immediately for smooth movement
     setCursorPosition({ x: e.clientX, y: e.clientY, show: true });
-  }, 16); // ~60fps
+  }, [cursorDirection]);
 
-  const handleMouseLeave = useCallback(() => {
-    setCursorPosition((prev) => ({ ...prev, show: false }));
+  const handleMouseLeave = useCallback((e: React.MouseEvent<HTMLElement>) => {
+    // Only hide cursor if we're actually leaving the section
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX;
+    const y = e.clientY;
+    
+    // Check if mouse is still within section bounds
+    if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+      setCursorPosition((prev) => ({ ...prev, show: false }));
+    }
   }, []);
 
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -64,7 +93,12 @@ function LandingCarousel() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
   
-  const handleClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+  const handleClick = useCallback((e: React.MouseEvent<HTMLElement>) => {
+    // Only handle clicks on desktop
+    if (isMobile) return;
+    
+    e.preventDefault();
+    e.stopPropagation();
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
     
@@ -75,7 +109,7 @@ function LandingCarousel() {
       setScrollIndex(prev => prev + 1);
       setCurrentIndex((prev) => (prev + 1) % CAROUSEL_FEATURES.length);
     }
-  }, []);
+  }, [isMobile]);
 
   // Auto-scroll when scrollIndex changes
   useEffect(() => {
@@ -241,10 +275,87 @@ function LandingCarousel() {
   return (
     <section 
       data-section="carousel" 
-      className="flex items-center bg-gray-50 dark:bg-gray-900 transition-colors duration-300 px-6 section-viewport" 
-      style={{ scrollSnapAlign: 'start', scrollSnapStop: 'always' }}
+      className={`flex items-center justify-center bg-gray-50 dark:bg-gray-900 transition-colors duration-300 px-6 section-viewport ${styles.scrollSnapStart}`}
+      style={{ 
+        scrollSnapStop: 'always', 
+        minHeight: 'calc(100vh - 80px)',
+        height: 'calc(100vh - 80px)',
+        position: 'relative',
+        zIndex: 1,
+        cursor: 'none'
+      }}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      onClick={!isMobile ? handleClick : undefined}
+      onWheel={!isMobile ? (e) => {
+        // Only handle horizontal scrolling, let vertical scrolling pass through
+        const isWideScreen = window.innerWidth >= 1024; // lg breakpoint
+        if (isWideScreen) {
+          return; // Don't prevent default or handle wheel on wide screens
+        }
+        
+        // Only intercept if horizontal scroll is dominant
+        const isHorizontalScroll = Math.abs(e.deltaX) > Math.abs(e.deltaY);
+        
+        if (!isHorizontalScroll) {
+          // Allow vertical scrolling to pass through for page navigation
+          return;
+        }
+        
+        // Capture horizontal scroll for carousel (only on smaller screens)
+        if (carouselRef.current && isHorizontalScroll) {
+          e.preventDefault();
+          e.stopPropagation();
+          
+          // Throttle scroll updates for better performance using requestAnimationFrame
+          if (carouselRef.current.dataset.scrolling === 'true') return;
+          carouselRef.current.dataset.scrolling = 'true';
+          
+          const scrollContainer = carouselRef.current;
+          const scrollAmount = e.deltaX * 0.3;
+          
+          requestAnimationFrame(() => {
+            if (scrollContainer) {
+              scrollContainer.scrollBy({
+                left: scrollAmount,
+                behavior: 'auto'
+              });
+              scrollContainer.dataset.scrolling = 'false';
+            }
+          });
+        }
+      } : undefined}
     >
-      <div className="w-full">
+      {/* Custom Cursor - Rendered at section level so it works everywhere */}
+      <div 
+        className="fixed pointer-events-none z-[9999]"
+        style={{ 
+          left: cursorPosition.show ? `${cursorPosition.x}px` : '-9999px', 
+          top: cursorPosition.show ? `${cursorPosition.y}px` : '-9999px',
+          transform: 'translate(-50%, -50%)',
+          willChange: 'transform',
+          backfaceVisibility: 'hidden',
+          pointerEvents: 'none',
+          opacity: cursorPosition.show ? 1 : 0,
+          transition: 'opacity 0.1s ease-out'
+        }}
+      >
+        <div 
+          className="w-12 h-12 rounded-full flex items-center justify-center"
+          style={{ 
+            backgroundColor: colors.neutral.charcoal,
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5), 0 0 0 2px rgba(255, 255, 255, 0.2)'
+          }}
+        >
+          {cursorDirection === 'left' ? (
+            <ChevronLeft className="w-7 h-7 text-white" strokeWidth={3} />
+          ) : (
+            <ChevronRight className="w-7 h-7 text-white" strokeWidth={3} />
+          )}
+        </div>
+      </div>
+
+      <div className="w-full flex flex-col items-center justify-center" style={{ minHeight: '100%' }}>
         {/* Title */}
         <div className="text-center mb-12 px-6 w-full flex justify-center">
           <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-3">
@@ -255,64 +366,8 @@ function LandingCarousel() {
         {/* Desktop Carousel */}
         <div 
           className="relative cursor-none hidden md:block overflow-hidden w-full"
-          onMouseMove={handleMouseMove}
-          onMouseLeave={handleMouseLeave}
-          onClick={handleClick}
-          style={{ pointerEvents: 'auto' }}
-          onWheel={(e) => {
-            // Disable sideways scrolling on wide screens (only allow on smaller screens)
-            const isWideScreen = window.innerWidth >= 1024; // lg breakpoint
-            if (isWideScreen) {
-              return; // Don't prevent default or handle wheel on wide screens
-            }
-            
-            // Capture scroll anywhere in carousel area (only on smaller screens)
-            if (carouselRef.current) {
-              e.preventDefault();
-              e.stopPropagation();
-              
-              // Throttle scroll updates for better performance using requestAnimationFrame
-              if (carouselRef.current.dataset.scrolling === 'true') return;
-              carouselRef.current.dataset.scrolling = 'true';
-              
-              const scrollContainer = carouselRef.current;
-              const delta = Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
-              // Reduce sensitivity for smoother scrolling
-              const scrollAmount = delta * 0.3;
-              
-              requestAnimationFrame(() => {
-                if (scrollContainer) {
-                  scrollContainer.scrollBy({
-                    left: scrollAmount,
-                    behavior: 'auto' // Use auto for instant scrolling, smoother performance
-                  });
-                  scrollContainer.dataset.scrolling = 'false';
-                }
-              });
-            }
-          }}
+          style={{ pointerEvents: 'auto', cursor: 'none' }}
         >
-          {/* Custom Cursor */}
-          {cursorPosition.show && (
-            <div 
-              className="fixed w-12 h-12 rounded-full pointer-events-none z-50 flex items-center justify-center transition-opacity duration-200"
-              style={{ 
-                left: cursorPosition.x - 24, 
-                top: cursorPosition.y - 24,
-                backgroundColor: colors.neutral.charcoal,
-                transition: 'opacity 0.2s ease'
-              }}
-            >
-              <div className="transition-transform duration-300 ease-out">
-                {cursorDirection === 'left' ? (
-                  <ChevronLeft className="w-6 h-6 text-white transition-all duration-300" />
-                ) : (
-                  <ChevronRight className="w-6 h-6 text-white transition-all duration-300" />
-                )}
-              </div>
-            </div>
-          )}
-
           {/* Carousel Container */}
           <div 
             ref={carouselRef}

@@ -1,5 +1,6 @@
 import { ChevronDown } from "lucide-react";
 import { colors } from "@/lib/designSystem";
+import styles from "../landing.module.css";
 
 /**
  * Hero section for landing page
@@ -14,9 +15,9 @@ export function LandingHero() {
   };
 
   return (
-    <section data-section="hero" className="relative overflow-hidden dark:bg-gray-900 flex flex-col" style={{ scrollSnapAlign: 'start', scrollSnapStop: 'always', border: 'none', height: '100vh' }}>
+    <section data-section="hero" className={`relative overflow-hidden dark:bg-gray-900 flex flex-col ${styles.heroSection}`}>
       {/* Video with Outward Curved Bottom - Starts at top, header overlays it */}
-      <div className="relative w-full h-96 md:h-[500px] lg:h-[600px]" style={{ border: 'none', outline: 'none', overflow: 'hidden' }}>
+      <div className={`relative w-full h-96 md:h-[500px] lg:h-[600px] ${styles.videoContainer}`}>
         <video 
           className="w-full h-full object-cover [&::-webkit-media-controls]:hidden [&::-webkit-media-controls-panel]:hidden [&::-webkit-media-controls-play-button]:hidden [&::-webkit-media-controls-start-playback-button]:hidden pointer-events-none"
           autoPlay 
@@ -31,13 +32,9 @@ export function LandingHero() {
           width="1920"
           height="1080"
           aria-label="Displini app demonstration video showing productivity and health tracking features"
+          className={styles.videoElement}
           style={{
-            clipPath: 'ellipse(120% 100% at 50% 0%)',
-            WebkitClipPath: 'ellipse(120% 100% at 50% 0%)',
             backgroundColor: colors.neutral.black,
-            border: 'none',
-            outline: 'none',
-            display: 'block'
           }}
           onLoadedMetadata={(e) => {
             // Start playing after metadata loads
@@ -65,7 +62,7 @@ export function LandingHero() {
               width="24"
               height="24"
               className="w-6 h-6 filter brightness-0 invert object-contain"
-              style={{ display: 'block' }}
+              className={styles.blockDisplay}
               loading="lazy"
             />
           </div>
@@ -77,7 +74,7 @@ export function LandingHero() {
               width="24"
               height="24"
               className="w-6 h-6 filter brightness-0 invert object-contain"
-              style={{ display: 'block' }}
+              className={styles.blockDisplay}
               loading="lazy"
             />
           </div>
@@ -85,7 +82,7 @@ export function LandingHero() {
       </div>
 
       {/* Text Section Below Curved Video */}
-      <div className="relative pt-16 pb-8 flex flex-col bg-gray-50 dark:bg-gray-900 transition-colors duration-300 flex-1" style={{ minHeight: 0 }}>
+      <div className={`relative pt-16 pb-8 flex flex-col bg-gray-50 dark:bg-gray-900 transition-colors duration-300 flex-1 ${styles.heroTextSection}`}>
         <div className="text-center px-6 flex-1 flex flex-col justify-center">
           <div className="flex justify-center mb-6 animate-fade-in">
             <img 
@@ -98,17 +95,17 @@ export function LandingHero() {
               loading="eager"
             />
           </div>
-          <p className="text-base md:text-lg mb-4 max-w-3xl mx-auto animate-fade-in text-gray-900 dark:text-gray-100 font-medium" style={{animationDelay: '0.2s'}}>
+          <p className={`text-base md:text-lg mb-4 max-w-3xl mx-auto animate-fade-in text-gray-900 dark:text-gray-100 font-medium ${styles.animationDelay200}`}>
             Displini is an application that helps you build structure, improve your health and routines.
           </p>
-          <p className="text-xl md:text-2xl italic text-gray-900 dark:text-displini-400 mb-8 animate-fade-in font-semibold" style={{animationDelay: '0.4s'}}>
+          <p className={`text-xl md:text-2xl italic text-gray-900 dark:text-displini-400 mb-8 animate-fade-in font-semibold ${styles.animationDelay400}`}>
             Stay focused. Stay Displini.
           </p>
         </div>
       </div>
       
       {/* Scroll Down Indicator - At Very Bottom of Section */}
-      <div className="absolute bottom-4 left-0 right-0 flex flex-col items-center gap-2 cursor-pointer animate-bounce" onClick={scrollToFeatures} style={{ zIndex: 10 }}>
+      <div className={`absolute bottom-4 left-0 right-0 flex flex-col items-center gap-2 cursor-pointer animate-bounce ${styles.scrollIndicator}`} onClick={scrollToFeatures}>
         <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Scroll</span>
         <ChevronDown className="w-6 h-6 text-gray-700 dark:text-gray-300" />
       </div>
