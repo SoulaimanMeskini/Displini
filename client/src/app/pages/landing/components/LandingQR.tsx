@@ -68,8 +68,9 @@ export function LandingQR() {
       ref={sectionRef}
       className={`relative px-6 bg-gray-50 dark:bg-gray-900 transition-colors duration-300 section-viewport ${styles.scrollSnapStart} flex items-center justify-center`}
       data-section="qr-code"
+      style={{ minHeight: 'calc(100vh - 80px)' }}
     >
-      <div className="container mx-auto max-w-4xl w-full">
+      <div className="container mx-auto max-w-4xl w-full flex items-center justify-center">
         <div className="flex flex-col items-center justify-center w-full">
           <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2 md:mb-4 text-center w-full">
             Download Displini

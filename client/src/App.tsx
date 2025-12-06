@@ -10,7 +10,6 @@ import { useAuth } from "@/hooks/useAuth";
 import Landing from "@/app/pages/landing/Landing";
 import BottomNav from "@/app/shared/BottomNav";
 import PageTransition from "@/app/shared/PageTransition";
-import OnboardingDialog from "@/app/components/shared/OnboardingDialog";
 import { LoadingScreen } from "@/app/components/shared/LoadingScreen";
 
 // Lazy load pages for better performance
@@ -104,7 +103,7 @@ function Router() {
       </PageTransition>
       {isAuthenticated && location.startsWith('/app') && (
         <>
-          <OnboardingDialog />
+          {/* OnboardingDialog removed - will be replaced with account setup flow later */}
           <BottomNav 
             onAddTask={location === '/app/todo' ? handleAddTask : undefined}
             onAddReminder={location === '/app/reminders' ? handleAddReminder : undefined}

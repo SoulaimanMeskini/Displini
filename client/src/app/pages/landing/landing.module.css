@@ -4,10 +4,30 @@
 .scrollContainer {
   scroll-snap-type: y mandatory;
   height: 100vh;
+  height: 100dvh; /* Dynamic viewport height for mobile */
   overflow-y: auto;
+  overflow-x: hidden;
   padding-top: 0;
   overscroll-behavior: none;
   -webkit-overflow-scrolling: touch;
+}
+
+/* Landscape mode adjustments */
+@media (orientation: landscape) and (max-height: 600px) {
+  .scrollContainer {
+    height: 100vh;
+    height: 100dvh;
+  }
+  
+  .heroSection {
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+  
+  .section-viewport {
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
 }
 
 /* Hero Section */

@@ -14,4 +14,5 @@ export { default as FeatureDialog } from './FeatureDialog';
 export { FeaturesSidebar } from './FeaturesSidebar';
 export { PageHeader } from './PageHeader';
 export { FeatureDialogs } from './FeatureDialogs';
+export { default as CreateReminderDialog } from './CreateReminderDialog';
 

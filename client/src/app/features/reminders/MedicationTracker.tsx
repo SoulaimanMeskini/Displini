@@ -551,7 +551,7 @@ export default function MedicationTracker({ isOpen, onClose }: MedicationTracker
                 <div className="flex gap-2 pt-4 justify-center">
                   <Button 
                     onClick={addMedication} 
-                    className="rounded-full px-8"
+                    className="rounded-full px-8 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
                     disabled={!newMedication.name.trim() || !newMedication.dosage.trim()}
                   >
                     {editingMode ? 'Update Medication' : 'Add Medication'}
@@ -677,20 +677,9 @@ export default function MedicationTracker({ isOpen, onClose }: MedicationTracker
     
     {/* Info Dialog */}
     <Dialog open={showInfo} onOpenChange={setShowInfo}>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-        <DialogHeader className="relative">
-          <div className="flex items-center justify-between gap-2">
-            <DialogTitle>Medication Reminder Information</DialogTitle>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => setShowInfo(false)}
-              aria-label="Close"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto [&>button]:hidden">
+        <DialogHeader>
+          <DialogTitle>Medication Reminder Information</DialogTitle>
         </DialogHeader>
         <div className="py-4 space-y-4">
           <p className="text-sm text-muted-foreground">

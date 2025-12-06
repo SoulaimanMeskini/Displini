@@ -19,7 +19,7 @@ export function LandingHero() {
       {/* Video with Outward Curved Bottom - Starts at top, header overlays it */}
       <div className={`relative w-full h-96 md:h-[500px] lg:h-[600px] ${styles.videoContainer}`}>
         <video 
-          className="w-full h-full object-cover [&::-webkit-media-controls]:hidden [&::-webkit-media-controls-panel]:hidden [&::-webkit-media-controls-play-button]:hidden [&::-webkit-media-controls-start-playback-button]:hidden pointer-events-none"
+          className={`w-full h-full object-cover [&::-webkit-media-controls]:hidden [&::-webkit-media-controls-panel]:hidden [&::-webkit-media-controls-play-button]:hidden [&::-webkit-media-controls-start-playback-button]:hidden pointer-events-none ${styles.videoElement}`}
           autoPlay 
           muted 
           loop 
@@ -32,7 +32,6 @@ export function LandingHero() {
           width="1920"
           height="1080"
           aria-label="Displini app demonstration video showing productivity and health tracking features"
-          className={styles.videoElement}
           style={{
             backgroundColor: colors.neutral.black,
           }}
@@ -61,8 +60,7 @@ export function LandingHero() {
               alt="Download on App Store"
               width="24"
               height="24"
-              className="w-6 h-6 filter brightness-0 invert object-contain"
-              className={styles.blockDisplay}
+              className={`w-6 h-6 filter brightness-0 invert object-contain ${styles.blockDisplay}`}
               loading="lazy"
             />
           </div>
@@ -73,8 +71,7 @@ export function LandingHero() {
               alt="Get it on Google Play"
               width="24"
               height="24"
-              className="w-6 h-6 filter brightness-0 invert object-contain"
-              className={styles.blockDisplay}
+              className={`w-6 h-6 filter brightness-0 invert object-contain ${styles.blockDisplay}`}
               loading="lazy"
             />
           </div>
@@ -91,7 +88,7 @@ export function LandingHero() {
               width="200"
               height="64"
               className="h-12 md:h-16 w-auto dark:brightness-0 dark:invert"
-              fetchPriority="high"
+              fetchpriority="high"
               loading="eager"
             />
           </div>

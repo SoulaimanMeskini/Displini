@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Moon, Sun, Clock, Settings, Plus, Edit, Trash2, Bell } from "lucide-react";
+import { Moon, Sun, Clock, Settings, Plus, Edit, Trash2, Bell, X, AlertTriangle } from "lucide-react";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/app/components/ui/dialog";
@@ -8,6 +8,7 @@ import { Label } from "@/app/components/ui/label";
 import { Switch } from "@/app/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/app/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/app/components/ui/tabs";
+import { Alert, AlertDescription } from "@/app/components/ui/alert";
 import { colors } from "@/lib/designSystem";
 
 interface SleepSchedule {
@@ -21,6 +22,10 @@ interface SleepSchedule {
   days: string[];
   windDownActivities: WindDownActivity[];
   startUpActivities: StartUpActivity[];
+  windDownSubtasks?: SleepScheduleSubtask[];
+  startUpSubtasks?: SleepScheduleSubtask[];
+  windDownColor?: string;
+  startUpColor?: string;
 }
 
 interface WindDownActivity {
@@ -29,6 +34,8 @@ interface WindDownActivity {
   duration: number;
   description: string;
   isActive: boolean;
+  subtasks?: Array<{ id: string; title: string; completed: boolean }>;
+  color?: string;
 }
 
 interface StartUpActivity {
@@ -37,6 +44,14 @@ interface StartUpActivity {
   duration: number;
   description: string;
   isActive: boolean;
+  subtasks?: Array<{ id: string; title: string; completed: boolean }>;
+  color?: string;
+}
+
+interface SleepScheduleSubtask {
+  id: string;
+  title: string;
+  completed: boolean;
 }
 
 interface SleepScheduleFeatureProps {
@@ -62,7 +77,33 @@ export default function SleepScheduleFeature({ isOpen, onClose }: SleepScheduleF
   useEffect(() => {
     const savedSchedules = localStorage.getItem('sleepSchedules');
     if (savedSchedules) {
-      setSchedules(JSON.parse(savedSchedules));
+      const parsedSchedules = JSON.parse(savedSchedules);
+      setSchedules(parsedSchedules);
+      
+      // Clean up tasks from inactive schedules
+      const activeScheduleIds = parsedSchedules
+        .filter((s: SleepSchedule) => s.isActive)
+        .map((s: SleepSchedule) => s.id);
+      
+      const existingTasks = JSON.parse(localStorage.getItem('todos') || '[]');
+      const filteredTasks = existingTasks.filter((t: any) => {
+        // Check sleep tasks
+        if (t.source === 'sleep' && (t.sleepAction === 'wake' || t.sleepAction === 'sleep')) {
+          const taskScheduleId = t.id.split('_')[2];
+          return activeScheduleIds.includes(taskScheduleId);
+        }
+        // Check winddown/startup tasks
+        if (t.source === 'winddown' || t.source === 'startup') {
+          const taskScheduleId = t.id.split('_')[1];
+          return activeScheduleIds.includes(taskScheduleId);
+        }
+        return true;
+      });
+      
+      if (filteredTasks.length !== existingTasks.length) {
+        localStorage.setItem('todos', JSON.stringify(filteredTasks));
+        window.dispatchEvent(new Event('todosUpdated'));
+      }
     }
   }, []);
 
@@ -102,7 +143,15 @@ export default function SleepScheduleFeature({ isOpen, onClose }: SleepScheduleF
     name: '',
     bedtime: '',
     wakeTime: '',
-    days: [] as string[]
+    days: [] as string[],
+    enableStartUp: false,
+    enableWindDown: false,
+    startUpDuration: 0,
+    windDownDuration: 0,
+    startUpSubtasks: [] as SleepScheduleSubtask[],
+    windDownSubtasks: [] as SleepScheduleSubtask[],
+    startUpColor: '#F59E0B', // Default orange
+    windDownColor: '#8B5CF6' // Default purple
   });
 
   // Calculate durations from activities
@@ -168,17 +217,40 @@ export default function SleepScheduleFeature({ isOpen, onClose }: SleepScheduleF
 
   const handleAddSchedule = () => {
     if (newSchedule.name.trim() && newSchedule.bedtime && newSchedule.wakeTime) {
+      // Create single activity for startup/winddown with subtasks
+      const startUpActivity: StartUpActivity | null = newSchedule.enableStartUp ? {
+        id: 'startup-main',
+        name: 'Start Up',
+        duration: newSchedule.startUpDuration,
+        description: '',
+        isActive: true,
+        subtasks: newSchedule.startUpSubtasks
+      } : null;
+      
+      const windDownActivity: WindDownActivity | null = newSchedule.enableWindDown ? {
+        id: 'winddown-main',
+        name: 'Wind Down',
+        duration: newSchedule.windDownDuration,
+        description: '',
+        isActive: true,
+        subtasks: newSchedule.windDownSubtasks
+      } : null;
+      
       const schedule: SleepSchedule = {
         id: Date.now().toString(),
         name: newSchedule.name,
         bedtime: newSchedule.bedtime,
         wakeTime: newSchedule.wakeTime,
-        windDownDuration: 0, // Will be calculated from activities
-        startUpDuration: 0, // Will be calculated from activities
+        windDownDuration: newSchedule.enableWindDown ? newSchedule.windDownDuration : 0,
+        startUpDuration: newSchedule.enableStartUp ? newSchedule.startUpDuration : 0,
         isActive: true,
         days: newSchedule.days,
-        windDownActivities: [],
-        startUpActivities: []
+        windDownActivities: windDownActivity ? [windDownActivity] : [],
+        startUpActivities: startUpActivity ? [startUpActivity] : [],
+        windDownSubtasks: newSchedule.windDownSubtasks,
+        startUpSubtasks: newSchedule.startUpSubtasks,
+        windDownColor: newSchedule.windDownColor,
+        startUpColor: newSchedule.startUpColor
       };
       
       setSchedules([...schedules, schedule]);
@@ -186,7 +258,15 @@ export default function SleepScheduleFeature({ isOpen, onClose }: SleepScheduleF
         name: '',
         bedtime: '',
         wakeTime: '',
-        days: []
+        days: [],
+        enableStartUp: false,
+        enableWindDown: false,
+        startUpDuration: 0,
+        windDownDuration: 0,
+        startUpSubtasks: [],
+        windDownSubtasks: [],
+        startUpColor: '#F59E0B',
+        windDownColor: '#8B5CF6'
       });
       setShowAddSchedule(false);
       
@@ -302,17 +382,45 @@ export default function SleepScheduleFeature({ isOpen, onClose }: SleepScheduleF
         createTasksFromSchedule(schedule, true); // Show message when enabling
       }
     } else {
-      // Schedule is being disabled - remove sleep markers from timeline
-      const today = new Date();
-      const todayStr = today.toISOString().split('T')[0];
+      // Schedule is being disabled - remove ALL tasks (sleep, winddown, startup) for this schedule across ALL dates
       const existingTasks = JSON.parse(localStorage.getItem('todos') || '[]');
-      const filteredTasks = existingTasks.filter((t: any) => 
-        !(t.dueDate === todayStr && 
-          t.source === 'sleep' &&
-          (t.sleepAction === 'wake' || t.sleepAction === 'sleep'))
-      );
+      const filteredTasks = existingTasks.filter((t: any) => {
+        // Remove sleep tasks for this schedule
+        if (t.source === 'sleep' && (t.sleepAction === 'wake' || t.sleepAction === 'sleep')) {
+          // Task IDs are formatted as: sleep_wake_${schedule.id}_${date} or sleep_bed_${schedule.id}_${date}
+          const taskScheduleId = t.id.split('_')[2];
+          return taskScheduleId !== id;
+        }
+        // Remove winddown/startup tasks for this schedule
+        if (t.source === 'winddown' || t.source === 'startup') {
+          // Task IDs are formatted as: winddown_${schedule.id}_${activity.id}_${date}_${index}
+          // or: startup_${schedule.id}_${activity.id}_${date}_${index}
+          const taskScheduleId = t.id.split('_')[1];
+          return taskScheduleId !== id;
+        }
+        return true;
+      });
       localStorage.setItem('todos', JSON.stringify(filteredTasks));
-      localStorage.removeItem('sleepSchedule');
+      
+      // Only remove sleepSchedule from localStorage if no other active schedules exist
+      const activeSchedules = updatedSchedules.filter(s => s.isActive);
+      if (activeSchedules.length === 0) {
+        localStorage.removeItem('sleepSchedule');
+      } else {
+        // Update sleepSchedule with the first active schedule's times
+        const firstActiveSchedule = activeSchedules[0];
+        const sleepScheduleForTimeline = {
+          wakeTime: firstActiveSchedule.wakeTime,
+          bedtime: firstActiveSchedule.bedtime,
+          sleepTime: firstActiveSchedule.bedtime,
+          daily: {
+            wakeTime: firstActiveSchedule.wakeTime,
+            sleepTime: firstActiveSchedule.bedtime
+          }
+        };
+        localStorage.setItem('sleepSchedule', JSON.stringify(sleepScheduleForTimeline));
+      }
+      
       window.dispatchEvent(new Event('todosUpdated'));
     }
   };
@@ -336,24 +444,22 @@ export default function SleepScheduleFeature({ isOpen, onClose }: SleepScheduleF
           windDownDuration
         };
         
-        // If this schedule is active and it's a scheduled day, recreate tasks
+        // Remove all winddown/startup tasks for this schedule across all dates and recreate them
         if (schedule.isActive) {
-          const today = new Date();
-          const todayDayName = today.toLocaleDateString('en-US', { weekday: 'long' });
-          if (schedule.days.includes(todayDayName)) {
-            // Remove old tasks and create new ones
-            const todayStr = today.toISOString().split('T')[0];
-            const existingTasks = JSON.parse(localStorage.getItem('todos') || '[]');
-            const filteredTasks = existingTasks.filter((t: any) => 
-              !(t.dueDate === todayStr && 
-                (t.source === 'winddown' || t.source === 'startup' || 
-                 (t.source === 'sleep' && (t.sleepAction === 'wake' || t.sleepAction === 'sleep'))))
-            );
-            localStorage.setItem('todos', JSON.stringify(filteredTasks));
-            
-            // Use setTimeout to ensure state has updated
-            setTimeout(() => createTasksFromSchedule(updated, false), 100);
-          }
+          const existingTasks = JSON.parse(localStorage.getItem('todos') || '[]');
+          const filteredTasks = existingTasks.filter((t: any) => {
+            // Remove all winddown/startup tasks for this schedule
+            if (t.source === 'winddown' || t.source === 'startup') {
+              // Check if task belongs to this schedule by checking the schedule ID in the task ID
+              const taskScheduleId = t.id.split('_')[1];
+              return taskScheduleId !== scheduleId;
+            }
+            return true;
+          });
+          localStorage.setItem('todos', JSON.stringify(filteredTasks));
+          
+          // Recreate tasks for all scheduled days
+          setTimeout(() => createTasksFromSchedule(updated, false), 100);
         }
         return updated;
       }
@@ -380,24 +486,22 @@ export default function SleepScheduleFeature({ isOpen, onClose }: SleepScheduleF
           startUpDuration
         };
         
-        // If this schedule is active and it's a scheduled day, recreate tasks
+        // Remove all winddown/startup tasks for this schedule across all dates and recreate them
         if (schedule.isActive) {
-          const today = new Date();
-          const todayDayName = today.toLocaleDateString('en-US', { weekday: 'long' });
-          if (schedule.days.includes(todayDayName)) {
-            // Remove old tasks and create new ones
-            const todayStr = today.toISOString().split('T')[0];
-            const existingTasks = JSON.parse(localStorage.getItem('todos') || '[]');
-            const filteredTasks = existingTasks.filter((t: any) => 
-              !(t.dueDate === todayStr && 
-                (t.source === 'winddown' || t.source === 'startup' || 
-                 (t.source === 'sleep' && (t.sleepAction === 'wake' || t.sleepAction === 'sleep'))))
-            );
-            localStorage.setItem('todos', JSON.stringify(filteredTasks));
-            
-            // Use setTimeout to ensure state has updated
-            setTimeout(() => createTasksFromSchedule(updated, false), 100);
-          }
+          const existingTasks = JSON.parse(localStorage.getItem('todos') || '[]');
+          const filteredTasks = existingTasks.filter((t: any) => {
+            // Remove all winddown/startup tasks for this schedule
+            if (t.source === 'winddown' || t.source === 'startup') {
+              // Check if task belongs to this schedule by checking the schedule ID in the task ID
+              const taskScheduleId = t.id.split('_')[1];
+              return taskScheduleId !== scheduleId;
+            }
+            return true;
+          });
+          localStorage.setItem('todos', JSON.stringify(filteredTasks));
+          
+          // Recreate tasks for all scheduled days
+          setTimeout(() => createTasksFromSchedule(updated, false), 100);
         }
         return updated;
       }
@@ -415,11 +519,33 @@ export default function SleepScheduleFeature({ isOpen, onClose }: SleepScheduleF
           .filter(a => a.isActive)
           .reduce((total, activity) => total + activity.duration, 0);
         
-        return {
+        const updated = {
           ...schedule,
           windDownActivities: updatedActivities,
           windDownDuration
         };
+        
+        // Remove all winddown/startup tasks for this schedule across all dates and recreate them
+        if (schedule.isActive) {
+          const existingTasks = JSON.parse(localStorage.getItem('todos') || '[]');
+          const filteredTasks = existingTasks.filter((t: any) => {
+            // Remove all winddown/startup tasks for this schedule
+            if (t.source === 'winddown' || t.source === 'startup') {
+              // Check if task belongs to this schedule by checking the schedule ID in the task ID
+              // Task IDs are formatted as: winddown_${schedule.id}_${activity.id}_${date}_${index}
+              // or: startup_${schedule.id}_${activity.id}_${date}_${index}
+              const taskScheduleId = t.id.split('_')[1];
+              return taskScheduleId !== scheduleId;
+            }
+            return true;
+          });
+          localStorage.setItem('todos', JSON.stringify(filteredTasks));
+          
+          // Recreate tasks for all scheduled days
+          setTimeout(() => createTasksFromSchedule(updated, false), 100);
+        }
+        
+        return updated;
       }
       return schedule;
     }));
@@ -435,11 +561,33 @@ export default function SleepScheduleFeature({ isOpen, onClose }: SleepScheduleF
           .filter(a => a.isActive)
           .reduce((total, activity) => total + activity.duration, 0);
         
-        return {
+        const updated = {
           ...schedule,
           startUpActivities: updatedActivities,
           startUpDuration
         };
+        
+        // Remove all winddown/startup tasks for this schedule across all dates and recreate them
+        if (schedule.isActive) {
+          const existingTasks = JSON.parse(localStorage.getItem('todos') || '[]');
+          const filteredTasks = existingTasks.filter((t: any) => {
+            // Remove all winddown/startup tasks for this schedule
+            if (t.source === 'winddown' || t.source === 'startup') {
+              // Check if task belongs to this schedule by checking the schedule ID in the task ID
+              // Task IDs are formatted as: winddown_${schedule.id}_${activity.id}_${date}_${index}
+              // or: startup_${schedule.id}_${activity.id}_${date}_${index}
+              const taskScheduleId = t.id.split('_')[1];
+              return taskScheduleId !== scheduleId;
+            }
+            return true;
+          });
+          localStorage.setItem('todos', JSON.stringify(filteredTasks));
+          
+          // Recreate tasks for all scheduled days
+          setTimeout(() => createTasksFromSchedule(updated, false), 100);
+        }
+        
+        return updated;
       }
       return schedule;
     }));
@@ -453,11 +601,33 @@ export default function SleepScheduleFeature({ isOpen, onClose }: SleepScheduleF
           .filter(a => a.isActive)
           .reduce((total, activity) => total + activity.duration, 0);
         
-        return {
+        const updated = {
           ...schedule,
           windDownActivities: updatedActivities,
           windDownDuration
         };
+        
+        // Remove all winddown/startup tasks for this schedule across all dates and recreate them
+        if (schedule.isActive) {
+          const existingTasks = JSON.parse(localStorage.getItem('todos') || '[]');
+          const filteredTasks = existingTasks.filter((t: any) => {
+            // Remove all winddown/startup tasks for this schedule
+            if (t.source === 'winddown' || t.source === 'startup') {
+              // Check if task belongs to this schedule by checking the schedule ID in the task ID
+              // Task IDs are formatted as: winddown_${schedule.id}_${activity.id}_${date}_${index}
+              // or: startup_${schedule.id}_${activity.id}_${date}_${index}
+              const taskScheduleId = t.id.split('_')[1];
+              return taskScheduleId !== scheduleId;
+            }
+            return true;
+          });
+          localStorage.setItem('todos', JSON.stringify(filteredTasks));
+          
+          // Recreate tasks for all scheduled days
+          setTimeout(() => createTasksFromSchedule(updated, false), 100);
+        }
+        
+        return updated;
       }
       return schedule;
     }));
@@ -471,11 +641,33 @@ export default function SleepScheduleFeature({ isOpen, onClose }: SleepScheduleF
           .filter(a => a.isActive)
           .reduce((total, activity) => total + activity.duration, 0);
         
-        return {
+        const updated = {
           ...schedule,
           startUpActivities: updatedActivities,
           startUpDuration
         };
+        
+        // Remove all winddown/startup tasks for this schedule across all dates and recreate them
+        if (schedule.isActive) {
+          const existingTasks = JSON.parse(localStorage.getItem('todos') || '[]');
+          const filteredTasks = existingTasks.filter((t: any) => {
+            // Remove all winddown/startup tasks for this schedule
+            if (t.source === 'winddown' || t.source === 'startup') {
+              // Check if task belongs to this schedule by checking the schedule ID in the task ID
+              // Task IDs are formatted as: winddown_${schedule.id}_${activity.id}_${date}_${index}
+              // or: startup_${schedule.id}_${activity.id}_${date}_${index}
+              const taskScheduleId = t.id.split('_')[1];
+              return taskScheduleId !== scheduleId;
+            }
+            return true;
+          });
+          localStorage.setItem('todos', JSON.stringify(filteredTasks));
+          
+          // Recreate tasks for all scheduled days
+          setTimeout(() => createTasksFromSchedule(updated, false), 100);
+        }
+        
+        return updated;
       }
       return schedule;
     }));
@@ -558,7 +750,12 @@ export default function SleepScheduleFeature({ isOpen, onClose }: SleepScheduleF
               allDay: false,
               source: 'winddown',
               emoji: '🌙',
-              color: '#8B5CF6' // Purple color for wind down
+              // No color property - winddown tasks should not show filled color on timeline
+              subtasks: activity.subtasks?.map(st => ({
+                id: `${st.id}_${targetDateStr}`,
+                text: st.title,
+                completed: st.completed
+              }))
             });
         }
       }
@@ -600,7 +797,12 @@ export default function SleepScheduleFeature({ isOpen, onClose }: SleepScheduleF
             allDay: false,
             source: 'startup',
             emoji: '☀️',
-            color: '#F59E0B' // Orange color for start up
+            // No color property - startup tasks should not show filled color on timeline
+            subtasks: activity.subtasks?.map(st => ({
+              id: `${st.id}_${targetDateStr}`,
+              text: st.title,
+              completed: st.completed
+            }))
           });
         }
       }
@@ -618,9 +820,23 @@ export default function SleepScheduleFeature({ isOpen, onClose }: SleepScheduleF
     };
     localStorage.setItem('sleepSchedule', JSON.stringify(sleepScheduleForTimeline));
     
-    // Save tasks to localStorage
+    // Save tasks to localStorage - remove old winddown/startup tasks for this schedule first
     const existingTasks = JSON.parse(localStorage.getItem('todos') || '[]');
-    const updatedTasks = [...existingTasks, ...tasks];
+    const filteredTasks = existingTasks.filter((t: any) => {
+      // Remove all winddown/startup tasks for this schedule to prevent duplicates
+      if (t.source === 'winddown' || t.source === 'startup') {
+        // Check if task belongs to this schedule by checking the schedule ID in the task ID
+        const taskScheduleId = t.id.split('_')[1];
+        return taskScheduleId !== schedule.id;
+      }
+      // Remove old sleep tasks for this schedule too
+      if (t.source === 'sleep') {
+        const taskScheduleId = t.id.split('_')[2];
+        return taskScheduleId !== schedule.id;
+      }
+      return true;
+    });
+    const updatedTasks = [...filteredTasks, ...tasks];
     localStorage.setItem('todos', JSON.stringify(updatedTasks));
     
     // Dispatch event to update timeline
@@ -638,9 +854,89 @@ export default function SleepScheduleFeature({ isOpen, onClose }: SleepScheduleF
     }));
   };
 
+  // Check if sleep times overlap (considering midnight crossing)
+  const doSleepTimesOverlap = (bedtime1: string, wakeTime1: string, bedtime2: string, wakeTime2: string): boolean => {
+    const timeToMinutes = (time: string): number => {
+      const [hours, minutes] = time.split(':').map(Number);
+      return hours * 60 + minutes;
+    };
+
+    const bed1 = timeToMinutes(bedtime1);
+    const wake1 = timeToMinutes(wakeTime1);
+    const bed2 = timeToMinutes(bedtime2);
+    const wake2 = timeToMinutes(wakeTime2);
+
+    // Normalize sleep periods to handle midnight crossing
+    // If bedtime > wakeTime, sleep crosses midnight
+    const getSleepStart = (bed: number, wake: number): number => {
+      return bed > wake ? bed : bed; // Start is always bedtime
+    };
+    
+    const getSleepEnd = (bed: number, wake: number): number => {
+      return bed > wake ? wake + (24 * 60) : wake; // If crosses midnight, add 24 hours to wake time
+    };
+
+    const start1 = getSleepStart(bed1, wake1);
+    const end1 = getSleepEnd(bed1, wake1);
+    const start2 = getSleepStart(bed2, wake2);
+    const end2 = getSleepEnd(bed2, wake2);
+
+    // Check if periods overlap
+    // Two periods overlap if: start1 < end2 && start2 < end1
+    const overlaps = start1 < end2 && start2 < end1;
+    
+    if (!overlaps) return false;
+    
+    // If they overlap, check if it's a significant overlap (more than 1 hour)
+    // This allows for mid-day naps that might briefly touch but don't conflict
+    const overlapStart = Math.max(start1, start2);
+    const overlapEnd = Math.min(end1, end2);
+    const overlapMinutes = overlapEnd - overlapStart;
+    const overlapHours = overlapMinutes / 60;
+    
+    // If overlap is less than 1 hour, it's probably a mid-day nap and not a conflict
+    return overlapHours >= 1;
+  };
+
+  // Check for overlapping schedules
+  const checkOverlappingSchedules = (currentSchedule?: SleepSchedule): { hasConflict: boolean; conflictingSchedules: SleepSchedule[] } => {
+    const activeSchedules = schedules.filter(s => s.isActive);
+    const conflictingSchedules: SleepSchedule[] = [];
+    
+    const scheduleToCheck = currentSchedule || newSchedule as any;
+    
+    if (!scheduleToCheck.bedtime || !scheduleToCheck.wakeTime || !scheduleToCheck.days || scheduleToCheck.days.length === 0) {
+      return { hasConflict: false, conflictingSchedules: [] };
+    }
+
+    for (const schedule of activeSchedules) {
+      // Skip checking against itself
+      if (currentSchedule && schedule.id === currentSchedule.id) continue;
+      
+      // Check if they share any days
+      const sharedDays = schedule.days.filter(day => scheduleToCheck.days.includes(day));
+      if (sharedDays.length === 0) continue;
+      
+      // Check if sleep times overlap
+      if (doSleepTimesOverlap(
+        schedule.bedtime,
+        schedule.wakeTime,
+        scheduleToCheck.bedtime,
+        scheduleToCheck.wakeTime
+      )) {
+        conflictingSchedules.push(schedule);
+      }
+    }
+    
+    return {
+      hasConflict: conflictingSchedules.length > 0,
+      conflictingSchedules
+    };
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Moon className="w-5 h-5" />
@@ -648,9 +944,9 @@ export default function SleepScheduleFeature({ isOpen, onClose }: SleepScheduleF
           </DialogTitle>
         </DialogHeader>
         
-        <div className="flex-1 overflow-hidden flex flex-col">
+        <div className="flex-1 overflow-hidden flex flex-col min-h-0">
           {/* Header - Sticky */}
-          <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 pb-4 mb-4">
+          <div className="flex-shrink-0 sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 pb-4 mb-4 border-b">
             <div className="flex justify-between items-center">
               <div className="flex items-center space-x-6">
                 <div className="text-center">
@@ -672,11 +968,13 @@ export default function SleepScheduleFeature({ isOpen, onClose }: SleepScheduleF
             </div>
           </div>
 
-          {/* Sleep Schedules */}
-          <div className="flex-1 overflow-y-auto space-y-4">
+          {/* Sleep Schedules - Scrollable */}
+          <div className="flex-1 overflow-y-auto overflow-x-hidden space-y-4 pr-2" style={{ minHeight: 0 }}>
             {schedules.length > 0 ? (
-              schedules.map((schedule) => (
-                <Card key={schedule.id} className="hover:shadow-md transition-shadow">
+              schedules.map((schedule) => {
+                const overlapCheck = checkOverlappingSchedules(schedule);
+                return (
+                <Card key={schedule.id} className={`hover:shadow-md transition-shadow ${overlapCheck.hasConflict ? 'border-orange-500 border-2' : ''}`}>
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
@@ -689,7 +987,22 @@ export default function SleepScheduleFeature({ isOpen, onClose }: SleepScheduleF
                           }`}>
                             {schedule.isActive ? 'Active' : 'Inactive'}
                           </div>
+                          {overlapCheck.hasConflict && schedule.isActive && (
+                            <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-orange-100 text-orange-800">
+                              <AlertTriangle className="w-3 h-3" />
+                              <span>Conflict</span>
+                            </div>
+                          )}
                         </div>
+                        {overlapCheck.hasConflict && schedule.isActive && (
+                          <Alert className="mt-2 mb-2 border-orange-500 bg-orange-50 dark:bg-orange-950/30">
+                            <AlertTriangle className="h-4 w-4 text-orange-600" />
+                            <AlertDescription className="text-sm text-orange-800 dark:text-orange-200">
+                              This schedule overlaps with: {overlapCheck.conflictingSchedules.map(s => s.name).join(', ')} on shared days. 
+                              Multiple sleep schedules on the same days may cause conflicts.
+                            </AlertDescription>
+                          </Alert>
+                        )}
                         <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
                           <div className="flex items-center gap-2">
                             <Sun className="w-4 h-4" />
@@ -788,15 +1101,88 @@ export default function SleepScheduleFeature({ isOpen, onClose }: SleepScheduleF
                                   </Button>
                                 </div>
                               ) : (
-                                <div className="space-y-2">
-                                  <div className="flex items-center justify-between text-sm">
-                                    <span className="text-muted-foreground">Start Up Activities</span>
-                                    <span className="font-medium">{schedule.startUpActivities.length}</span>
+                                <div className="space-y-3">
+                                  <Card className="hover:shadow-md transition-shadow rounded-2xl">
+                                    <CardContent className="p-4">
+                                      <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                          <div className="w-12 h-12 rounded-full flex items-center justify-center bg-gradient-to-br from-amber-100 to-orange-100">
+                                            <Sun className="w-6 h-6 text-amber-600" />
                                   </div>
-                                  <div className="flex items-center justify-between text-sm">
-                                    <span className="text-muted-foreground">Wind Down Activities</span>
-                                    <span className="font-medium">{schedule.windDownActivities.length}</span>
+                                          <div>
+                                            <h3 className="font-medium">Start Up Activities</h3>
+                                            <p className="text-sm text-muted-foreground">
+                                              {schedule.startUpActivities.length} {schedule.startUpActivities.length === 1 ? 'activity' : 'activities'}
+                                            </p>
                                   </div>
+                                        </div>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() => {
+                                            setEditingSchedule(schedule);
+                                            setActivityType('startup');
+                                            setEditingActivity(null);
+                                            setShowStartUpDialog(true);
+                                          }}
+                                          className="rounded-full"
+                                        >
+                                          {schedule.startUpActivities.length > 0 ? (
+                                            <>
+                                              <Edit className="w-4 h-4 mr-1" />
+                                              Edit
+                                            </>
+                                          ) : (
+                                            <>
+                                              <Plus className="w-4 h-4 mr-1" />
+                                              Add
+                                            </>
+                                          )}
+                                        </Button>
+                                      </div>
+                                    </CardContent>
+                                  </Card>
+                                  
+                                  <Card className="hover:shadow-md transition-shadow rounded-2xl">
+                                    <CardContent className="p-4">
+                                      <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                          <div className="w-12 h-12 rounded-full flex items-center justify-center bg-gradient-to-br from-indigo-100 to-purple-100">
+                                            <Moon className="w-6 h-6 text-indigo-600" />
+                                          </div>
+                                          <div>
+                                            <h3 className="font-medium">Wind Down Activities</h3>
+                                            <p className="text-sm text-muted-foreground">
+                                              {schedule.windDownActivities.length} {schedule.windDownActivities.length === 1 ? 'activity' : 'activities'}
+                                            </p>
+                                          </div>
+                                        </div>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() => {
+                                            setEditingSchedule(schedule);
+                                            setActivityType('winddown');
+                                            setEditingActivity(null);
+                                            setShowWindDownDialog(true);
+                                          }}
+                                          className="rounded-full"
+                                        >
+                                          {schedule.windDownActivities.length > 0 ? (
+                                            <>
+                                              <Edit className="w-4 h-4 mr-1" />
+                                              Edit
+                                            </>
+                                          ) : (
+                                            <>
+                                              <Plus className="w-4 h-4 mr-1" />
+                                              Add
+                                            </>
+                                          )}
+                                        </Button>
+                                      </div>
+                                    </CardContent>
+                                  </Card>
                                 </div>
                               )}
                             </TabsContent>
@@ -821,9 +1207,15 @@ export default function SleepScheduleFeature({ isOpen, onClose }: SleepScheduleF
                                     <Plus className="w-4 h-4" />
                                   </Button>
                                 </div>
-                                <div className="space-y-2">
+                                <div className="space-y-3">
                                   {schedule.startUpActivities.map((activity) => (
-                                    <div key={activity.id} className="flex items-center justify-between text-sm p-2 bg-muted/50 rounded">
+                                    <Card key={activity.id} className="hover:shadow-md transition-shadow rounded-2xl">
+                                      <CardContent className="p-4">
+                                        <div className="flex items-center justify-between">
+                                          <div className="flex items-center gap-3 flex-1">
+                                            <div className="w-10 h-10 rounded-full flex items-center justify-center bg-gradient-to-br from-amber-100 to-orange-100">
+                                              <Sun className="w-5 h-5 text-amber-600" />
+                                            </div>
                                       <div className="flex-1">
                                         <div className="flex items-center gap-2">
                                           <span className="font-medium">{activity.name}</span>
@@ -831,10 +1223,15 @@ export default function SleepScheduleFeature({ isOpen, onClose }: SleepScheduleF
                                             <span className="text-xs text-muted-foreground">(Inactive)</span>
                                           )}
                                         </div>
-                                        <p className="text-xs text-muted-foreground">{activity.description}</p>
+                                              <p className="text-sm text-muted-foreground">
+                                                {activity.duration}min
+                                        {activity.subtasks && activity.subtasks.length > 0 && (
+                                                  <> • {activity.subtasks.length} subtask{activity.subtasks.length !== 1 ? 's' : ''}</>
+                                        )}
+                                              </p>
+                                            </div>
                                       </div>
                                       <div className="flex items-center gap-2">
-                                        <span className="text-muted-foreground">{activity.duration}min</span>
                                         <Button
                                           size="sm"
                                           variant="ghost"
@@ -844,20 +1241,20 @@ export default function SleepScheduleFeature({ isOpen, onClose }: SleepScheduleF
                                             setEditingActivity(activity);
                                             setShowStartUpDialog(true);
                                           }}
-                                          className="h-6 w-6 p-0"
                                         >
-                                          <Edit className="w-3 h-3" />
+                                              <Edit className="w-4 h-4 text-amber-600" />
                                         </Button>
                                         <Button
                                           size="sm"
                                           variant="ghost"
                                           onClick={() => deleteStartUpActivity(schedule.id, activity.id)}
-                                          className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
                                         >
-                                          <Trash2 className="w-3 h-3" />
+                                              <Trash2 className="w-4 h-4 text-red-600" />
                                         </Button>
                                       </div>
                                     </div>
+                                      </CardContent>
+                                    </Card>
                                   ))}
                                   {schedule.startUpActivities.length === 0 && (
                                     <div className="text-center py-4 text-muted-foreground">
@@ -889,9 +1286,15 @@ export default function SleepScheduleFeature({ isOpen, onClose }: SleepScheduleF
                                     <Plus className="w-4 h-4" />
                                   </Button>
                                 </div>
-                                <div className="space-y-2">
+                                <div className="space-y-3">
                                   {schedule.windDownActivities.map((activity) => (
-                                    <div key={activity.id} className="flex items-center justify-between text-sm p-2 bg-muted/50 rounded">
+                                    <Card key={activity.id} className="hover:shadow-md transition-shadow rounded-2xl">
+                                      <CardContent className="p-4">
+                                        <div className="flex items-center justify-between">
+                                          <div className="flex items-center gap-3 flex-1">
+                                            <div className="w-10 h-10 rounded-full flex items-center justify-center bg-gradient-to-br from-indigo-100 to-purple-100">
+                                              <Moon className="w-5 h-5 text-indigo-600" />
+                                            </div>
                                       <div className="flex-1">
                                         <div className="flex items-center gap-2">
                                           <span className="font-medium">{activity.name}</span>
@@ -899,10 +1302,15 @@ export default function SleepScheduleFeature({ isOpen, onClose }: SleepScheduleF
                                             <span className="text-xs text-muted-foreground">(Inactive)</span>
                                           )}
                                         </div>
-                                        <p className="text-xs text-muted-foreground">{activity.description}</p>
+                                              <p className="text-sm text-muted-foreground">
+                                                {activity.duration}min
+                                        {activity.subtasks && activity.subtasks.length > 0 && (
+                                                  <> • {activity.subtasks.length} subtask{activity.subtasks.length !== 1 ? 's' : ''}</>
+                                        )}
+                                              </p>
+                                            </div>
                                       </div>
                                       <div className="flex items-center gap-2">
-                                        <span className="text-muted-foreground">{activity.duration}min</span>
                                         <Button
                                           size="sm"
                                           variant="ghost"
@@ -912,20 +1320,20 @@ export default function SleepScheduleFeature({ isOpen, onClose }: SleepScheduleF
                                             setEditingActivity(activity);
                                             setShowWindDownDialog(true);
                                           }}
-                                          className="h-6 w-6 p-0"
                                         >
-                                          <Edit className="w-3 h-3" />
+                                              <Edit className="w-4 h-4 text-indigo-600" />
                                         </Button>
                                         <Button
                                           size="sm"
                                           variant="ghost"
                                           onClick={() => deleteWindDownActivity(schedule.id, activity.id)}
-                                          className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
                                         >
-                                          <Trash2 className="w-3 h-3" />
+                                              <Trash2 className="w-4 h-4 text-red-600" />
                                         </Button>
                                       </div>
                                     </div>
+                                      </CardContent>
+                                    </Card>
                                   ))}
                                   {schedule.windDownActivities.length === 0 && (
                                     <div className="text-center py-4 text-muted-foreground">
@@ -997,7 +1405,8 @@ export default function SleepScheduleFeature({ isOpen, onClose }: SleepScheduleF
                     </div>
                   </CardHeader>
                 </Card>
-              ))
+                );
+              })
             ) : (
               <div className="text-center py-12">
                 <Moon className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
@@ -1023,6 +1432,22 @@ export default function SleepScheduleFeature({ isOpen, onClose }: SleepScheduleF
               <DialogTitle>New Sleep Schedule</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
+              {/* Overlap Warning */}
+              {(() => {
+                const overlapCheck = checkOverlappingSchedules();
+                if (overlapCheck.hasConflict && newSchedule.bedtime && newSchedule.wakeTime && newSchedule.days.length > 0) {
+                  return (
+                    <Alert className="border-orange-500 bg-orange-50 dark:bg-orange-950/30">
+                      <AlertTriangle className="h-4 w-4 text-orange-600" />
+                      <AlertDescription className="text-sm text-orange-800 dark:text-orange-200">
+                        Warning: This schedule will overlap with active schedules ({overlapCheck.conflictingSchedules.map(s => s.name).join(', ')}) on shared days. 
+                        Multiple sleep schedules on the same days may cause conflicts.
+                      </AlertDescription>
+                    </Alert>
+                  );
+                }
+                return null;
+              })()}
               <div>
                 <Label htmlFor="schedule-name">Schedule Name</Label>
                 <Input
@@ -1077,13 +1502,210 @@ export default function SleepScheduleFeature({ isOpen, onClose }: SleepScheduleF
                   ))}
                 </div>
               </div>
+
+              {/* Start Up Setup */}
+              <div className="p-4 border rounded-lg space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Sun className="w-5 h-5" />
+                    <Label className="text-base font-semibold">Start Up Routine</Label>
+                  </div>
+                  <Switch
+                    checked={newSchedule.enableStartUp}
+                    onCheckedChange={(checked) => setNewSchedule({ ...newSchedule, enableStartUp: checked })}
+                  />
+                </div>
+                {newSchedule.enableStartUp && (
+                  <div className="space-y-3 pl-7">
+                    <div>
+                      <Label htmlFor="startup-duration">Duration (minutes)</Label>
+                      <Input
+                        id="startup-duration"
+                        type="number"
+                        min="1"
+                        value={newSchedule.startUpDuration || ''}
+                        onChange={(e) => setNewSchedule({ ...newSchedule, startUpDuration: parseInt(e.target.value) || 0 })}
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="startup-color">Color</Label>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Input
+                          id="startup-color"
+                          type="color"
+                          value={newSchedule.startUpColor || '#F59E0B'}
+                          onChange={(e) => setNewSchedule({ ...newSchedule, startUpColor: e.target.value })}
+                          className="h-10 w-20 cursor-pointer"
+                        />
+                        <Input
+                          type="text"
+                          value={newSchedule.startUpColor || '#F59E0B'}
+                          onChange={(e) => setNewSchedule({ ...newSchedule, startUpColor: e.target.value })}
+                          className="flex-1"
+                          placeholder="#F59E0B"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Subtasks</Label>
+                      {newSchedule.startUpSubtasks.map((subtask, idx) => (
+                        <div key={subtask.id} className="flex gap-2">
+                          <Input
+                            value={subtask.title}
+                            onChange={(e) => {
+                              const updated = [...newSchedule.startUpSubtasks];
+                              updated[idx] = { ...subtask, title: e.target.value };
+                              setNewSchedule({ ...newSchedule, startUpSubtasks: updated });
+                            }}
+                            placeholder="Subtask title"
+                            className="flex-1 text-sm"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setNewSchedule({
+                                ...newSchedule,
+                                startUpSubtasks: newSchedule.startUpSubtasks.filter((_, i) => i !== idx)
+                              });
+                            }}
+                          >
+                            <X className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      ))}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="w-full text-xs"
+                        onClick={() => {
+                          setNewSchedule({
+                            ...newSchedule,
+                            startUpSubtasks: [...newSchedule.startUpSubtasks, { id: Date.now().toString(), title: '', completed: false }]
+                          });
+                        }}
+                      >
+                        <Plus className="w-3 h-3 mr-1" />
+                        Add Subtask
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Wind Down Setup */}
+              <div className="p-4 border rounded-lg space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Moon className="w-5 h-5" />
+                    <Label className="text-base font-semibold">Wind Down Routine</Label>
+                  </div>
+                  <Switch
+                    checked={newSchedule.enableWindDown}
+                    onCheckedChange={(checked) => setNewSchedule({ ...newSchedule, enableWindDown: checked })}
+                  />
+                </div>
+                {newSchedule.enableWindDown && (
+                  <div className="space-y-3 pl-7">
+                    <div>
+                      <Label htmlFor="winddown-duration">Duration (minutes)</Label>
+                      <Input
+                        id="winddown-duration"
+                        type="number"
+                        min="1"
+                        value={newSchedule.windDownDuration || ''}
+                        onChange={(e) => setNewSchedule({ ...newSchedule, windDownDuration: parseInt(e.target.value) || 0 })}
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="winddown-color">Color</Label>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Input
+                          id="winddown-color"
+                          type="color"
+                          value={newSchedule.windDownColor || '#8B5CF6'}
+                          onChange={(e) => setNewSchedule({ ...newSchedule, windDownColor: e.target.value })}
+                          className="h-10 w-20 cursor-pointer"
+                        />
+                        <Input
+                          type="text"
+                          value={newSchedule.windDownColor || '#8B5CF6'}
+                          onChange={(e) => setNewSchedule({ ...newSchedule, windDownColor: e.target.value })}
+                          className="flex-1"
+                          placeholder="#8B5CF6"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Subtasks</Label>
+                      {newSchedule.windDownSubtasks.map((subtask, idx) => (
+                        <div key={subtask.id} className="flex gap-2">
+                          <Input
+                            value={subtask.title}
+                            onChange={(e) => {
+                              const updated = [...newSchedule.windDownSubtasks];
+                              updated[idx] = { ...subtask, title: e.target.value };
+                              setNewSchedule({ ...newSchedule, windDownSubtasks: updated });
+                            }}
+                            placeholder="Subtask title"
+                            className="flex-1 text-sm"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setNewSchedule({
+                                ...newSchedule,
+                                windDownSubtasks: newSchedule.windDownSubtasks.filter((_, i) => i !== idx)
+                              });
+                            }}
+                          >
+                            <X className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      ))}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="w-full text-xs"
+                        onClick={() => {
+                          setNewSchedule({
+                            ...newSchedule,
+                            windDownSubtasks: [...newSchedule.windDownSubtasks, { id: Date.now().toString(), title: '', completed: false }]
+                          });
+                        }}
+                      >
+                        <Plus className="w-3 h-3 mr-1" />
+                        Add Subtask
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div className="flex justify-end space-x-2">
                 <Button variant="outline" onClick={() => setShowAddSchedule(false)}>
                   Cancel
                 </Button>
-                <Button onClick={handleAddSchedule}>
+                {(() => {
+                  const isValid = newSchedule.name.trim() && newSchedule.bedtime && newSchedule.wakeTime && newSchedule.days.length > 0;
+                  
+                  return (
+                    <Button 
+                      onClick={handleAddSchedule}
+                      disabled={!isValid}
+                      className="disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
                   Create Schedule
                 </Button>
+                  );
+                })()}
               </div>
             </div>
           </DialogContent>
@@ -1154,9 +1776,19 @@ export default function SleepScheduleFeature({ isOpen, onClose }: SleepScheduleF
                 <Button variant="outline" onClick={() => setShowEditSchedule(false)}>
                   Cancel
                 </Button>
-                <Button onClick={handleUpdateSchedule}>
+                {(() => {
+                  const isValid = newSchedule.name.trim() && newSchedule.bedtime && newSchedule.wakeTime && newSchedule.days.length > 0;
+                  
+                  return (
+                    <Button 
+                      onClick={handleUpdateSchedule}
+                      disabled={!isValid}
+                      className="disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
                   Update Schedule
                 </Button>
+                  );
+                })()}
               </div>
             </div>
           </DialogContent>
@@ -1286,13 +1918,22 @@ function WindDownActivityForm({
     name: activity?.name || '',
     duration: activity?.duration || 5,
     description: activity?.description || '',
-    isActive: activity?.isActive ?? true
+    isActive: activity?.isActive ?? true,
+    subtasks: activity?.subtasks || [] as Array<{ id: string; title: string; completed: boolean }>,
+    color: activity?.color || '#8B5CF6'
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.name.trim()) {
-      onSave(formData);
+      onSave({
+        name: formData.name,
+        duration: formData.duration,
+        description: '', // Always empty since we removed description field
+        isActive: formData.isActive,
+        subtasks: formData.subtasks,
+        color: formData.color
+      });
     }
   };
 
@@ -1306,6 +1947,7 @@ function WindDownActivityForm({
           onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
           placeholder="e.g., Deep Breathing"
           required
+          className="rounded-full"
         />
       </div>
       <div>
@@ -1317,16 +1959,72 @@ function WindDownActivityForm({
           onChange={(e) => setFormData(prev => ({ ...prev, duration: parseInt(e.target.value) || 5 }))}
           min="1"
           required
+          className="rounded-full"
         />
       </div>
       <div>
-        <Label htmlFor="activity-description">Description</Label>
-        <Input
-          id="activity-description"
-          value={formData.description}
-          onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-          placeholder="e.g., Focus on your breath and relax"
-        />
+        <Label htmlFor="activity-color">Color</Label>
+        <div className="flex items-center gap-2 mt-1">
+          <Input
+            id="activity-color"
+            type="color"
+            value={formData.color}
+            onChange={(e) => setFormData(prev => ({ ...prev, color: e.target.value }))}
+            className="h-10 w-20 cursor-pointer rounded-lg"
+          />
+          <Input
+            type="text"
+            value={formData.color}
+            onChange={(e) => setFormData(prev => ({ ...prev, color: e.target.value }))}
+            className="flex-1 rounded-full"
+            placeholder="#8B5CF6"
+          />
+        </div>
+      </div>
+      <div className="space-y-2">
+        <Label className="text-sm font-medium">Subtasks</Label>
+        {formData.subtasks.map((subtask, idx) => (
+          <div key={subtask.id} className="flex gap-2">
+            <Input
+              value={subtask.title}
+              onChange={(e) => {
+                const updated = [...formData.subtasks];
+                updated[idx] = { ...subtask, title: e.target.value };
+                setFormData(prev => ({ ...prev, subtasks: updated }));
+              }}
+              placeholder="Subtask title"
+              className="flex-1 text-sm rounded-full"
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setFormData(prev => ({
+                  ...prev,
+                  subtasks: prev.subtasks.filter((_, i) => i !== idx)
+                }));
+              }}
+            >
+              <X className="w-3 h-3" />
+            </Button>
+          </div>
+        ))}
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="w-full text-xs rounded-full"
+          onClick={() => {
+            setFormData(prev => ({
+              ...prev,
+              subtasks: [...prev.subtasks, { id: Date.now().toString(), title: '', completed: false }]
+            }));
+          }}
+        >
+          <Plus className="w-3 h-3 mr-1" />
+          Add Subtask
+        </Button>
       </div>
       <div className="flex items-center space-x-2">
         <Switch
@@ -1337,12 +2035,21 @@ function WindDownActivityForm({
         <Label htmlFor="activity-active">Active</Label>
       </div>
       <div className="flex justify-end space-x-2">
-        <Button type="button" variant="outline" onClick={onCancel}>
+        <Button type="button" variant="outline" onClick={onCancel} className="rounded-full">
           Cancel
         </Button>
-        <Button type="submit">
+        {(() => {
+          const isValid = formData.name.trim();
+          return (
+            <Button 
+              type="submit" 
+              className="rounded-full disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
+              disabled={!isValid}
+            >
           {activity ? 'Update' : 'Add'} Activity
         </Button>
+          );
+        })()}
       </div>
     </form>
   );
@@ -1362,13 +2069,22 @@ function StartUpActivityForm({
     name: activity?.name || '',
     duration: activity?.duration || 5,
     description: activity?.description || '',
-    isActive: activity?.isActive ?? true
+    isActive: activity?.isActive ?? true,
+    subtasks: activity?.subtasks || [] as Array<{ id: string; title: string; completed: boolean }>,
+    color: activity?.color || '#F59E0B'
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.name.trim()) {
-      onSave(formData);
+      onSave({
+        name: formData.name,
+        duration: formData.duration,
+        description: '', // Always empty since we removed description field
+        isActive: formData.isActive,
+        subtasks: formData.subtasks,
+        color: formData.color
+      });
     }
   };
 
@@ -1382,6 +2098,7 @@ function StartUpActivityForm({
           onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
           placeholder="e.g., Morning Stretches"
           required
+          className="rounded-full"
         />
       </div>
       <div>
@@ -1393,16 +2110,72 @@ function StartUpActivityForm({
           onChange={(e) => setFormData(prev => ({ ...prev, duration: parseInt(e.target.value) || 5 }))}
           min="1"
           required
+          className="rounded-full"
         />
       </div>
       <div>
-        <Label htmlFor="activity-description">Description</Label>
-        <Input
-          id="activity-description"
-          value={formData.description}
-          onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-          placeholder="e.g., Gentle morning stretches to wake up"
-        />
+        <Label htmlFor="activity-color">Color</Label>
+        <div className="flex items-center gap-2 mt-1">
+          <Input
+            id="activity-color"
+            type="color"
+            value={formData.color}
+            onChange={(e) => setFormData(prev => ({ ...prev, color: e.target.value }))}
+            className="h-10 w-20 cursor-pointer rounded-lg"
+          />
+          <Input
+            type="text"
+            value={formData.color}
+            onChange={(e) => setFormData(prev => ({ ...prev, color: e.target.value }))}
+            className="flex-1 rounded-full"
+            placeholder="#F59E0B"
+          />
+        </div>
+      </div>
+      <div className="space-y-2">
+        <Label className="text-sm font-medium">Subtasks</Label>
+        {formData.subtasks.map((subtask, idx) => (
+          <div key={subtask.id} className="flex gap-2">
+            <Input
+              value={subtask.title}
+              onChange={(e) => {
+                const updated = [...formData.subtasks];
+                updated[idx] = { ...subtask, title: e.target.value };
+                setFormData(prev => ({ ...prev, subtasks: updated }));
+              }}
+              placeholder="Subtask title"
+              className="flex-1 text-sm rounded-full"
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setFormData(prev => ({
+                  ...prev,
+                  subtasks: prev.subtasks.filter((_, i) => i !== idx)
+                }));
+              }}
+            >
+              <X className="w-3 h-3" />
+            </Button>
+          </div>
+        ))}
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="w-full text-xs rounded-full"
+          onClick={() => {
+            setFormData(prev => ({
+              ...prev,
+              subtasks: [...prev.subtasks, { id: Date.now().toString(), title: '', completed: false }]
+            }));
+          }}
+        >
+          <Plus className="w-3 h-3 mr-1" />
+          Add Subtask
+        </Button>
       </div>
       <div className="flex items-center space-x-2">
         <Switch
@@ -1413,12 +2186,21 @@ function StartUpActivityForm({
         <Label htmlFor="activity-active">Active</Label>
       </div>
       <div className="flex justify-end space-x-2">
-        <Button type="button" variant="outline" onClick={onCancel}>
+        <Button type="button" variant="outline" onClick={onCancel} className="rounded-full">
           Cancel
         </Button>
-        <Button type="submit">
+        {(() => {
+          const isValid = formData.name.trim();
+          return (
+            <Button 
+              type="submit" 
+              className="rounded-full disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
+              disabled={!isValid}
+            >
           {activity ? 'Update' : 'Add'} Activity
         </Button>
+          );
+        })()}
       </div>
     </form>
   );

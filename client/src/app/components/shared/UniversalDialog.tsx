@@ -41,7 +41,7 @@ export default function UniversalDialog({
   return (
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`max-w-md ${scrollable ? 'max-h-[90vh] overflow-y-auto' : ''}`}>
+      <DialogContent className={`max-w-md ${scrollable ? 'max-h-[90vh] overflow-y-auto' : ''} [&>button]:hidden`}>
           <DialogHeader className="relative">
             <div className="flex items-center justify-between gap-2">
               <div className="flex-1">

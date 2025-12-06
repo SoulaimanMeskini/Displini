@@ -1,24 +1,12 @@
 import { useState, useEffect } from "react";
-import { Droplets, Plus, Edit, Trash2, Target, CheckCircle, Calendar, Clock, Bell, X } from "lucide-react";
+import { Droplets, Plus, X, Clock, Bell, ArrowLeft, Info, Target, Edit } from "lucide-react";
 import { Button } from "@/app/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/app/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/app/components/ui/dialog";
 import { Input } from "@/app/components/ui/input";
 import { Label } from "@/app/components/ui/label";
 import { Switch } from "@/app/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/app/components/ui/select";
 import { colors } from "@/lib/designSystem";
-import { handleError, handleSuccess } from "@/lib/errorHandling";
-
-interface WaterGoal {
-  id: string;
-  name: string;
-  targetAmount: number;
-  unit: 'ml' | 'oz' | 'cups';
-  reminderInterval: number;
-  isActive: boolean;
-  currentIntake: number;
-}
 
 interface WaterIntakeFeatureProps {
   isOpen: boolean;
@@ -26,400 +14,311 @@ interface WaterIntakeFeatureProps {
 }
 
 export default function WaterIntakeFeature({ isOpen, onClose }: WaterIntakeFeatureProps) {
-  const [todayIntake, setTodayIntake] = useState(0);
+  const [showSetup, setShowSetup] = useState(false);
+  const [isCollapsing, setIsCollapsing] = useState(false);
   const [dailyGoal, setDailyGoal] = useState(2000);
-  const [remindersEnabled, setRemindersEnabled] = useState(false);
-  const [reminderTimes, setReminderTimes] = useState<string[]>([]);
-  const [showAddReminderTime, setShowAddReminderTime] = useState(false);
-  const [newReminderTime, setNewReminderTime] = useState('09:00');
   const [unit, setUnit] = useState<'ml' | 'oz'>('ml');
-  const [reminderMode, setReminderMode] = useState<'custom' | 'interval'>('custom');
-  const [reminderInterval, setReminderInterval] = useState(2); // Default: every 2 hours
-  const [hasConfiguredGoal, setHasConfiguredGoal] = useState(false); // Track if user has actually set a goal
+  const [reminderMode, setReminderMode] = useState<'custom' | 'interval'>('interval');
+  const [reminderInterval, setReminderInterval] = useState(2);
+  const [reminderTimes, setReminderTimes] = useState<string[]>([]);
+  const [newReminderTime, setNewReminderTime] = useState('09:00');
+  const [showAddTime, setShowAddTime] = useState(false);
+  const [isSetupComplete, setIsSetupComplete] = useState(false);
 
-  // Load water settings and today's intake
+  // Load settings on open
   useEffect(() => {
     if (!isOpen) return;
     
     const waterSettings = JSON.parse(localStorage.getItem('water_settings') || '{}');
-    const savedGoal = waterSettings.dailyGoal || 2000;
-    setDailyGoal(savedGoal);
-    setRemindersEnabled(waterSettings.remindersEnabled || false);
-    setReminderTimes(waterSettings.reminderTimes || []);
+    const hasSetup = waterSettings.isSetupComplete || false;
+    
+    setIsSetupComplete(hasSetup);
+    setShowSetup(false); // Don't auto-show setup form, show prompt first
+    
+    if (hasSetup) {
+      setDailyGoal(waterSettings.dailyGoal || 2000);
     setUnit(waterSettings.unit || 'ml');
     setReminderMode(waterSettings.reminderMode || 'custom');
     setReminderInterval(waterSettings.reminderInterval || 2);
+      setReminderTimes(waterSettings.reminderTimes || []);
     
-    // Check if user has actually configured a goal (not just the default)
-    setHasConfiguredGoal(!!waterSettings.dailyGoal);
-
-    // Calculate today's intake
-    const waterEntries = JSON.parse(localStorage.getItem('water_entries') || '[]');
-    const today = new Date().toDateString();
-    const todayEntries = waterEntries.filter((entry: any) => 
-      new Date(entry.timestamp).toDateString() === today
-    );
-    const totalIntake = todayEntries.reduce((sum: number, entry: any) => sum + (entry.amount || 0), 0);
-    setTodayIntake(totalIntake);
-    
-    // Auto-create water reminders if enabled and times are set
-    if (waterSettings.remindersEnabled && waterSettings.reminderTimes?.length > 0) {
-      // Check if reminders already exist for today
-      const existingTasks = JSON.parse(localStorage.getItem('todos') || '[]');
-      const todayStr = new Date().toISOString().split('T')[0];
-      const hasWaterReminders = existingTasks.some((t: any) => 
-        t.dueDate === todayStr && t.source === 'water'
-      );
-      
-      if (!hasWaterReminders) {
-        setTimeout(() => createWaterReminders(), 100);
+      // Create reminders if enabled
+      if (waterSettings.remindersEnabled && (waterSettings.reminderTimes?.length > 0 || waterSettings.reminderMode === 'interval')) {
+        createWaterReminders(waterSettings);
       }
     }
   }, [isOpen]);
 
-  // Auto-update reminders when intake changes
+  // Listen for water entry updates to refresh reminder notes
   useEffect(() => {
-    if (remindersEnabled && reminderTimes.length > 0) {
-      updateWaterReminderNotes();
+    const handleWaterEntryAdded = () => {
+      if (isSetupComplete) {
+        const waterSettings = JSON.parse(localStorage.getItem('water_settings') || '{}');
+        if (waterSettings.remindersEnabled) {
+          createWaterReminders(waterSettings);
     }
-  }, [todayIntake]);
+      }
+    };
+    
+    window.addEventListener('waterEntryAdded', handleWaterEntryAdded);
+    return () => window.removeEventListener('waterEntryAdded', handleWaterEntryAdded);
+  }, [isSetupComplete]);
 
-  // Create water reminders based on set times or intervals
-  const createWaterReminders = () => {
-    const waterSettings = JSON.parse(localStorage.getItem('water_settings') || '{}');
+  // Create water reminder tasks for timeline (for past 30 days and next 335 days)
+  const createWaterReminders = (settings?: any) => {
+    const waterSettings = settings || JSON.parse(localStorage.getItem('water_settings') || '{}');
     const dailyGoal = waterSettings.dailyGoal || 2000;
+    const unit = waterSettings.unit || 'ml';
     const mode = waterSettings.reminderMode || 'custom';
     const times = waterSettings.reminderTimes || [];
     const interval = waterSettings.reminderInterval || 2;
     
+    // Check for sleep schedule to get wake/sleep times
+    const sleepSchedule = JSON.parse(localStorage.getItem('sleepSchedule') || 'null');
+    let startHour = 6; // Default 6 AM
+    let endHour = 22; // Default 10 PM
+    
+    if (sleepSchedule && sleepSchedule.wakeTime && sleepSchedule.bedtime) {
+      // Use sleep schedule times
+      const wakeTimeParts = sleepSchedule.wakeTime.split(':');
+      const bedtimeParts = sleepSchedule.bedtime.split(':');
+      startHour = parseInt(wakeTimeParts[0]) || 6;
+      endHour = parseInt(bedtimeParts[0]) || 22;
+    } else if (sleepSchedule && sleepSchedule.daily && sleepSchedule.daily.wakeTime && sleepSchedule.daily.sleepTime) {
+      // Fallback to daily schedule
+      const wakeTimeParts = sleepSchedule.daily.wakeTime.split(':');
+      const sleepTimeParts = sleepSchedule.daily.sleepTime.split(':');
+      startHour = parseInt(wakeTimeParts[0]) || 6;
+      endHour = parseInt(sleepTimeParts[0]) || 22;
+    }
+    
     // Generate times based on mode
-    let reminderTimes: string[] = [];
+    let reminderTimesList: string[] = [];
     if (mode === 'custom') {
-      reminderTimes = times;
-      if (reminderTimes.length === 0) {
-        alert('Please add at least one reminder time first.');
-        return 0;
+      reminderTimesList = times;
+      if (reminderTimesList.length === 0) {
+        return;
       }
+      // Filter custom times to be within wake/sleep hours (strictly before bedtime)
+      reminderTimesList = reminderTimesList.filter(time => {
+        const timeParts = time.split(':');
+        const timeHour = parseInt(timeParts[0]);
+        const timeMinute = parseInt(timeParts[1] || '0');
+        const timeTotalMinutes = timeHour * 60 + timeMinute;
+        const endTotalMinutes = endHour * 60;
+        const startTotalMinutes = startHour * 60;
+        return timeTotalMinutes >= startTotalMinutes && timeTotalMinutes < endTotalMinutes;
+      });
     } else {
-      // Generate interval-based times
-      const now = new Date();
-      const startHour = parseInt(waterSettings.reminderStartTime?.split(':')[0] || '8');
-      const endHour = parseInt(waterSettings.reminderEndTime?.split(':')[0] || '22');
-      for (let hour = startHour; hour <= endHour; hour += interval) {
-        reminderTimes.push(`${String(hour).padStart(2, '0')}:00`);
+      // Generate interval-based times between wake and sleep
+      // Start AFTER wake up time (wake up + interval), not at wake up
+      let firstReminderHour = startHour + interval;
+      // Ensure first reminder doesn't exceed end hour
+      if (firstReminderHour > endHour) {
+        firstReminderHour = endHour;
+      }
+      for (let hour = firstReminderHour; hour <= endHour; hour += interval) {
+        reminderTimesList.push(`${String(hour).padStart(2, '0')}:00`);
       }
     }
     
-    // Get current date
     const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
-    
-    // Calculate today's intake
-    const waterEntries = JSON.parse(localStorage.getItem('water_entries') || '[]');
-    const todayEntries = waterEntries.filter((entry: any) => 
-      new Date(entry.timestamp).toDateString() === today.toDateString()
-    );
-    const currentIntake = todayEntries.reduce((sum: number, entry: any) => sum + (entry.amount || 0), 0);
-    
     const tasks: any[] = [];
     const existingTasks = JSON.parse(localStorage.getItem('todos') || '[]');
     
-    // Remove existing water reminders for today
+    // Remove existing water reminders
     const filteredTasks = existingTasks.filter((t: any) => 
-      !(t.dueDate === todayStr && t.source === 'water')
+      !(t.source === 'water' && t.waterReminder)
     );
     
-    // Create reminders for each set time
-    reminderTimes.forEach((time: string, index: number) => {
+    // Create reminders for past 30 days and next 335 days (365 total)
+    for (let i = -30; i < 335; i++) {
+      const targetDate = new Date(today);
+      targetDate.setDate(targetDate.getDate() + i);
+      const targetDateStr = targetDate.toISOString().split('T')[0];
+      
+      // Calculate intake for this date
+      const waterEntries = JSON.parse(localStorage.getItem('water_entries') || '[]');
+      const dateEntries = waterEntries.filter((entry: any) => {
+        const entryDate = entry.date || (entry.timestamp ? new Date(entry.timestamp).toISOString().split('T')[0] : null);
+        return entryDate === targetDateStr;
+      });
+      const currentIntake = dateEntries.reduce((sum: number, entry: any) => sum + (entry.amount || 0), 0);
       const progressPercent = Math.round((currentIntake / dailyGoal) * 100);
+      
+      // Create reminders for each time
+      reminderTimesList.forEach((time: string) => {
       tasks.push({
-        id: `water_reminder_${todayStr}_${time.replace(':', '')}`,
+          id: `water_reminder_${targetDateStr}_${time.replace(':', '')}`,
         title: '💧 Drink Water',
-        notes: `Today's intake: ${currentIntake}ml / ${dailyGoal}ml (${progressPercent}%)\nTap to log your water intake.`,
+          notes: `Today's intake: ${currentIntake}${unit} / ${dailyGoal}${unit} (${progressPercent}%)\nTap to log your water intake.`,
         time: time,
-        dueDate: todayStr,
+          dueDate: targetDateStr,
         completed: false,
         allDay: false,
         source: 'water',
         emoji: '💧',
-        color: '#3B82F6',
+          color: colors.features.water,
         waterReminder: true
       });
     });
+    }
     
-    // Save to localStorage
     localStorage.setItem('todos', JSON.stringify([...filteredTasks, ...tasks]));
-    
-    // Dispatch event to update timeline
-    window.dispatchEvent(new Event('todosUpdated'));
-    
-    return tasks.length;
-  };
-
-
-  const handleAddWater = (amount: number) => {
-    try {
-      const waterSettings = JSON.parse(localStorage.getItem('water_settings') || '{}');
-      const unit = waterSettings.unit || 'ml';
-      
-      const newEntry = {
-        id: Date.now().toString(),
-        amount: amount,
-        unit: unit,
-        timestamp: new Date().toISOString(),
-        source: 'water_intake_feature'
-      };
-
-      const waterEntries = JSON.parse(localStorage.getItem('water_entries') || '[]');
-      waterEntries.unshift(newEntry);
-      localStorage.setItem('water_entries', JSON.stringify(waterEntries));
-
-      // Update today's intake
-      setTodayIntake(prev => prev + amount);
-      handleSuccess(`Added ${amount}ml of water`);
-      
-      // Update water reminder notes with new intake
-      if (remindersEnabled && reminderTimes.length > 0) {
-        updateWaterReminderNotes();
-      }
-      
-      // Dispatch event to update timeline
-      window.dispatchEvent(new Event('waterEntryAdded'));
-    } catch (error) {
-      handleError(error, { title: 'Failed to Add Water' });
-    }
-  };
-
-  const updateWaterReminderNotes = () => {
-    const waterSettings = JSON.parse(localStorage.getItem('water_settings') || '{}');
-    const dailyGoal = waterSettings.dailyGoal || 2000;
-    const todayStr = new Date().toISOString().split('T')[0];
-    
-    // Calculate current intake
-    const waterEntries = JSON.parse(localStorage.getItem('water_entries') || '[]');
-    const today = new Date();
-    const todayEntries = waterEntries.filter((entry: any) => 
-      new Date(entry.timestamp).toDateString() === today.toDateString()
-    );
-    const currentIntake = todayEntries.reduce((sum: number, entry: any) => sum + (entry.amount || 0), 0);
-    const progressPercent = Math.round((currentIntake / dailyGoal) * 100);
-    
-    // Update all water reminder tasks for today
-    const existingTasks = JSON.parse(localStorage.getItem('todos') || '[]');
-    const updatedTasks = existingTasks.map((t: any) => {
-      if (t.dueDate === todayStr && t.source === 'water') {
-        return {
-          ...t,
-          notes: `Today's intake: ${currentIntake}ml / ${dailyGoal}ml (${progressPercent}%)\nTap to log your water intake.`
-        };
-      }
-      return t;
-    });
-    
-    localStorage.setItem('todos', JSON.stringify(updatedTasks));
     window.dispatchEvent(new Event('todosUpdated'));
   };
 
-  const handleUpdateDailyGoal = (newGoal: number) => {
-    setDailyGoal(newGoal);
-    const waterSettings = JSON.parse(localStorage.getItem('water_settings') || '{}');
-    waterSettings.dailyGoal = newGoal;
-    localStorage.setItem('water_settings', JSON.stringify(waterSettings));
+  const handleSetupComplete = () => {
+    const waterSettings = {
+      isSetupComplete: true,
+      dailyGoal,
+      unit,
+      reminderMode,
+      reminderInterval,
+      reminderTimes,
+      remindersEnabled: reminderTimes.length > 0 || reminderMode === 'interval'
+    };
     
-    // Recreate reminders with new goal
-    if (waterSettings.reminderInterval) {
-      createWaterReminders();
-    }
-  };
-
-  const toggleWaterReminders = (enabled: boolean) => {
-    const waterSettings = JSON.parse(localStorage.getItem('water_settings') || '{}');
-    waterSettings.remindersEnabled = enabled;
     localStorage.setItem('water_settings', JSON.stringify(waterSettings));
-    setRemindersEnabled(enabled);
+    setIsSetupComplete(true);
+    setShowSetup(false);
     
-    if (enabled) {
-      const created = createWaterReminders();
-      if (created > 0) {
-        alert(`✅ Created ${created} water reminders for today! Check your timeline.`);
-      }
-    } else {
-      // Remove existing reminders
-      const existingTasks = JSON.parse(localStorage.getItem('todos') || '[]');
-      const today = new Date().toISOString().split('T')[0];
-      const filteredTasks = existingTasks.filter((t: any) => 
-        !(t.dueDate === today && t.source === 'water')
-      );
-      localStorage.setItem('todos', JSON.stringify(filteredTasks));
-      window.dispatchEvent(new Event('todosUpdated'));
-      alert('Water reminders disabled and removed from timeline.');
+    // Dispatch event to update feature lists
+    window.dispatchEvent(new Event('waterSetupCompleted'));
+    
+    // Create reminders if enabled
+    if (waterSettings.remindersEnabled) {
+      createWaterReminders(waterSettings);
     }
   };
 
   const addReminderTime = () => {
     if (newReminderTime && !reminderTimes.includes(newReminderTime)) {
-      const updatedTimes = [...reminderTimes, newReminderTime].sort();
-      setReminderTimes(updatedTimes);
-      
-      const waterSettings = JSON.parse(localStorage.getItem('water_settings') || '{}');
-      waterSettings.reminderTimes = updatedTimes;
-      localStorage.setItem('water_settings', JSON.stringify(waterSettings));
-      
-      setShowAddReminderTime(false);
+      const updated = [...reminderTimes, newReminderTime].sort();
+      setReminderTimes(updated);
       setNewReminderTime('09:00');
-      
-      // Recreate reminders if enabled
-      if (remindersEnabled) {
-        createWaterReminders();
-      }
+      setShowAddTime(false);
     }
   };
 
   const removeReminderTime = (time: string) => {
-    const updatedTimes = reminderTimes.filter(t => t !== time);
-    setReminderTimes(updatedTimes);
-    
-    const waterSettings = JSON.parse(localStorage.getItem('water_settings') || '{}');
-    waterSettings.reminderTimes = updatedTimes;
-    localStorage.setItem('water_settings', JSON.stringify(waterSettings));
-    
-    // Recreate reminders if enabled
-    if (remindersEnabled) {
-      createWaterReminders();
-    }
+    setReminderTimes(reminderTimes.filter(t => t !== time));
   };
-
-
-  // Check if water intake is set up
-  // Check if water intake is actually configured
-  const isSetup = hasConfiguredGoal;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
-        <DialogHeader>
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto p-0 [&>button]:hidden">
+        {/* Header for when setup is complete */}
+        {isSetupComplete && !showSetup && (
+          <div className="px-6 pt-6 pb-4 border-b">
+            <div className="flex items-center justify-between">
           <DialogTitle className="flex items-center gap-2">
-            <Droplets className="w-5 h-5" />
-            Water Intake Tracking
+                <Droplets className="w-5 h-5" style={{ color: colors.features.water }} />
+                Water Intake
           </DialogTitle>
-          <DialogDescription>
-            Track your daily water intake and set reminders to stay hydrated
-          </DialogDescription>
-        </DialogHeader>
-        
-        <div className="flex-1 overflow-hidden flex flex-col">
-          {/* Show setup prompt if not configured */}
-          {!isSetup && (
-            <Card className="mb-6 border-2" style={{ 
-              background: `linear-gradient(to right, ${colors.features.water}15, ${colors.features.water}25)`,
-              borderColor: `${colors.features.water}60`
-            }}>
-              <CardContent className="p-6">
-                <div className="text-center">
-                  <Droplets className="w-16 h-16 mx-auto mb-4" style={{ color: colors.features.water }} />
-                  <h3 className="text-xl font-semibold mb-2 text-gray-900">Set Up Water Intake Tracking</h3>
-                  <p className="text-sm text-gray-700 mb-4">
-                    Track your daily water intake and get reminders to stay hydrated
-                  </p>
-                  <p className="text-sm mb-6" style={{ color: colors.features.water }}>
-                    Set your daily goal and reminder times below to get started
-                  </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={onClose}
+                  aria-label="Close"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowSetup(true)}
+                  className="rounded-full h-9 px-3"
+                >
+                  <Edit className="w-4 h-4 mr-1" />
+                  Edit
+                </Button>
+              </div>
+            </div>
                 </div>
-              </CardContent>
-            </Card>
-          )}
-          
+        )}
 
-          
-          {/* Setup Section - Only show if configured */}
-          {!isSetup ? (
-            <Card className="mb-6">
-              <CardContent className="p-6">
-                {/* Initial Setup - Only show goal setting */}
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="daily-goal" className="text-base font-semibold mb-2 block">Set Your Daily Water Goal</Label>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        id="daily-goal"
-                        type="number"
-                        value={dailyGoal}
-                        onChange={(e) => {
-                          const value = parseInt(e.target.value) || 2000;
-                          setDailyGoal(value);
+        {/* Combined Initial Setup and Expand Form */}
+        {(!isSetupComplete || showSetup) && (
+          <div className={`transition-all duration-700 ease-in-out overflow-hidden rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 ${showSetup || isCollapsing ? 'min-h-[600px]' : ''}`}>
+            <div className="px-6 pt-6 pb-4 border-b">
+              <div className="flex items-center justify-between">
+                <DialogTitle className="flex items-center gap-2">
+                  {showSetup ? (
+                    <>
+                      <ArrowLeft 
+                        className="w-4 h-4 cursor-pointer" 
+                        style={{ color: colors.features.water }}
+                        onClick={() => {
+                          setIsCollapsing(true);
+                          setTimeout(() => {
+                            setShowSetup(false);
+                            setIsCollapsing(false);
+                          }, 700);
                         }}
-                        className="w-32 h-10"
-                        placeholder="2000"
                       />
-                      <Select 
-                        value={unit} 
-                        onValueChange={(value: 'ml' | 'oz') => {
-                          setUnit(value);
-                          const waterSettings = JSON.parse(localStorage.getItem('water_settings') || '{}');
-                          waterSettings.unit = value;
-                          localStorage.setItem('water_settings', JSON.stringify(waterSettings));
-                        }}
-                      >
-                        <SelectTrigger className="w-24 h-10">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="ml">ml</SelectItem>
-                          <SelectItem value="oz">oz</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <span>{isSetupComplete ? 'Edit Water Settings' : 'Set up your Water Intake'}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Droplets className="w-5 h-5" style={{ color: colors.features.water }} />
+                      Water Intake
+                    </>
+                  )}
+                </DialogTitle>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={onClose}
+                    aria-label="Close"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-2">Set a daily goal to start tracking your water intake</p>
                   </div>
                   
-                  {/* Save Button */}
-                  <div className="pt-4">
-                    <Button 
-                      className="w-full" 
-                      onClick={() => {
-                        // Mark as configured and save to localStorage
-                        setHasConfiguredGoal(true);
-                        const waterSettings = JSON.parse(localStorage.getItem('water_settings') || '{}');
-                        waterSettings.dailyGoal = dailyGoal;
-                        waterSettings.unit = unit;
-                        localStorage.setItem('water_settings', JSON.stringify(waterSettings));
-                        
-                        // If reminders are enabled and times are set, create water reminders
-                        if (remindersEnabled && reminderTimes.length > 0) {
-                          setTimeout(() => createWaterReminders(), 100);
-                        }
-                      }}
-                    >
-                      Save & Set Up
-                    </Button>
-                  </div>
+            {!showSetup && (
+              <div className="flex flex-col items-center justify-center p-8 min-h-[400px] text-center">
+                <div className="w-16 h-16 mb-4 rounded-full bg-gradient-to-br from-blue-100 to-cyan-100 flex items-center justify-center">
+                  <Droplets className="w-8 h-8" style={{ color: colors.features.water }} />
                 </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card className="mb-6">
-              <CardContent className="p-6">
-                {/* Full Setup - Show when configured */}
+                <h3 className="text-lg font-semibold mb-2" style={{ color: colors.features.water }}>Set up your Water Intake</h3>
+                <button
+                  onClick={() => setShowSetup(true)}
+                  className="mt-4 w-12 h-12 rounded-full backdrop-blur-md bg-white/30 hover:bg-white/40 border border-white/30 flex items-center justify-center transition-all shadow-lg hover:scale-110"
+                  style={{ color: colors.features.water }}
+                >
+                  <Plus className="w-6 h-6" />
+                </button>
+              </div>
+            )}
+
+            {/* Setup Form Content */}
+            {showSetup && (
+              <div className="px-6 pb-6 animate-in fade-in duration-300">
+                <div className="space-y-6">
+                {/* Daily Goal - First Step */}
                 <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Label htmlFor="daily-goal" className="text-sm">Daily Goal:</Label>
+                  <Label htmlFor="daily-goal" className="text-base font-semibold block text-center">Daily Water Goal</Label>
+                  <div className="flex items-center justify-center gap-2">
                     <Input
                       id="daily-goal"
                       type="number"
                       value={dailyGoal}
-                      onChange={(e) => handleUpdateDailyGoal(parseInt(e.target.value) || 2000)}
-                      className="w-20 h-8"
+                      onChange={(e) => setDailyGoal(parseInt(e.target.value) || 2000)}
+                      placeholder="2000"
+                      className="rounded-full w-32 text-center"
                     />
                     <Select 
                       value={unit} 
-                      onValueChange={(value: 'ml' | 'oz') => {
-                        setUnit(value);
-                        const waterSettings = JSON.parse(localStorage.getItem('water_settings') || '{}');
-                        waterSettings.unit = value;
-                        localStorage.setItem('water_settings', JSON.stringify(waterSettings));
-                      }}
+                      onValueChange={(value: 'ml' | 'oz') => setUnit(value)}
                     >
-                      <SelectTrigger className="w-16 h-8">
+                      <SelectTrigger className="w-24 rounded-full">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -428,130 +327,109 @@ export default function WaterIntakeFeature({ isOpen, onClose }: WaterIntakeFeatu
                       </SelectContent>
                     </Select>
                   </div>
-                
-                {/* Reminder Times */}
-                <div className="p-3 rounded-lg border-2 space-y-3" style={{ 
-                  backgroundColor: `${colors.features.water}10`,
-                  borderColor: `${colors.features.water}30`
-                }}>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Bell className="w-5 h-5" style={{ color: colors.features.water }} />
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">Daily Reminders</p>
-                        <p className="text-xs text-gray-700">Set times to get water reminders</p>
-                      </div>
-                    </div>
-                    {reminderTimes.length > 0 && (
-                      <Button
-                        size="sm"
-                        onClick={() => toggleWaterReminders(!remindersEnabled)}
-                        variant={remindersEnabled ? "destructive" : "default"}
-                      >
-                        {remindersEnabled ? 'Disable' : 'Enable'}
-                      </Button>
-                    )}
+                  <p className="text-xs text-muted-foreground text-center">
+                    Recommended: 2000ml (8 cups) per day
+                  </p>
                   </div>
                   
-                  {/* Reminder Mode Selector */}
-                  <div className="flex gap-2 mb-3">
-                    <Button
-                      size="sm"
-                      variant={reminderMode === 'custom' ? 'default' : 'outline'}
-                      onClick={() => {
-                        setReminderMode('custom');
-                        const waterSettings = JSON.parse(localStorage.getItem('water_settings') || '{}');
-                        waterSettings.reminderMode = 'custom';
-                        localStorage.setItem('water_settings', JSON.stringify(waterSettings));
-                      }}
-                    >
-                      Custom Times
-                    </Button>
+                {/* Reminder Mode - Second Step */}
+                <div className="space-y-3">
+                  <Label className="text-base font-semibold block text-center">Reminder Schedule</Label>
+                  <div className="flex gap-2 justify-center">
                     <Button
                       size="sm"
                       variant={reminderMode === 'interval' ? 'default' : 'outline'}
-                      onClick={() => {
-                        setReminderMode('interval');
-                        const waterSettings = JSON.parse(localStorage.getItem('water_settings') || '{}');
-                        waterSettings.reminderMode = 'interval';
-                        localStorage.setItem('water_settings', JSON.stringify(waterSettings));
-                      }}
+                      onClick={() => setReminderMode('interval')}
+                      className="rounded-full"
                     >
                       Every X Hours
                     </Button>
+                    <Button
+                      size="sm"
+                      variant={reminderMode === 'custom' ? 'default' : 'outline'}
+                      onClick={() => setReminderMode('custom')}
+                      className="rounded-full"
+                    >
+                      Custom Times
+                    </Button>
                   </div>
                   
-                  {/* Reminder Times List */}
+                  {/* Custom Times */}
+                  {reminderMode === 'custom' && (
+                    <div className="space-y-3">
                   {reminderTimes.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap gap-2 justify-center">
                       {reminderTimes.map((time) => (
-                        <div key={time} className="flex items-center gap-1 bg-white px-2 py-1 rounded border border-blue-300">
-                          <Clock className="w-3 h-3 text-blue-600" />
-                          <span className="text-sm text-blue-900">{time}</span>
+                            <div key={time} className="flex items-center gap-1 bg-muted px-3 py-1.5 rounded-full border">
+                              <Clock className="w-3 h-3" />
+                              <span className="text-sm">{time}</span>
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-4 w-4 p-0 hover:bg-red-100"
+                                className="h-4 w-4 p-0 hover:bg-destructive/10"
                             onClick={() => removeReminderTime(time)}
                           >
-                            <X className="w-3 h-3 text-red-600" />
+                                <X className="w-3 h-3 text-destructive" />
                           </Button>
                         </div>
                       ))}
                     </div>
                   )}
                   
-                  {/* Custom Time Input */}
-                  {reminderMode === 'custom' && (
-                    <>
-                      {showAddReminderTime ? (
-                        <div className="flex items-center gap-2">
+                      {showAddTime ? (
+                        <div className="flex items-center justify-center gap-2">
                           <Input
                             type="time"
                             value={newReminderTime}
                             onChange={(e) => setNewReminderTime(e.target.value)}
-                            className="flex-1"
+                            className="rounded-full w-32"
                           />
-                          <Button size="sm" onClick={addReminderTime}>
+                          <Button size="sm" onClick={addReminderTime} className="rounded-full">
                             Add
                           </Button>
-                          <Button size="sm" variant="ghost" onClick={() => setShowAddReminderTime(false)}>
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            onClick={() => {
+                              setShowAddTime(false);
+                              setNewReminderTime('09:00');
+                            }}
+                            className="rounded-full"
+                          >
                             Cancel
                           </Button>
                         </div>
                       ) : (
+                        <div className="flex justify-center">
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => setShowAddReminderTime(true)}
-                          className="w-full"
+                            onClick={() => setShowAddTime(true)}
+                            className="rounded-full"
                         >
                           <Plus className="w-4 h-4 mr-2" />
                           Add Reminder Time
                         </Button>
+                        </div>
                       )}
-                    </>
+                      {reminderTimes.length === 0 && (
+                        <p className="text-xs text-muted-foreground text-center py-2">
+                          Add at least one reminder time to continue
+                        </p>
+                      )}
+                    </div>
                   )}
                   
-                  {/* Interval Selector */}
+                  {/* Interval Mode */}
                   {reminderMode === 'interval' && (
                           <div className="space-y-3">
-                            <div className="flex items-center gap-2">
+                      <div className="flex items-center justify-center gap-2">
                               <Label htmlFor="reminder-interval" className="text-sm">Remind every:</Label>
                               <Select 
                                 value={reminderInterval.toString()} 
-                                onValueChange={(value) => {
-                                  const interval = parseInt(value);
-                                  setReminderInterval(interval);
-                                  const waterSettings = JSON.parse(localStorage.getItem('water_settings') || '{}');
-                                  waterSettings.reminderInterval = interval;
-                                  localStorage.setItem('water_settings', JSON.stringify(waterSettings));
-                                  if (remindersEnabled) {
-                                    createWaterReminders();
-                                  }
-                                }}
+                          onValueChange={(value) => setReminderInterval(parseInt(value))}
                               >
-                                <SelectTrigger className="w-24 h-8">
+                          <SelectTrigger className="w-32 rounded-full">
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -563,18 +441,149 @@ export default function WaterIntakeFeature({ isOpen, onClose }: WaterIntakeFeatu
                                 </SelectContent>
                               </Select>
                             </div>
-                            <div className="text-xs text-muted-foreground p-2 bg-gray-50 rounded">
-                              Reminders will be set from 8:00 AM to 10:00 PM
-                            </div>
+                      {(() => {
+                        const sleepSchedule = JSON.parse(localStorage.getItem('sleepSchedule') || 'null');
+                        let startHour = 6;
+                        let endHour = 22;
+                        
+                        if (sleepSchedule && sleepSchedule.wakeTime && sleepSchedule.bedtime) {
+                          const wakeTimeParts = sleepSchedule.wakeTime.split(':');
+                          const bedtimeParts = sleepSchedule.bedtime.split(':');
+                          startHour = parseInt(wakeTimeParts[0]) || 6;
+                          endHour = parseInt(bedtimeParts[0]) || 22;
+                        } else if (sleepSchedule && sleepSchedule.daily && sleepSchedule.daily.wakeTime && sleepSchedule.daily.sleepTime) {
+                          const wakeTimeParts = sleepSchedule.daily.wakeTime.split(':');
+                          const sleepTimeParts = sleepSchedule.daily.sleepTime.split(':');
+                          startHour = parseInt(wakeTimeParts[0]) || 6;
+                          endHour = parseInt(sleepTimeParts[0]) || 22;
+                        }
+                        
+                        return (
+                          <p className="text-xs text-muted-foreground p-2 bg-muted rounded-full text-center">
+                            Reminders will be set from {String(startHour).padStart(2, '0')}:00 to {String(endHour).padStart(2, '0')}:00
+                            {sleepSchedule ? ' (based on your sleep schedule)' : ''}
+                          </p>
+                        );
+                      })()}
                           </div>
                   )}
                 </div>
                         
+                {/* Save Button */}
+                <div className="pt-4 flex flex-col items-center">
+                  {(() => {
+                    const isCustomModeValid = reminderMode === 'interval' || (reminderMode === 'custom' && reminderTimes.length > 0);
+                    const isDailyGoalValid = dailyGoal > 0;
+                    const isValid = isCustomModeValid && isDailyGoalValid;
+                    
+                    return (
+                      <>
+                        <Button 
+                          className="rounded-full px-8 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground" 
+                          onClick={handleSetupComplete}
+                          disabled={!isValid}
+                        >
+                          {isSetupComplete ? 'Save Changes' : 'Complete Setup'}
+                        </Button>
+                        {!isValid && (
+                          <p className="text-xs text-muted-foreground mt-2 text-center">
+                            {reminderMode === 'custom' && reminderTimes.length === 0 
+                              ? 'Please add at least one reminder time'
+                              : !isDailyGoalValid 
+                              ? 'Please set a daily water goal'
+                              : 'Please fill in all required fields'}
+                          </p>
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
+                </div>
               </div>
-            </CardContent>
-          </Card>
+            )}
+          </div>
+        )}
+
+        {/* Settings Overview when setup complete */}
+        {isSetupComplete && !showSetup && (() => {
+          // Calculate today's intake
+          const waterEntries = JSON.parse(localStorage.getItem('water_entries') || '[]');
+          const today = new Date();
+          const todayStr = today.toISOString().split('T')[0];
+          const todayEntries = waterEntries.filter((entry: any) => {
+            if (entry.timestamp) {
+              return new Date(entry.timestamp).toDateString() === today.toDateString();
+            }
+            if (entry.date) {
+              return entry.date === todayStr;
+            }
+            return false;
+          });
+          const totalIntake = todayEntries.reduce((sum: number, entry: any) => sum + (entry.amount || 0), 0);
+          const goalReached = totalIntake >= dailyGoal;
+          
+          const markAllWaterTasksDone = () => {
+            if (!goalReached) return;
+            const todos = JSON.parse(localStorage.getItem('todos') || '[]');
+            const updatedTodos = todos.map((task: any) => {
+              if (task.source === 'water' && (task as any).waterReminder && task.dueDate === todayStr) {
+                return { ...task, completed: true };
+              }
+              return task;
+            });
+            localStorage.setItem('todos', JSON.stringify(updatedTodos));
+            window.dispatchEvent(new Event('todosUpdated'));
+          };
+          
+          return (
+            <div className="px-6 py-6 space-y-4">
+              <div className="p-4 rounded-2xl border bg-muted/20">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Target className="w-4 h-4 text-primary" />
+                    <span className="font-medium text-sm">Daily Goal</span>
+                  </div>
+                </div>
+                <div className="text-2xl font-bold">
+                  {dailyGoal}{unit}
+                </div>
+                {goalReached && (
+                  <Button
+                    size="sm"
+                    className="mt-3 w-full rounded-full"
+                    onClick={markAllWaterTasksDone}
+                  >
+                    Mark All Water Tasks as Done
+                  </Button>
+                )}
+              </div>
+
+            <div className="p-4 rounded-2xl border bg-muted/20">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Bell className="w-4 h-4 text-primary" />
+                  <span className="font-medium text-sm">Reminders</span>
+                </div>
+              </div>
+              {reminderMode === 'custom' && reminderTimes.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {reminderTimes.map((time) => (
+                    <div key={time} className="flex items-center gap-1 bg-background px-2 py-1 rounded-full border text-sm">
+                      <Clock className="w-3 h-3" />
+                      {time}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {reminderMode === 'interval' && (
+                <div className="text-sm mt-2">
+                  Every {reminderInterval} hour{reminderInterval > 1 ? 's' : ''} (8 AM - 10 PM)
+                </div>
           )}
         </div>
+            </div>
+          );
+        })()}
       </DialogContent>
     </Dialog>
   );

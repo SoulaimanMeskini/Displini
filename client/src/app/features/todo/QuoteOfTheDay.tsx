@@ -66,13 +66,13 @@ export function QuoteOfTheDay() {
   const quote = getDailyQuote();
 
   return settings.enabled ? (
-    <div className="relative p-5 mb-8 rounded-2xl bg-gradient-to-br from-muted/50 to-transparent border shadow-sm">
-      <Quote className="w-7 h-7 text-muted-foreground/30 absolute top-4 left-4" />
-      <div className="pl-10">
-        <p className="text-sm sm:text-base leading-relaxed text-foreground mb-2 italic">
+    <div className="relative p-3 rounded-xl bg-gradient-to-br from-muted/30 to-transparent border shadow-sm max-w-full">
+      <Quote className="w-4 h-4 text-muted-foreground/30 absolute top-3 left-3" />
+      <div className="pl-8">
+        <p className="text-sm leading-relaxed text-foreground mb-1 italic">
           "{quote.text}"
         </p>
-        <p className="text-xs sm:text-sm text-muted-foreground font-medium">
+        <p className="text-xs text-muted-foreground font-medium">
           — {quote.author}
         </p>
       </div>

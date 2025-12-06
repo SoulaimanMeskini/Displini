@@ -292,7 +292,7 @@ function LandingAbout() {
         onMouseMove={handleMouseMove}
         onMouseLeave={() => setHoveredCard(null)}
       >
-        <div className="container mx-auto max-w-md">
+        <div className="container mx-auto max-w-md w-full flex items-center justify-center px-4">
           <motion.div
             className="relative"
             initial={{ opacity: 0, scale: 0.9 }}
@@ -367,7 +367,7 @@ function LandingAbout() {
         onMouseLeave={() => setHoveredCard(null)}
       >
         <div className="container mx-auto max-w-md w-full flex items-center justify-center px-4">
-          <div className="flex flex-col gap-4 md:gap-8 items-center justify-center w-full max-w-sm mx-auto">
+          <div className="flex flex-col gap-4 md:gap-8 items-center justify-center w-full max-w-sm">
             {smallCards.map((card, index) => {
               const Icon = card.icon;
               const cardId = `${card.title.toLowerCase()}-mobile`;
@@ -383,7 +383,7 @@ function LandingAbout() {
                   onMouseEnter={() => setHoveredCard(cardId)}
                 >
                   <motion.div
-                    className="relative bg-white/40 dark:bg-gray-800/40 backdrop-blur-xl border border-white/50 dark:border-gray-700/50 rounded-2xl p-4 md:p-6 shadow-xl overflow-hidden w-full"
+                    className="relative bg-white/40 dark:bg-gray-800/40 backdrop-blur-xl border border-white/50 dark:border-gray-700/50 rounded-2xl p-3 md:p-6 shadow-xl overflow-hidden w-full"
                     animate={{
                       y: [0, -8, 0],
                       scale: hoveredCard === cardId ? 1.02 : 1,
@@ -418,19 +418,19 @@ function LandingAbout() {
                     <div className="relative z-10 flex flex-col items-center text-center">
                       {/* Icon */}
                       <div 
-                        className="w-14 h-14 rounded-full flex items-center justify-center mb-4"
+                        className={`${isMobile ? 'w-10 h-10' : 'w-14 h-14'} rounded-full flex items-center justify-center ${isMobile ? 'mb-2' : 'mb-4'}`}
                         style={{ backgroundColor: `${card.color}20` }}
                       >
-                        <Icon className="w-7 h-7" style={{ color: card.color }} />
+                        <Icon className={isMobile ? 'w-5 h-5' : 'w-7 h-7'} style={{ color: card.color }} />
                       </div>
 
                       {/* Title */}
-                      <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
+                      <h3 className={`${isMobile ? 'text-lg' : 'text-2xl'} font-bold text-gray-900 dark:text-white ${isMobile ? 'mb-2' : 'mb-3'}`}>
                         {card.title}
                       </h3>
 
                       {/* Text */}
-                      <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                      <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-gray-700 dark:text-gray-300 leading-relaxed`}>
                         {card.text}
                       </p>
                     </div>

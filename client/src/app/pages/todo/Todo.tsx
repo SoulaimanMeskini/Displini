@@ -81,6 +81,27 @@ export default function Todo() {
       window.dispatchEvent(new CustomEvent('openFeature', { detail: { featureId: 'school' } }));
     };
     
+    const handleOpenStandSitReminder = (e: any) => {
+      const taskId = e.detail?.taskId;
+      // TODO: Open stand/sit reminder dialog component
+      // For now, log the taskId - component to be implemented
+      console.log('Open Stand/Sit Reminder for task:', taskId);
+    };
+    
+    const handleOpenEyeBreakReminder = (e: any) => {
+      const taskId = e.detail?.taskId;
+      // TODO: Open eye break reminder dialog component
+      // For now, log the taskId - component to be implemented
+      console.log('Open Eye Break Reminder for task:', taskId);
+    };
+    
+    const handleOpenPomodoro = (e: any) => {
+      const taskId = e.detail?.taskId;
+      // TODO: Open pomodoro timer dialog component
+      // For now, log the taskId - component to be implemented
+      console.log('Open Pomodoro Timer for task:', taskId);
+    };
+    
     window.addEventListener('openAddTask', handleOpenAddTask);
     window.addEventListener('openStudentDialog', handleOpenStudentDialog);
     window.addEventListener('openWaterIntake', handleOpenWaterIntake);
@@ -89,6 +110,9 @@ export default function Todo() {
     window.addEventListener('openMenstrualCycle', handleOpenMenstrualCycle);
     window.addEventListener('openWork', handleOpenWork);
     window.addEventListener('openSchool', handleOpenSchool);
+    window.addEventListener('openStandSitReminder', handleOpenStandSitReminder);
+    window.addEventListener('openEyeBreakReminder', handleOpenEyeBreakReminder);
+    window.addEventListener('openPomodoro', handleOpenPomodoro);
     
     return () => {
       window.removeEventListener('openAddTask', handleOpenAddTask);
@@ -99,6 +123,9 @@ export default function Todo() {
       window.removeEventListener('openMenstrualCycle', handleOpenMenstrualCycle);
       window.removeEventListener('openWork', handleOpenWork);
       window.removeEventListener('openSchool', handleOpenSchool);
+      window.removeEventListener('openStandSitReminder', handleOpenStandSitReminder);
+      window.removeEventListener('openEyeBreakReminder', handleOpenEyeBreakReminder);
+      window.removeEventListener('openPomodoro', handleOpenPomodoro);
     };
   }, []);
 
@@ -110,6 +137,17 @@ export default function Todo() {
     };
     window.addEventListener('openJournal', handleOpenJournal);
     return () => window.removeEventListener('openJournal', handleOpenJournal);
+  }, []);
+
+  // Listen for openJournalWrite event from journal tasks in timeline
+  useEffect(() => {
+    const handleOpenJournalWrite = (e: any) => {
+      setIsJournalDialogOpen(true);
+      // Dispatch event to JournalFeature to open write dialog
+      window.dispatchEvent(new CustomEvent('openJournal', { detail: e.detail }));
+    };
+    window.addEventListener('openJournalWrite', handleOpenJournalWrite);
+    return () => window.removeEventListener('openJournalWrite', handleOpenJournalWrite);
   }, []);
 
 
@@ -195,6 +233,112 @@ export default function Todo() {
     return () => window.removeEventListener('storage', checkStartupSettings);
   }, []);
 
+  // Sync work tasks on page load if work is set up
+  useEffect(() => {
+    const syncWorkTasksOnLoad = () => {
+      const workSettings = JSON.parse(localStorage.getItem('work_settings') || '{}');
+      if (!workSettings.isSetupComplete || !workSettings.workSchedule) return;
+
+      const todos = JSON.parse(localStorage.getItem('todos') || '[]');
+      const filteredTodos = todos.filter((t: any) => t.source !== 'work');
+      
+      const today = new Date();
+      for (let i = -30; i < 335; i++) {
+        const date = new Date(today);
+        date.setDate(date.getDate() + i);
+        const dayName = date.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+        
+        if (workSettings.workSchedule.workDays && workSettings.workSchedule.workDays.includes(dayName)) {
+          const dateStr = date.toISOString().split('T')[0];
+          const existingWorkTask = filteredTodos.find((t: any) => t.id === `work-${dateStr}`);
+          if (!existingWorkTask && workSettings.workSchedule.startTime && workSettings.workSchedule.endTime) {
+            const workTask = {
+              id: `work-${dateStr}`,
+              title: 'Work',
+              emoji: '💼',
+              time: workSettings.workSchedule.startTime,
+              endTime: workSettings.workSchedule.endTime,
+              completed: false,
+              source: 'work' as const,
+              dueDate: dateStr,
+              color: workSettings.workSchedule.color || '#3b82f6',
+              breakTimes: workSettings.workSchedule.breakTimes || [],
+            };
+            filteredTodos.push(workTask);
+          }
+        }
+      }
+      
+      localStorage.setItem('todos', JSON.stringify(filteredTodos));
+      window.dispatchEvent(new Event('todosUpdated'));
+    };
+
+    syncWorkTasksOnLoad();
+    
+    // Also sync when date changes to ensure tasks are up to date
+    const handleDateChange = () => {
+      syncWorkTasksOnLoad();
+    };
+    window.addEventListener('dateChanged', handleDateChange);
+    return () => window.removeEventListener('dateChanged', handleDateChange);
+  }, [selectedDate]);
+
+  // Sync school tasks on page load if school schedules are set up
+  useEffect(() => {
+    const syncSchoolTasksOnLoad = () => {
+      const schoolSchedules = JSON.parse(localStorage.getItem('school_schedules') || '[]');
+      if (!schoolSchedules || schoolSchedules.length === 0) return;
+
+      const todos = JSON.parse(localStorage.getItem('todos') || '[]');
+      const filteredTodos = todos.filter((t: any) => t.source !== 'school' && !t.source?.startsWith('school-'));
+      
+      const today = new Date();
+      for (let i = -30; i < 335; i++) {
+        const date = new Date(today);
+        date.setDate(date.getDate() + i);
+        const dayName = date.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+        
+        schoolSchedules.forEach((schedule: any) => {
+          if (schedule.isActive && schedule.days && schedule.days.includes(dayName)) {
+            const dateStr = date.toISOString().split('T')[0];
+            const taskId = `school-${schedule.id}-${dateStr}`;
+            const existingSchoolTask = filteredTodos.find((t: any) => t.id === taskId);
+            if (!existingSchoolTask && schedule.startTime && schedule.endTime) {
+              const schoolTask = {
+                id: taskId,
+                title: schedule.name || 'School',
+                emoji: schedule.emoji || '🎓',
+                time: schedule.startTime,
+                endTime: schedule.endTime,
+                completed: false,
+                source: 'school' as const,
+                dueDate: dateStr,
+                color: schedule.color || '#FFD400',
+              };
+              filteredTodos.push(schoolTask);
+            }
+          }
+        });
+      }
+      
+      localStorage.setItem('todos', JSON.stringify(filteredTodos));
+      window.dispatchEvent(new Event('todosUpdated'));
+    };
+
+    syncSchoolTasksOnLoad();
+    
+    // Also sync when date changes
+    const handleDateChange = () => {
+      syncSchoolTasksOnLoad();
+    };
+    window.addEventListener('dateChanged', handleDateChange);
+    window.addEventListener('schoolSchedulesUpdated', syncSchoolTasksOnLoad);
+    return () => {
+      window.removeEventListener('dateChanged', handleDateChange);
+      window.removeEventListener('schoolSchedulesUpdated', syncSchoolTasksOnLoad);
+    };
+  }, [selectedDate]);
+
   // Check for confetti trigger whenever tasks change (NOT on date change)
   useEffect(() => {
     // Skip confetti check on initial page load
@@ -270,6 +414,14 @@ export default function Todo() {
       
       return updatedTasks;
     });
+    
+    // Delete reminder when task from reminder is completed
+    if (task && task.source === "reminder" && task.reminderId && isCompleting) {
+      const reminders = JSON.parse(localStorage.getItem('reminders') || '[]');
+      const updatedReminders = reminders.filter((r: any) => r.id !== task.reminderId);
+      localStorage.setItem('reminders', JSON.stringify(updatedReminders));
+      window.dispatchEvent(new Event('remindersUpdated'));
+    }
 
     // Handle medication completion
     if (task && task.source === "medication" && isCompleting) {
@@ -580,7 +732,110 @@ export default function Todo() {
       <main className="px-4 py-6">
         
         {/* Progress Indicators */}
-        <div className="flex justify-center items-center gap-6 mb-6">
+        <div className="flex flex-nowrap justify-center items-start gap-6 mb-6">
+          {/* Food Tracker - Show on left side if configured */}
+          {(() => {
+            const foodSettings = JSON.parse(localStorage.getItem('food_settings') || '{}');
+            if (!foodSettings.isSetupComplete) return null;
+            
+            const calorieGoal = foodSettings.calorieGoal || 2000;
+            const proteinGoal = foodSettings.proteinGoal || 150;
+            const meals = JSON.parse(localStorage.getItem('meals') || '[]');
+            const todayDate = new Date(selectedDate);
+            const todayStr = todayDate.toISOString().split('T')[0];
+            
+            // Filter meals for today (consumed meals)
+            const todayMeals = meals.filter((meal: any) => {
+              if (meal.consumedAt) {
+                const consumedDate = new Date(meal.consumedAt);
+                return consumedDate.toISOString().split('T')[0] === todayStr;
+              }
+              if (meal.date) {
+                return meal.date === todayStr;
+              }
+              return false;
+            });
+            
+            const totalCalories = todayMeals.reduce((sum: number, meal: any) => sum + (meal.kcal || 0), 0);
+            const totalProtein = todayMeals.reduce((sum: number, meal: any) => sum + (meal.protein || 0), 0);
+            const calorieProgress = calorieGoal > 0 ? Math.min((totalCalories / calorieGoal) * 100, 100) : 0;
+            const proteinProgress = proteinGoal > 0 ? Math.min((totalProtein / proteinGoal) * 100, 100) : 0;
+            const overallProgress = (calorieProgress + proteinProgress) / 2;
+            
+            // Create a custom circular progress for food (showing percentage)
+            const size = 100;
+            const strokeWidth = 8;
+            const radius = (size - strokeWidth) / 2;
+            const circumference = radius * 2 * Math.PI;
+            const strokeDashoffset = circumference - (overallProgress / 100 * circumference);
+            
+            const getFoodColor = (progress: number) => {
+              if (progress === 0) return "stroke-muted-foreground/20";
+              if (progress <= 30) return "stroke-red-500";
+              if (progress <= 60) return "stroke-yellow-500";
+              if (progress <= 90) return "stroke-orange-500";
+              return "stroke-green-500";
+            };
+
+            const getFoodBackgroundColor = (progress: number) => {
+              if (progress === 0) return "stroke-muted-foreground/10";
+              if (progress <= 30) return "stroke-red-100";
+              if (progress <= 60) return "stroke-yellow-100";
+              if (progress <= 90) return "stroke-orange-100";
+              return "stroke-green-100";
+            };
+
+            return (
+              <div 
+                className="flex flex-col items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent('openFeature', { detail: { featureId: 'food' } }));
+                }}
+              >
+                <div className="relative inline-flex items-center justify-center">
+                  <svg
+                    width={size}
+                    height={size}
+                    className="transform -rotate-90"
+                  >
+                    <circle
+                      cx={size / 2}
+                      cy={size / 2}
+                      r={radius}
+                      stroke="currentColor"
+                      strokeWidth={strokeWidth}
+                      fill="none"
+                      className={getFoodBackgroundColor(overallProgress)}
+                    />
+                    <circle
+                      cx={size / 2}
+                      cy={size / 2}
+                      r={radius}
+                      stroke="currentColor"
+                      strokeWidth={strokeWidth}
+                      fill="none"
+                      strokeDasharray={circumference}
+                      strokeDashoffset={strokeDashoffset}
+                      strokeLinecap="round"
+                      className={`transition-all duration-300 ease-in-out ${getFoodColor(overallProgress)}`}
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <div className="text-lg font-bold text-foreground">
+                      {Math.round(overallProgress)}%
+                    </div>
+                  </div>
+                </div>
+                <p className="text-sm text-muted-foreground text-center">
+                  {totalCalories} / {calorieGoal} kcal
+                </p>
+                <p className="text-xs text-muted-foreground text-center">
+                  {totalProtein} / {proteinGoal} g protein
+                </p>
+              </div>
+            );
+          })()}
+          
           <div className="flex flex-col items-center gap-2">
             <CircularProgress 
               completed={completedCount}
@@ -619,45 +874,55 @@ export default function Todo() {
               return false;
             });
             const totalIntake = todayEntries.reduce((sum: number, entry: any) => sum + (entry.amount || 0), 0);
-            const percentage = Math.min((totalIntake / goal) * 100, 100);
+            const percentage = goal > 0 ? Math.min((totalIntake / goal) * 100, 100) : 0;
+            const progress = goal > 0 ? totalIntake / goal : 0;
+            
+            // Match CircularProgress color scheme
+            const getColor = (progress: number) => {
+              if (progress === 0) return "stroke-muted-foreground/20";
+              if (progress <= 0.3) return "stroke-red-500";
+              if (progress <= 0.6) return "stroke-yellow-500";
+              if (progress <= 0.9) return "stroke-orange-500";
+              return "stroke-green-500";
+            };
+
+            const getBackgroundColor = (progress: number) => {
+              if (progress === 0) return "stroke-muted-foreground/10";
+              if (progress <= 0.3) return "stroke-red-100";
+              if (progress <= 0.6) return "stroke-yellow-100";
+              if (progress <= 0.9) return "stroke-orange-100";
+              return "stroke-green-100";
+            };
+
+            const size = 100;
+            const strokeWidth = 8;
+            const radius = (size - strokeWidth) / 2;
+            const circumference = radius * 2 * Math.PI;
+            const strokeDashoffset = circumference - (progress * circumference);
             
                           return (
-              <div className="flex flex-col items-center gap-2">
-                <div className="relative inline-flex items-center justify-center">
-                  <svg width={100} height={100} className="transform -rotate-90">
-                    <circle
-                      cx={50}
-                      cy={50}
-                      r={42}
-                      stroke="currentColor"
-                      strokeWidth={8}
-                      fill="none"
-                      className="stroke-muted-foreground/10"
-                    />
-                    <circle
-                      cx={50}
-                      cy={50}
-                      r={42}
-                      stroke="currentColor"
-                      strokeWidth={8}
-                      fill="none"
-                      strokeDasharray={`${2 * Math.PI * 42}`}
-                      strokeDashoffset={`${2 * Math.PI * 42 * (1 - percentage / 100)}`}
-                      strokeLinecap="round"
-                      className="transition-all duration-500 stroke-blue-500"
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <div className="text-center">
-                      <div className="text-lg font-bold text-foreground">
-                        {totalIntake}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        of {goal}ml
-                      </div>
-                    </div>
-                  </div>
-                </div>
+              <div 
+                className="flex flex-col items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+                onClick={() => {
+                  // Find a water reminder task for today to trigger the dialog
+                  const waterTasks = todayTasks.filter((t: any) => t.source === 'water' && (t as any).waterReminder);
+                  if (waterTasks.length > 0) {
+                    handleWaterReminderClick(waterTasks[0].time || '12:00');
+                  } else {
+                    // Open water intake feature if no reminder tasks found
+                    window.dispatchEvent(new CustomEvent('openFeature', { detail: { featureId: 'water' } }));
+                  }
+                }}
+              >
+                <CircularProgress 
+                  completed={totalIntake}
+                  total={goal}
+                  size={size}
+                  strokeWidth={strokeWidth}
+                />
+                <p className="text-sm text-muted-foreground">
+                  {totalIntake} / {goal} {unit}
+                </p>
               </div>
             );
           })()}
@@ -665,10 +930,6 @@ export default function Todo() {
 
         {/* Main Content - Show All Day Tasks and Liquid Timeline */}
         <div className="mt-6 space-y-8">
-          {/* Quote of the Day - appears before all-day tasks (only on current day) */}
-          {quoteSettings.enabled && isToday(selectedDate) && (
-            <QuoteOfTheDay />
-          )}
           
           {todayTasks.filter(t => t.allDay || (!t.time && !t.allDay)).length > 0 && (
             <AllDayTasks 
@@ -679,6 +940,13 @@ export default function Todo() {
               getSourceBadge={getSourceBadge}
               onOpenWorkDialog={() => setIsOfficeDialogOpen(true)}
             />
+          )}
+
+          {/* Quote of the Day - shown between all-day tasks and timeline (only on current day) */}
+          {quoteSettings.enabled && isToday(selectedDate) && (
+            <div className="max-w-md mx-auto">
+              <QuoteOfTheDay />
+            </div>
           )}
           
           <LiquidTimeline

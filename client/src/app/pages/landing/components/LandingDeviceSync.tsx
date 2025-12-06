@@ -202,12 +202,23 @@ export function LandingDeviceSync() {
         </div>
       </div>
 
-      {/* Device Screens - Positioned below title, behind CTA - Only top visible */}
-      <div className="absolute left-0 right-0 w-full" style={{ top: isMobile ? '40%' : '42%', height: '350px', overflow: 'hidden', zIndex: 5 }}>
+      {/* Device Screens - Positioned below title, behind CTA - Only top visible - Hidden on mobile */}
+      {!isMobile && (
+      <div className="absolute left-0 right-0 w-full" style={{ 
+        top: '42%', 
+        height: '350px', 
+        overflow: 'hidden', 
+        zIndex: 5 
+      }}>
         {/* MacBook */}
         <div 
           className="absolute left-1/2 -translate-x-1/2 transition-transform duration-500 hover:scale-105"
-          style={{ top: '50px', width: '560px', maxWidth: '90vw', zIndex: 5 }}
+          style={{ 
+            top: isMobile ? '20px' : '50px', 
+            width: isMobile ? '320px' : '560px', 
+            maxWidth: '90vw', 
+            zIndex: 5 
+          }}
         >
           <div className="flex flex-col items-center" style={{ width: '100%' }}>
             <div className="bg-gray-800 rounded-t-2xl shadow-2xl relative" style={{ width: '93%', aspectRatio: '520/320', padding: '8px 8px 0 8px' }}>
@@ -245,7 +256,14 @@ export function LandingDeviceSync() {
         {/* iPad */}
         <div 
           className="absolute left-1/2 -translate-x-1/2 bg-gray-800 rounded-[2rem] shadow-2xl transition-transform duration-500 hover:scale-105"
-          style={{ top: '100px', width: '288px', height: '384px', padding: '10px', maxWidth: '70vw', zIndex: 5 }}
+          style={{ 
+            top: isMobile ? '70px' : '100px', 
+            width: isMobile ? '200px' : '288px', 
+            height: isMobile ? '266px' : '384px', 
+            padding: isMobile ? '8px' : '10px', 
+            maxWidth: '70vw', 
+            zIndex: 5 
+          }}
         >
           <div className="w-full h-full bg-white rounded-[1.5rem] overflow-hidden relative">
             <div className="absolute top-3 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-900 rounded-full z-20"></div>
@@ -261,7 +279,14 @@ export function LandingDeviceSync() {
         {/* iPhone */}
         <div 
           className="absolute left-1/2 -translate-x-1/2 bg-gray-900 rounded-[2.5rem] shadow-2xl transition-transform duration-500 hover:scale-105"
-          style={{ top: '150px', width: '192px', height: '384px', padding: '8px', maxWidth: '50vw', zIndex: 5 }}
+          style={{ 
+            top: isMobile ? '120px' : '150px', 
+            width: isMobile ? '140px' : '192px', 
+            height: isMobile ? '280px' : '384px', 
+            padding: isMobile ? '6px' : '8px', 
+            maxWidth: '50vw', 
+            zIndex: 5 
+          }}
           data-device="iphone"
         >
           <div className="w-full h-full bg-white rounded-[2rem] overflow-hidden relative">
@@ -302,6 +327,7 @@ export function LandingDeviceSync() {
           <div className="absolute rounded-b-lg bg-gray-800" style={{ bottom: '-16px', left: '50%', transform: 'translateX(-50%)', width: '48px', height: '16px' }}></div>
         </div>
       </div>
+      )}
 
       {/* CTA Section - At bottom of section */}
       <div 

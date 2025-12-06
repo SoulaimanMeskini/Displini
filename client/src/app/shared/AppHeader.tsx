@@ -15,7 +15,8 @@ import {
   Briefcase,
   GraduationCap,
   ChevronRight,
-  BookOpen
+  BookOpen,
+  Utensils
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
@@ -24,6 +25,7 @@ import { colors } from "@/lib/designSystem";
 import JournalFeature from "@/app/features/reminders/JournalFeature";
 import SleepScheduleFeature from "@/app/features/reminders/SleepScheduleFeature";
 import WaterIntakeFeature from "@/app/features/reminders/WaterIntakeFeature";
+import FoodTrackerFeature from "@/app/features/reminders/FoodTrackerFeature";
 import MenstrualCycleTracker from "@/app/features/reminders/MenstrualCycleTracker";
 import MedicationTracker from "@/app/features/reminders/MedicationTracker";
 import WorkFeature from "@/app/features/reminders/WorkFeature";
@@ -45,7 +47,7 @@ interface Feature {
 }
 
 // Features ordered to match landing page carousel (Section 3) and FeaturesSidebar
-// Order: Sleep, Water, Medication, Menstrual, Sport, Journal, Office, School
+// Order: Sleep, Water, Medication, Food, Menstrual, Sport, Journal, Office, School
 const features: Feature[] = [
   {
     id: 'sleep',
@@ -67,6 +69,13 @@ const features: Feature[] = [
     icon: Pill,
     description: 'Reminders and tracking',
     color: colors.features.medication
+  },
+  {
+    id: 'food',
+    name: 'Food Tracker',
+    icon: Utensils,
+    description: 'Track calories and macros',
+    color: colors.features.food || '#f59e0b'
   },
   {
     id: 'menstrual',
@@ -112,6 +121,7 @@ export default function AppHeader({ title, subtitle, onSettingsClick, onStatsCli
   const [showJournal, setShowJournal] = useState(false);
   const [showSleepSchedule, setShowSleepSchedule] = useState(false);
   const [showWaterIntake, setShowWaterIntake] = useState(false);
+  const [showFoodTracker, setShowFoodTracker] = useState(false);
   const [showMenstrualCycle, setShowMenstrualCycle] = useState(false);
   const [showMedication, setShowMedication] = useState(false);
   const [showWork, setShowWork] = useState(false);
@@ -170,6 +180,10 @@ export default function AppHeader({ title, subtitle, onSettingsClick, onStatsCli
         case 'water':
           // Open water intake feature dialog
           setShowWaterIntake(true);
+          break;
+        case 'food':
+          // Open food tracker feature dialog
+          setShowFoodTracker(true);
           break;
         case 'medication':
           // Open medication tracker dialog
@@ -287,6 +301,11 @@ export default function AppHeader({ title, subtitle, onSettingsClick, onStatsCli
       <WaterIntakeFeature 
         isOpen={showWaterIntake} 
         onClose={() => setShowWaterIntake(false)} 
+      />
+
+      <FoodTrackerFeature 
+        isOpen={showFoodTracker} 
+        onClose={() => setShowFoodTracker(false)} 
       />
 
       <MenstrualCycleTracker 

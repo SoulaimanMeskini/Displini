@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback, lazy, Suspense } from "react";
 import { Task } from "@/app/types/types";
 import { getCurrentTime, formatTimeString } from "@/lib/timeUtils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/app/components/ui/dialog";
@@ -9,13 +9,27 @@ import { Checkbox } from "@/app/components/ui/checkbox";
 import { Badge } from "@/app/components/ui/badge";
 import { Card, CardContent } from "@/app/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/app/components/ui/select";
-import { Edit2, X, Plus, ChevronDown, ChevronUp, Clock, Repeat, Repeat1, Repeat2, Calendar, GripVertical, Image as ImageIcon, Sparkles, ExternalLink } from "lucide-react";
+import { Edit2, X, Plus, ChevronDown, ChevronUp, Clock, Repeat, Repeat1, Repeat2, Calendar, GripVertical, Image as ImageIcon, Sparkles, ExternalLink, Monitor, Eye, Timer } from "lucide-react";
 import { Textarea } from "@/app/components/ui/textarea";
 import { EmojiPicker } from "@/app/components/shared/EmojiPicker";
 import { ImageViewerDialog } from "@/app/components/shared";
 import { getAffirmationSettings, getDailyAffirmationText } from "@/app/features/todo/DailyAffirmations";
 import { useLocation } from "wouter";
-import Work from "@/app/features/todo/Work";
+const Work = lazy(() => import("@/app/features/todo/Work"));
+// New utilities and components
+import { timeToMinutes, minutesToTime, hasTimePassed } from "./utils/timeHelpers";
+import { calculateTimelineBounds, calculatePosition, TimelineBounds, TimelineItem as TimelineItemType } from "./utils/timelineCalculations";
+import { groupOverlappingTasks, TaskGroup } from "./utils/taskGrouping";
+import { buildTimelineItems } from "./utils/buildTimelineItems";
+import { calculateTaskMetrics } from "./utils/taskSizing";
+import { calculateFreeTimeSegments, FreeTimeSegment } from "./utils/freeTime";
+import { TimelineBar } from "./timeline/TimelineBar";
+import { TimelineDot } from "./timeline/TimelineDot";
+import { CurrentTimeIndicator } from "./timeline/CurrentTimeIndicator";
+import { CandyConePattern } from "./timeline/CandyConePattern";
+import { ReminderDots } from "./timeline/ReminderDots";
+import { TaskGroupContainer } from "./tasks/TaskGroupContainer";
+import { TaskCard } from "./tasks/TaskCard";
 
 interface Props {
   tasks: Task[];
@@ -28,17 +42,7 @@ interface Props {
   getSourceBadge?: (source: Task["source"]) => { label: string; className: string } | null;
 }
 
-interface TimelineItem {
-  time: string;
-  tasks: Task[];
-  waterReminder?: boolean;
-  medicationReminder?: boolean;
-  stepReminder?: boolean;
-  meditationReminder?: boolean;
-  glucoseReminder?: boolean;
-  isWakeUp?: boolean;
-  isBedTime?: boolean;
-}
+// TimelineItem interface is now imported from timelineCalculations
 
 export default function LiquidTimeline({ tasks, date, onToggleTask, onUpdateTask, onDeleteTask, onWaterReminderClick, onAddTaskClick, getSourceBadge }: Props) {
   const [, setLocation] = useLocation();
@@ -54,8 +58,11 @@ export default function LiquidTimeline({ tasks, date, onToggleTask, onUpdateTask
     switch (source) {
       case 'water':
       case 'medication':
-      case 'sleep':
         return '/health';
+      case 'sleep':
+      case 'startup':
+      case 'winddown':
+        return 'sleep-dialog'; // Special case: opens sleep schedule dialog
       case 'food':
         return '/food';
       case 'workout':
@@ -80,6 +87,9 @@ export default function LiquidTimeline({ tasks, date, onToggleTask, onUpdateTask
     } else if (destination === 'student-dialog') {
       // We need to dispatch an event to open the student dialog from the parent component
       window.dispatchEvent(new CustomEvent('openStudentDialog'));
+    } else if (destination === 'sleep-dialog') {
+      // Dispatch event to open sleep schedule dialog
+      window.dispatchEvent(new CustomEvent('openFeature', { detail: { featureId: 'sleep' } }));
     } else {
       setLocation(destination);
     }
@@ -317,187 +327,59 @@ export default function LiquidTimeline({ tasks, date, onToggleTask, onUpdateTask
 
   const timeBasedTasks = tasks.filter(task => task.time && !task.allDay);
 
-  // Get water and medication reminders
-  const getWaterReminderTimes = () => {
-    const waterSettings = JSON.parse(localStorage.getItem('water_settings') || '{}');
-    const dailyGoal = waterSettings.dailyGoal;
-    
-    // Only show if daily goal is set AND reminders are enabled
-    if (!dailyGoal || dailyGoal === 0) {
-      return [];
-    }
-    if (!waterSettings.remindersEnabled) {
-      return [];
-    }
-    
-    // If custom times are set, use those
-    if (waterSettings.reminderTimes && waterSettings.reminderTimes.length > 0) {
-      return waterSettings.reminderTimes;
-    }
-    
-    // Otherwise, generate based on interval mode
-    const interval = waterSettings.reminderInterval || 2;
-    const startTime = waterSettings.reminderStartTime || '08:00';
-    const endTime = waterSettings.reminderEndTime || '22:00';
-    
-    const [startHour] = startTime.split(':').map(Number);
-    const [endHour] = endTime.split(':').map(Number);
-    
-    const reminderTimes: string[] = [];
-    for (let hour = startHour; hour <= endHour; hour += interval) {
-      reminderTimes.push(`${String(hour).padStart(2, '0')}:00`);
-    }
-    
-    return reminderTimes;
-  };
-
-  const getMedicationReminderTimes = () => {
-    const medications = JSON.parse(localStorage.getItem('medications') || '[]');
-    const times: string[] = [];
-    medications.forEach((med: any) => {
-      // Skip all-day medications - they should not appear as dots on the timeline
-      if (med.allDay) return;
-      
-      if (med.times && Array.isArray(med.times)) {
-        med.times.forEach((time: string) => {
-          if (!times.includes(time)) {
-            times.push(time);
-          }
-        });
-      }
-    });
-    return times;
-  };
-
-  const getStepReminderTimes = () => {
-    const stepSettings = JSON.parse(localStorage.getItem('step_settings') || '{}');
-    if (!stepSettings.remindersEnabled || !stepSettings.addToTodo) return [];
-    
-    // Check if the current viewing date's day is in the selected reminderDays
-    const viewingDate = date || new Date();
-    const dayName = viewingDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
-    const reminderDays = stepSettings.reminderDays || [];
-    
-    // Only return times if today's day is in the selected days
-    if (reminderDays.includes(dayName)) {
-      return stepSettings.reminderTimes || [];
-    }
-    
-    return [];
-  };
-
-  const getMeditationReminderTimes = () => {
-    const reminders = JSON.parse(localStorage.getItem('breathingReminders') || '[]');
-    const times: string[] = [];
-    reminders.forEach((reminder: any) => {
-      if (reminder.enabled && reminder.time) {
-        times.push(reminder.time);
-      }
-    });
-    return times;
-  };
-
-  const getGlucoseReminderTimes = () => {
-    const glucoseSettings = JSON.parse(localStorage.getItem('glucose_settings') || '{}');
-    if (!glucoseSettings.remindersEnabled || !glucoseSettings.addToTodo) return [];
-    return glucoseSettings.reminderTimes || [];
-  };
-
-  // Build timeline items - refreshKey ensures re-calculation when reminders are completed
-  const timelineItems: TimelineItem[] = useMemo(() => {
-    const waterReminderTimes = getWaterReminderTimes();
-    const medicationReminderTimes = getMedicationReminderTimes();
-    const stepReminderTimes = getStepReminderTimes();
-    const meditationReminderTimes = getMeditationReminderTimes();
-    const glucoseReminderTimes = getGlucoseReminderTimes();
-    
-    const itemsMap: Record<string, TimelineItem> = {};
-
-    // Add tasks
-    timeBasedTasks.forEach(task => {
-      const time = task.time!;
-      
-      // For startup and winddown tasks, use a unique key that includes the task id
-      // This prevents them from being grouped together even if they have the same time
-      const key = (task.source === 'startup' || task.source === 'winddown') 
-        ? `${time}_${task.source}_${task.id}` 
-        : time;
-      
-      if (!itemsMap[key]) {
-        itemsMap[key] = { time, tasks: [], isWakeUp: false, isBedTime: false };
-      }
-      itemsMap[key].tasks.push(task);
-      
-      if (task.source === 'sleep' && task.sleepAction === 'wake') {
-        itemsMap[key].isWakeUp = true;
-      }
-      if (task.source === 'sleep' && task.sleepAction === 'sleep') {
-        itemsMap[key].isBedTime = true;
-      }
-    });
-
-    // Add water reminders - check both generated times and existing water tasks
-    // First add from generated times
-    waterReminderTimes.forEach((time: string) => {
-      if (!itemsMap[time]) {
-        itemsMap[time] = { time, tasks: [] };
-      }
-      itemsMap[time].waterReminder = true;
-    });
-    
-    // Also check if there are existing water tasks that weren't added yet
-    timeBasedTasks.forEach(task => {
-      const isWaterReminder = (task as any).waterReminder;
-      if (task.source === 'water' && isWaterReminder && task.time) {
-        const time = task.time;
-        if (!itemsMap[time]) {
-          itemsMap[time] = { time, tasks: [] };
-        }
-        itemsMap[time].waterReminder = true;
-      }
-    });
-
-    // Add medication reminders
-    medicationReminderTimes.forEach(time => {
-      if (!itemsMap[time]) {
-        itemsMap[time] = { time, tasks: [] };
-      }
-      itemsMap[time].medicationReminder = true;
-    });
-
-    // Add step reminders
-    stepReminderTimes.forEach((time: string) => {
-      if (!itemsMap[time]) {
-        itemsMap[time] = { time, tasks: [] };
-      }
-      itemsMap[time].stepReminder = true;
-    });
-
-    // Add meditation reminders
-    meditationReminderTimes.forEach(time => {
-      if (!itemsMap[time]) {
-        itemsMap[time] = { time, tasks: [] };
-      }
-      itemsMap[time].meditationReminder = true;
-    });
-
-    // Add glucose check reminders
-    glucoseReminderTimes.forEach((time: string) => {
-      if (!itemsMap[time]) {
-        itemsMap[time] = { time, tasks: [] };
-      }
-      itemsMap[time].glucoseReminder = true;
-    });
-
-    // Sort by time
-    const sortedItems = Object.values(itemsMap).sort((a, b) => {
-      const [aH, aM] = a.time.split(':').map(Number);
-      const [bH, bM] = b.time.split(':').map(Number);
-      return (aH * 60 + aM) - (bH * 60 + bM);
-    });
-
-    return sortedItems;
+  // Build timeline items using new utility
+  const timelineItems: TimelineItemType[] = useMemo(() => {
+    return buildTimelineItems(timeBasedTasks, date);
   }, [timeBasedTasks, refreshKey, date]);
+
+  // Sleep schedule for timeline bounds calculation
+  const sleepSchedule = useMemo(() => {
+    const schedule = JSON.parse(localStorage.getItem('sleepSchedule') || '{}');
+    return {
+      wakeTime: schedule.daily?.wakeTime || schedule.wakeTime,
+      bedtime: schedule.daily?.sleepTime || schedule.bedtime || schedule.sleepTime,
+    };
+  }, []);
+  
+  // Helper function to calculate timeline height (memoized for performance)
+  const calculateTimelineHeight = useCallback((rangeMinutes: number, taskCount: number): number => {
+    const baseHeight = Math.max(rangeMinutes * 1.5, 400); // Minimum 400px, 1.5px per minute
+    const taskBasedHeight = taskCount * 80; // 80px per task
+    return Math.min(Math.max(baseHeight, taskBasedHeight), rangeMinutes * 3);
+  }, []);
+
+  // Step 1: Calculate preliminary bounds (without density map) to get range
+  // This is fast because it skips density analysis
+  const preliminaryBounds: TimelineBounds = useMemo(() => {
+    return calculateTimelineBounds(timelineItems, sleepSchedule, false); // Disable scaling for preliminary
+  }, [timelineItems, sleepSchedule]);
+
+  // Calculate task count once (used in multiple places)
+  const taskCount = useMemo(() => {
+    return timelineItems.reduce((sum, item) => sum + item.tasks.length, 0);
+  }, [timelineItems]);
+
+  // Step 2: Calculate timeline height based on preliminary bounds
+  // This gives us the actual height that will be used for rendering
+  const timelineHeight = useMemo(() => {
+    return calculateTimelineHeight(preliminaryBounds.rangeMinutes, taskCount);
+  }, [preliminaryBounds.rangeMinutes, taskCount, calculateTimelineHeight]);
+
+  // Step 3: Calculate final bounds with density map using actual timeline height
+  // This is memoized and only recalculates when inputs change (timelineItems, sleepSchedule, or timelineHeight)
+  const bounds: TimelineBounds = useMemo(() => {
+    return calculateTimelineBounds(timelineItems, sleepSchedule, true, timelineHeight);
+  }, [timelineItems, sleepSchedule, timelineHeight]);
+      
+  // Group overlapping tasks (includes tasks with and without endTime)
+  const taskGroups: TaskGroup[] = useMemo(() => {
+    return groupOverlappingTasks(timeBasedTasks, bounds);
+  }, [timeBasedTasks, bounds]);
+
+  // Calculate free time segments using algorithm
+  const freeTimeSegments: FreeTimeSegment[] = useMemo(() => {
+    return calculateFreeTimeSegments(taskGroups, bounds, timelineItems);
+  }, [taskGroups, bounds, timelineItems]);
 
   // Check if we only have system tasks (wake up, go to bed, startup, winddown) or reminders
   const hasOnlySystemTasks = timelineItems.every(item => 
@@ -594,44 +476,10 @@ export default function LiquidTimeline({ tasks, date, onToggleTask, onUpdateTask
 
   const currentTimeStr = formatTimeString(currentTime);
   
-  // Helper function to convert time string to minutes
-  const timeToMinutes = (time: string) => {
-    const [h, m] = time.split(':').map(Number);
-    return h * 60 + m;
-  };
-  
-  // Find wake up and bed time from timeline items
-  const wakeUpItem = timelineItems.find(item => item.isWakeUp);
-  const bedTimeItem = timelineItems.find(item => item.isBedTime);
-  
-  // Use wake up time as start if available, otherwise use first item
-  // If no wake up, use first task time or default to 07:00
-  const startTime = wakeUpItem ? wakeUpItem.time : (timelineItems.length > 0 ? timelineItems[0].time : '07:00');
-  
-  // Use bed time as end if available, otherwise use last item
-  // If no bed time, use last task time or default to 23:00
-  const endTime = bedTimeItem ? bedTimeItem.time : (timelineItems.length > 0 ? timelineItems[timelineItems.length - 1].time : '23:00');
-  
-  // If we have tasks with end times, extend the timeline to include them
-  const allTaskEndTimes = timelineItems.flatMap(item => 
-    item.tasks.filter(t => t.endTime).map(t => {
-      const endMinutes = timeToMinutes(t.endTime!);
-      return endMinutes;
-    })
-  );
-  
-  const maxEndMinutes = allTaskEndTimes.length > 0 ? Math.max(...allTaskEndTimes) : timeToMinutes(endTime);
-  const minStartMinutes = timelineItems.length > 0 ? Math.min(...timelineItems.map(item => timeToMinutes(item.time))) : timeToMinutes(startTime);
-  
-  // Adjust end time if tasks extend beyond bed time
-  const adjustedEndTime = maxEndMinutes > timeToMinutes(endTime) 
-    ? `${Math.floor(maxEndMinutes / 60)}:${String(maxEndMinutes % 60).padStart(2, '0')}`
-    : endTime;
-  
-  // Adjust start time if tasks start before wake time
-  const adjustedStartTime = minStartMinutes < timeToMinutes(startTime)
-    ? `${Math.floor(minStartMinutes / 60)}:${String(minStartMinutes % 60).padStart(2, '0')}`
-    : startTime;
+  const adjustedStartTime = bounds.startTime;
+  const adjustedEndTime = bounds.endTime;
+  const startMinutes = bounds.startMinutes;
+  const endMinutes = bounds.endMinutes;
 
   // Check if viewing today, past, or future date
   const today = new Date().toISOString().split('T')[0];
@@ -660,42 +508,50 @@ export default function LiquidTimeline({ tasks, date, onToggleTask, onUpdateTask
   const isFutureDate = viewingDate > today;
 
   // Calculate fill percentage
-  const startMinutes = timeToMinutes(adjustedStartTime);
-  const endMinutes = timeToMinutes(adjustedEndTime);
   const currentMinutes = timeToMinutes(currentTimeStr);
   
-  // Calculate fill percentage based on task completion, not just time
+  // Find the last task's end time for capping purposes (calculate BEFORE fill percentage)
+  const allTaskEndTimes = taskGroups.length > 0
+    ? taskGroups.map(group => timeToMinutes(group.endTime))
+    : [];
+  const lastTaskEndTime = allTaskEndTimes.length > 0 
+    ? Math.max(...allTaskEndTimes)
+    : undefined;
+  
+  // Calculate fill percentage using adaptive position calculation (algorithm)
   let fillPercentage = 0;
   
-  // Get tasks for the viewing date
-  const viewingDateStr = viewingDate;
-  const dateTasks = tasks.filter(t => {
-    if (!t.dueDate) return false;
-    const taskDate = typeof t.dueDate === 'string' ? t.dueDate.split('T')[0] : t.dueDate.toISOString().split('T')[0];
-    return taskDate === viewingDateStr;
-  });
-  
-  if (isPastDate) {
-    // Past dates: Always 100% filled
-    fillPercentage = 100;
+  if (bounds.rangeMinutes === 0 || bounds.rangeMinutes <= 0) {
+    fillPercentage = 0;
+  } else if (isPastDate) {
+    // Past dates: Fill to last task end time, or 100% if no tasks
+    if (lastTaskEndTime !== undefined) {
+      const lastTaskEndTimeStr = minutesToTime(lastTaskEndTime);
+      fillPercentage = calculatePosition(lastTaskEndTimeStr, bounds);
+    } else {
+      fillPercentage = 100;
+    }
   } else if (isFutureDate) {
     // Future dates: Never filled
     fillPercentage = 0;
   } else {
-    // Today: Fill based on current time
-    fillPercentage = Math.max(0, Math.min(100, 
-      ((currentMinutes - startMinutes) / (endMinutes - startMinutes)) * 100
-    ));
-    
-    // If current time is past the end time, fill 100%
-    if (currentMinutes >= endMinutes) {
-      fillPercentage = 100;
-    }
-    // If current time is before start time, no fill
-    if (currentMinutes <= startMinutes) {
+    // Today: Use adaptive position calculation (handles density scaling automatically)
+    if (currentMinutes < bounds.startMinutes) {
       fillPercentage = 0;
+    } else {
+      // Cap at last task end if current time has passed all tasks
+      let effectiveTime = currentTimeStr;
+      if (lastTaskEndTime !== undefined && currentMinutes > lastTaskEndTime) {
+        effectiveTime = minutesToTime(lastTaskEndTime);
+      }
+      
+      // Use adaptive position calculation
+      fillPercentage = calculatePosition(effectiveTime, bounds);
     }
   }
+  
+  // Ensure fillPercentage is a valid number between 0 and 100
+  fillPercentage = isNaN(fillPercentage) ? 0 : Math.max(0, Math.min(100, fillPercentage));
 
   // Check if task is missed (time has passed but not completed)
   const isTaskMissed = (time: string, tasks: Task[]) => {
@@ -1117,6 +973,19 @@ export default function LiquidTimeline({ tasks, date, onToggleTask, onUpdateTask
   // Wrapper to track task completions for fill animation
   const handleTaskToggle = (taskId: string) => {
     const task = tasks.find(t => t.id === taskId);
+    
+    // Special handling for journal tasks - open write dialog instead of toggling
+    if (task && (task.source as any) === 'journal') {
+      window.dispatchEvent(new CustomEvent('openJournalWrite', {
+        detail: {
+          taskId: task.id,
+          date: task.dueDate,
+          time: task.time,
+        }
+      }));
+      return;
+    }
+    
     if (task && !task.completed) {
       // Task is being completed, add to recently completed
       setRecentlyCompleted(prev => new Set(prev).add(taskId));
@@ -1133,7 +1002,7 @@ export default function LiquidTimeline({ tasks, date, onToggleTask, onUpdateTask
   };
 
   // Drag-to-reschedule handlers
-  const handleDragStart = (task: Task, e: React.MouseEvent) => {
+  const handleDragStart = (task: Task, e: React.MouseEvent | React.TouchEvent) => {
     e.stopPropagation();
     e.preventDefault(); // Prevent text selection
     
@@ -1149,32 +1018,33 @@ export default function LiquidTimeline({ tasks, date, onToggleTask, onUpdateTask
         task.source === 'school' ||
         task.source === 'workout' ||
         task.source === 'food' ||
+        (task.source as any) === 'journal' ||
         task.source === 'winddown' ||
         task.source === 'startup' ||
         task.isContainer) return;
     
     setDraggingTask(task);
-    setDragStartY(e.clientY);
-    setDragCurrentY(e.clientY);
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    setDragStartY(clientY);
+    setDragCurrentY(clientY);
     // Prevent text selection during drag
     document.body.style.userSelect = 'none';
   };
 
-  const handleDragMove = (e: React.MouseEvent) => {
+  const handleDragMove = (e: React.MouseEvent | React.TouchEvent) => {
     if (!draggingTask || !timelineRef.current) return;
     
-    setDragCurrentY(e.clientY);
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    setDragCurrentY(clientY);
     
-    // Calculate and show preview time
-    const waterSettings = JSON.parse(localStorage.getItem('water_settings') || '{}');
-    const wakeTime = waterSettings.reminderStartTime || '08:00';
-    const sleepTime = waterSettings.reminderEndTime || '22:00';
-    const startMinutesWake = timeToMinutes(wakeTime);
-    const endMinutesSleep = timeToMinutes(sleepTime);
+    // Use actual timeline boundaries (adjustedStartTime, adjustedEndTime)
+    // These are calculated above and account for task extensions
+    const startMinutesWake = timeToMinutes(adjustedStartTime);
+    const endMinutesSleep = timeToMinutes(adjustedEndTime);
     const timeRangeMinutes = endMinutesSleep - startMinutesWake;
     
     const timelineRect = timelineRef.current.getBoundingClientRect();
-    const dragDeltaY = e.clientY - dragStartY;
+    const dragDeltaY = clientY - dragStartY;
     const timelineHeight = timelineRect.height;
     
     const minutesDelta = (dragDeltaY / timelineHeight) * timeRangeMinutes;
@@ -1183,7 +1053,11 @@ export default function LiquidTimeline({ tasks, date, onToggleTask, onUpdateTask
     
     // Snap to nearest 15 minutes for preview
     newTimeMinutes = Math.round(newTimeMinutes / 15) * 15;
-    newTimeMinutes = Math.max(startMinutesWake, Math.min(endMinutesSleep, newTimeMinutes));
+    
+    // Allow dragging beyond current end time - we'll extend timeline dynamically
+    // But still constrain to reasonable bounds (not before start, and max 2 hours after end)
+    const maxEndMinutes = endMinutesSleep + 120; // Allow up to 2 hours extension
+    newTimeMinutes = Math.max(startMinutesWake, Math.min(maxEndMinutes, newTimeMinutes));
     
     const newHours = Math.floor(newTimeMinutes / 60);
     const newMinutes = newTimeMinutes % 60;
@@ -1195,11 +1069,9 @@ export default function LiquidTimeline({ tasks, date, onToggleTask, onUpdateTask
   const handleDragEnd = () => {
     if (!draggingTask || !timelineRef.current) return;
     
-    const waterSettings = JSON.parse(localStorage.getItem('water_settings') || '{}');
-    const wakeTime = waterSettings.reminderStartTime || '08:00';
-    const sleepTime = waterSettings.reminderEndTime || '22:00';
-    const startMinutesWake = timeToMinutes(wakeTime);
-    const endMinutesSleep = timeToMinutes(sleepTime);
+    // Use actual timeline boundaries (adjustedStartTime, adjustedEndTime)
+    const startMinutesWake = timeToMinutes(adjustedStartTime);
+    const endMinutesSleep = timeToMinutes(adjustedEndTime);
     const timeRangeMinutes = endMinutesSleep - startMinutesWake;
     
     // Calculate the new time based on Y position
@@ -1219,16 +1091,98 @@ export default function LiquidTimeline({ tasks, date, onToggleTask, onUpdateTask
     // Snap to the nearest 15 minutes
     newTimeMinutes = Math.round(newTimeMinutes / 15) * 15;
     
-    // Constrain within wake/sleep boundaries
-    newTimeMinutes = Math.max(startMinutesWake, Math.min(endMinutesSleep, newTimeMinutes));
+    // Allow dragging beyond current end time - we'll extend timeline dynamically
+    // But still constrain to reasonable bounds (not before start, and max 2 hours after end)
+    const maxEndMinutes = endMinutesSleep + 120; // Allow up to 2 hours extension
+    newTimeMinutes = Math.max(startMinutesWake, Math.min(maxEndMinutes, newTimeMinutes));
     
     // Convert back to time string
     const newHours = Math.floor(newTimeMinutes / 60);
     const newMinutes = newTimeMinutes % 60;
     const newTimeStr = `${String(newHours).padStart(2, '0')}:${String(newMinutes).padStart(2, '0')}`;
     
+    // Check for spacing conflicts with other tasks
+    const allTimelineTasks = tasks.filter(t => t.time && !t.allDay && t.id !== draggingTask.id &&
+      t.source !== 'medication' && t.source !== 'sleep' && t.source !== 'water' && t.source !== 'steps' &&
+      t.source !== 'startup' && t.source !== 'winddown' && !t.parentId);
+    
+    // Find tasks that end before or at the new position
+    const tasksBefore = allTimelineTasks.filter(t => {
+      if (!t.endTime) return false;
+      const tEnd = timeToMinutes(t.endTime);
+      return tEnd <= newTimeMinutes;
+    });
+    
+    // Find the task that ends closest to the new position
+    let closestTask: Task | null = null;
+    let closestEnd = -Infinity;
+    if (tasksBefore.length > 0) {
+      closestTask = tasksBefore.reduce((closest, t) => {
+        if (!t.endTime) return closest;
+        const tEnd = timeToMinutes(t.endTime);
+        return tEnd > closestEnd ? t : closest;
+      }, null as Task | null);
+      if (closestTask?.endTime) {
+        closestEnd = timeToMinutes(closestTask.endTime);
+      }
+    }
+    
+    // Find tasks that start after the new position
+    const tasksAfter = allTimelineTasks.filter(t => {
+      if (!t.time) return false;
+      const tStart = timeToMinutes(t.time);
+      return tStart >= newTimeMinutes;
+    });
+    
+    // Find the task that starts closest to the new position
+    let nextTask: Task | null = null;
+    let nextStart = Infinity;
+    if (tasksAfter.length > 0) {
+      nextTask = tasksAfter.reduce((closest, t) => {
+        if (!t.time) return closest;
+        const tStart = timeToMinutes(t.time);
+        return tStart < nextStart ? t : closest;
+      }, null as Task | null);
+      if (nextTask?.time) {
+        nextStart = timeToMinutes(nextTask.time);
+      }
+    }
+    
+    // Calculate minimum spacing needed
+    const MIN_SPACING_MINUTES = 15;
+    let adjustedNewTimeMinutes = newTimeMinutes;
+    let needsSpacingAdjustment = false;
+    
+    // Check spacing with previous task
+    if (closestTask?.endTime && closestEnd > -Infinity) {
+      const gapMinutes = newTimeMinutes - closestEnd;
+      if (gapMinutes < MIN_SPACING_MINUTES && gapMinutes >= 0) {
+        adjustedNewTimeMinutes = closestEnd + MIN_SPACING_MINUTES;
+        needsSpacingAdjustment = true;
+      }
+    }
+    
+    // Check spacing with next task (if task has end time)
+    if (draggingTask.endTime && nextTask?.time && nextStart < Infinity) {
+      const taskEndMinutes = adjustedNewTimeMinutes + (timeToMinutes(draggingTask.endTime) - currentTaskMinutes);
+      const gapMinutes = nextStart - taskEndMinutes;
+      if (gapMinutes < MIN_SPACING_MINUTES && gapMinutes >= 0) {
+        // Adjust backwards to maintain spacing
+        adjustedNewTimeMinutes = nextStart - MIN_SPACING_MINUTES - (timeToMinutes(draggingTask.endTime) - currentTaskMinutes);
+        needsSpacingAdjustment = true;
+      }
+    }
+    
+    // Ensure adjusted time is still within bounds
+    adjustedNewTimeMinutes = Math.max(startMinutesWake, Math.min(maxEndMinutes, adjustedNewTimeMinutes));
+    
+    // Convert adjusted time back to string
+    const adjustedHours = Math.floor(adjustedNewTimeMinutes / 60);
+    const adjustedMins = adjustedNewTimeMinutes % 60;
+    const finalTimeStr = `${String(adjustedHours).padStart(2, '0')}:${String(adjustedMins).padStart(2, '0')}`;
+    
     // Only update if time actually changed
-    if (newTimeStr !== draggingTask.time && onUpdateTask) {
+    if (finalTimeStr !== draggingTask.time && onUpdateTask) {
       // If task has an end time, calculate the new end time by maintaining the duration
       if (draggingTask.endTime) {
         const originalStartMinutes = timeToMinutes(draggingTask.time!);
@@ -1236,16 +1190,16 @@ export default function LiquidTimeline({ tasks, date, onToggleTask, onUpdateTask
         const durationMinutes = originalEndMinutes - originalStartMinutes;
         
         // Calculate new end time
-        const newEndTimeMinutes = newTimeMinutes + durationMinutes;
+        const newEndTimeMinutes = adjustedNewTimeMinutes + durationMinutes;
         const newEndHours = Math.floor(newEndTimeMinutes / 60);
-        const newEndMinutes = newEndTimeMinutes % 60;
-        const newEndTimeStr = `${String(newEndHours).padStart(2, '0')}:${String(newEndMinutes).padStart(2, '0')}`;
+        const newEndMins = newEndTimeMinutes % 60;
+        const newEndTimeStr = `${String(newEndHours).padStart(2, '0')}:${String(newEndMins).padStart(2, '0')}`;
         
         // Update both time and endTime
-        onUpdateTask(draggingTask.id, { time: newTimeStr, endTime: newEndTimeStr });
+        onUpdateTask(draggingTask.id, { time: finalTimeStr, endTime: newEndTimeStr });
       } else {
         // Update only the time
-        onUpdateTask(draggingTask.id, { time: newTimeStr });
+        onUpdateTask(draggingTask.id, { time: finalTimeStr });
       }
     }
     
@@ -1286,24 +1240,24 @@ export default function LiquidTimeline({ tasks, date, onToggleTask, onUpdateTask
     return overlapping;
   };
 
-  const calculateFreeTime = (currentItem: TimelineItem, nextItem: TimelineItem | null): { hours: number; minutes: number; text: string } | null => {
+  const calculateFreeTime = (currentItem: TimelineItemType, nextItem: TimelineItemType | null): { hours: number; minutes: number; text: string } | null => {
     // Only calculate between actual tasks (not water/medication/step reminders or sleep)
     if (currentItem.tasks.length === 0) return null; // Skip if current is only a reminder
     if (!nextItem || nextItem.tasks.length === 0) return null; // Skip if next is only a reminder
     
-    // Skip if current item is medication, water, steps, or sleep
-    if (currentItem.tasks.every(t => t.source === 'medication' || t.source === 'water' || t.source === 'steps' || t.source === 'sleep')) return null;
-    // Skip if next item is medication, water, steps, or sleep (using every)
-    if (nextItem.tasks.every(t => t.source === 'medication' || t.source === 'water' || t.source === 'steps' || t.source === 'sleep')) return null;
+    // Skip if current item is medication, water, steps, sleep, or work
+    if (currentItem.tasks.every((t: Task) => t.source === 'medication' || t.source === 'water' || t.source === 'steps' || t.source === 'sleep' || t.source === 'work' || t.source?.startsWith('work-'))) return null;
+    // Skip if next item is medication, water, steps, sleep, or work (using every)
+    if (nextItem.tasks.every((t: Task) => t.source === 'medication' || t.source === 'water' || t.source === 'steps' || t.source === 'sleep' || t.source === 'work' || t.source?.startsWith('work-'))) return null;
     
-    // Skip if current item has winddown (don't show free time after winddown)
-    if (currentItem.tasks.some(t => t.source === 'winddown')) return null;
+    // Skip if current item has winddown or work tasks (don't show free time after winddown or work)
+    if (currentItem.tasks.some((t: Task) => t.source === 'winddown' || t.source === 'work' || t.source?.startsWith('work-'))) return null;
     
-    // Skip if next item has winddown or startup (don't show free time before these routines)
-    if (nextItem.tasks.some(t => t.source === 'winddown' || t.source === 'startup')) return null;
+    // Skip if next item has startup or work (don't show free time before these routines)
+    // Never take winddown into account for free time calculation
+    if (nextItem.tasks.some((t: Task) => t.source === 'startup' || t.source === 'work' || t.source?.startsWith('work-'))) return null;
     
-    // Skip if current item has startup (don't show free time after startup)
-    if (currentItem.tasks.some(t => t.source === 'startup')) return null;
+    // Allow free time after startup tasks - they will be positioned below the task container
     
     // Use end time of current task if available, otherwise use start time
     const currentTask = currentItem.tasks.find(t => t.endTime);
@@ -1328,15 +1282,8 @@ export default function LiquidTimeline({ tasks, date, onToggleTask, onUpdateTask
     return { hours, minutes, text };
   };
 
-  // Calculate timeline height based on time range (more accurate for positioning)
-  const timeRangeMinutes = endMinutes - startMinutes;
-  // Calculate dynamic timeline height based on number of tasks
-  // More tasks = taller timeline, fewer tasks = shorter timeline
-  const taskCount = timelineItems.reduce((sum, item) => sum + item.tasks.length, 0);
-  const baseHeight = Math.max(timeRangeMinutes * 1.5, 400); // Minimum 400px, 1.5px per minute
-  const taskBasedHeight = taskCount * 80; // 80px per task
-  // Use the larger of base height or task-based height, but cap at reasonable max
-  const timelineHeight = Math.min(Math.max(baseHeight, taskBasedHeight), timeRangeMinutes * 3);
+  // Timeline height is now calculated in useMemo above (before bounds calculation)
+  // This ensures density map uses the correct height
 
   return (
     <div className="w-full mx-auto pl-2 pr-0 sm:px-2 md:px-4 mb-12">
@@ -1357,262 +1304,252 @@ export default function LiquidTimeline({ tasks, date, onToggleTask, onUpdateTask
           )}
         </div>
       )}
-      <div className="py-8 pb-12 pl-24 sm:pl-28 md:pl-32 pr-1 sm:pr-2 overflow-visible">
-
-
-        {/* Timeline Container */}
+      <div className="py-8 pb-12 pr-1 sm:pr-2 overflow-visible">
+        {/* Timeline Container with proper spacing */}
         <div 
           ref={timelineRef}
           className="relative overflow-visible" 
-          style={{ height: `${timelineHeight}px` }}
+          style={{ 
+            height: `${timelineHeight}px`,
+            marginLeft: '7rem', // Space for time labels on the left
+            marginRight: '1rem', // Space on the right
+          }}
           onMouseMove={handleDragMove}
           onMouseUp={handleDragEnd}
           onMouseLeave={handleDragEnd}
+          onTouchMove={handleDragMove}
+          onTouchEnd={handleDragEnd}
         >
-          {/* Liquid Fill Background - Full height timeline */}
-          <div 
-            className="absolute w-2 bg-muted left-0"
-            style={{ 
-              top: '0',
-              bottom: '0',
-              borderRadius: '9999px 9999px 0 0', // Only rounded at top
+          {/* New Modular Components */}
+          <TimelineBar bounds={bounds} timelineHeight={timelineHeight} lastTaskEndTime={lastTaskEndTime} />
+          
+          <CurrentTimeIndicator 
+            bounds={bounds} 
+            isToday={isToday} 
+            fillPercentage={fillPercentage}
+            lastTaskEndTime={lastTaskEndTime}
+            taskGroups={taskGroups}
+            currentTime={currentTimeStr}
+            isPastDate={isPastDate}
+          />
+          
+          <ReminderDots
+            timelineItems={timelineItems}
+            bounds={bounds}
+            isToday={isToday}
+            currentTime={currentTimeStr}
+            today={viewingDate}
+            onWaterReminderClick={onWaterReminderClick}
+            onMedicationReminderClick={handleMedicationReminderClick}
+            onJournalReminderClick={() => {
+              window.dispatchEvent(new CustomEvent('openJournalWrite'));
             }}
-          >
-            {/* Extended timeline lines to connect with wake/sleep dots */}
-            {timelineItems.map((item, index) => {
-              if (!item.isBedTime && !item.isWakeUp) return null;
-              
-              // Check if we need to offset the dot position
-              let dotPosition = ((timeToMinutes(item.time) - startMinutes) / (endMinutes - startMinutes)) * 100;
-              
-              if (item.isBedTime) {
-                const winddownTask = timelineItems
-                  .flatMap(i => i.tasks)
-                  .find(t => t.source === 'winddown' && t.endTime === item.time);
-                if (winddownTask) {
-                  dotPosition += 2; // Offset downward
-                }
+          />
+          
+          {/* Wake/Sleep Dots - Only show if actual sleep tasks exist */}
+          {(() => {
+            // Find wake/sleep items that actually have sleep tasks
+            const wakeItem = timelineItems.find(item => 
+              item.isWakeUp && item.tasks.some(t => t.source === 'sleep' && t.sleepAction === 'wake')
+            );
+            const sleepItem = timelineItems.find(item => 
+              item.isBedTime && item.tasks.some(t => t.source === 'sleep' && t.sleepAction === 'sleep')
+            );
+            
+            const dots = [];
+            
+            // Render wake dot only if actual wake task exists
+            if (wakeItem) {
+              const wakeTask = wakeItem.tasks.find(t => t.source === 'sleep' && t.sleepAction === 'wake');
+              if (wakeTask) {
+                const isCompleted = wakeTask.completed || false;
+                const hasPassed = isToday && timeToMinutes(wakeItem.time) <= timeToMinutes(currentTimeStr);
+                
+                dots.push(
+                  <TimelineDot
+                    key="wake-dot"
+                    time={wakeItem.time}
+                    position={0}
+                    type="wake"
+                    isCompleted={isCompleted}
+                    hasPassed={hasPassed}
+                    onClick={() => {
+                      onToggleTask(wakeTask.id);
+                    }}
+                    emoji="☀️"
+                  />
+                );
               }
-              
-              if (item.isWakeUp) {
-                const startupTask = timelineItems
-                  .flatMap(i => i.tasks)
-                  .find(t => t.source === 'startup' && t.time === item.time);
-                if (startupTask) {
-                  dotPosition -= 2; // Offset upward
-                }
+            }
+            
+            // Render sleep dot only if actual sleep task exists
+            if (sleepItem) {
+              const sleepTask = sleepItem.tasks.find(t => t.source === 'sleep' && t.sleepAction === 'sleep');
+              if (sleepTask) {
+                const isCompleted = sleepTask.completed || false;
+                const hasPassed = isToday && timeToMinutes(sleepItem.time) <= timeToMinutes(currentTimeStr);
+                
+                dots.push(
+                  <TimelineDot
+                    key="sleep-dot"
+                    time={sleepItem.time}
+                    position={100}
+                    type="sleep"
+                    isCompleted={isCompleted}
+                    hasPassed={hasPassed}
+                    onClick={() => {
+                      onToggleTask(sleepTask.id);
+                    }}
+                    emoji="🌙"
+                  />
+                );
               }
-              
-              // Draw an extended line from the original position to the dot position
-              const originalPosition = ((timeToMinutes(item.time) - startMinutes) / (endMinutes - startMinutes)) * 100;
-              
-              return (
-                <div
-                  key={`timeline-extension-${item.time}`}
-                  className="absolute left-0 w-full bg-primary/40"
-                  style={{
-                    top: `${Math.min(originalPosition, dotPosition)}%`,
-                    height: `${Math.abs(dotPosition - originalPosition)}%`,
-                    zIndex: 45,
-                  }}
-                />
-              );
-            })}
-            {/* Liquid Fill - rounded at top and at current time endpoint */}
-            <div 
-              ref={currentTimeMarkerRef}
-              className="absolute top-0 left-0 w-full bg-primary"
-              style={{ 
-                height: isToday 
-                  ? (hasAnimated ? `${fillPercentage}%` : '0%')
-                  : isPastDate ? '100%' : '0%',
-                borderRadius: fillPercentage < 100 ? '9999px 9999px 9999px 9999px' : '9999px 9999px 0 0',
-                animation: isToday && hasAnimated ? `liquidFillUp 2s ease-out forwards` : 'none',
-                '--fill-target': `${fillPercentage}%`,
-              } as React.CSSProperties}
+            }
+            
+            return dots;
+          })()}
+          
+          {/* Start/End Dots - Only show if no actual wake/sleep tasks exist */}
+          {!timelineItems.some(item => 
+            item.isWakeUp && item.tasks.some(t => t.source === 'sleep' && t.sleepAction === 'wake')
+          ) && (
+            <TimelineDot
+              time={bounds.startTime}
+              position={0}
+              type="start"
+              hasPassed={isToday && timeToMinutes(bounds.startTime) <= timeToMinutes(currentTimeStr)}
+              emoji="☀️"
             />
-            
-            {/* Candy Cane Stripes for Missed Tasks ONLY (not reminders) */}
-            {timelineItems.map((item, index) => {
-              // Check each task in this timeline item for missed status
-              return item.tasks.map((task, taskIndex) => {
-                // Skip reminders and completed tasks
-                if (task.source === 'medication' || task.source === 'water' || task.source === 'steps' || task.completed) {
-                  return null;
-                }
-                
-                // Check if this specific task is missed
-                const checkTaskMissed = () => {
-                  // Future dates: nothing is missed
-                  if (isFutureDate) return false;
-                  
-                  // Don't show candy cane for bedtime/wake up/sleep tasks
-                  if (item.isBedTime || item.isWakeUp) return false;
-                  
-                  let timePassed = false;
-                  if (isPastDate) {
-                    // Past dates: all times have passed
-                    timePassed = true;
-                  } else {
-                    // Today: check if task start time has passed (with at least 5 minute buffer)
-                    const taskStartMinutes = timeToMinutes(task.time!);
-                    const currentMinutes = timeToMinutes(currentTimeStr);
-                    timePassed = taskStartMinutes < (currentMinutes - 5); // 5 minute buffer
-                  }
-                  
-                  return timePassed;
-                };
-                
-                const isTaskMissed = checkTaskMissed();
-                
-                if (!isTaskMissed) return null;
-                
-                // Calculate the full duration of this missed task
-                const taskStartMinutes = timeToMinutes(task.time!);
-                // For tasks with endTime, use actual end time
-                // For tasks without endTime, calculate based on actual rendered container height
-                let taskEndMinutes: number;
-                if (task.endTime) {
-                  taskEndMinutes = timeToMinutes(task.endTime);
-                } else {
-                  // For tasks without endTime, the rendered container has a minHeight of 80px
-                  // Convert that to minutes based on timeline scale
-                  // Calculate what 80px represents in minutes for this timeline
-                  const timelineRangeMinutes = endMinutes - startMinutes;
-                  const pixelsPerMinute = timelineHeight / timelineRangeMinutes;
-                  const minHeightInMinutes = 80 / pixelsPerMinute;
-                  
-                  // Check if there's a next task to use as end boundary
-                  const nextTask = timelineItems.flatMap(i => i.tasks).find(t => 
-                    t.time && timeToMinutes(t.time) > taskStartMinutes && t.id !== task.id &&
-                    t.source !== 'medication' && t.source !== 'water' && t.source !== 'steps' && t.source !== 'sleep'
+          )}
+          
+          {!timelineItems.some(item => 
+            item.isBedTime && item.tasks.some(t => t.source === 'sleep' && t.sleepAction === 'sleep')
+          ) && (
+            <TimelineDot
+              time={bounds.endTime}
+              position={100}
+              type="end"
+              hasPassed={isToday && timeToMinutes(bounds.endTime) <= timeToMinutes(currentTimeStr)}
+              emoji="🌙"
+            />
+          )}
+          
+          {/* Candy Cone Patterns are now integrated into CurrentTimeIndicator fill - removed separate rendering */}
+          
+          {/* Task Time Labels on Timeline - REMOVED: Times are shown inside TaskGroupContainer */}
+          
+          {/* Task Groups */}
+          {taskGroups.map((group) => (
+            <TaskGroupContainer
+              key={group.id}
+              group={group}
+              timelineHeight={timelineHeight}
+              onToggleTask={onToggleTask}
+              onUpdateTask={onUpdateTask}
+              onDeleteTask={onDeleteTask}
+              onToggleSubtask={(taskId, subtaskId) => {
+                const task = tasks.find(t => t.id === taskId);
+                if (task && task.subtasks) {
+                  const updatedSubtasks = task.subtasks.map(st =>
+                    st.id === subtaskId ? { ...st, completed: !st.completed } : st
                   );
-                  
-                  if (nextTask) {
-                    const nextTaskMinutes = timeToMinutes(nextTask.time);
-                    // Use the smaller of: next task time or start + minHeight
-                    taskEndMinutes = Math.min(nextTaskMinutes, taskStartMinutes + minHeightInMinutes);
-                  } else {
-                    // Default to minHeight representation (80px worth of time)
-                    taskEndMinutes = taskStartMinutes + minHeightInMinutes;
-                  }
+                  onUpdateTask?.(taskId, { subtasks: updatedSubtasks });
                 }
-                const totalHeight = endMinutes - startMinutes;
-                
-                const startPercent = ((taskStartMinutes - startMinutes) / totalHeight) * 100;
-                // Cap the end position at sleep time (endMinutes) to prevent candy cane from extending past timeline
-                const cappedEndMinutes = Math.min(taskEndMinutes, endMinutes);
-                const endPercent = ((cappedEndMinutes - startMinutes) / totalHeight) * 100;
-              
-              // Check if this specific task was recently completed
-              const hasRecentlyCompletedTask = task.completed;
-              
-              return (
-                <div
-                  key={`stripe-${task.id}`}
-                  className="absolute left-0 w-full overflow-hidden z-5"
-                  style={{
-                    top: `${startPercent}%`,
-                    height: `${endPercent - startPercent}%`,
-                    position: 'relative',
-                  }}
-                >
-                  {/* Candy cane stripe background - show only when task is NOT completed */}
-                  {!task.completed && (
-                    <div
-                      key={`candy-${task.id}-${task.completed}`}
-                      className="absolute inset-0"
-                      style={{
-                        background: 'repeating-linear-gradient(45deg, hsl(var(--primary)) 0px, hsl(var(--primary)) 6px, hsl(var(--background)) 6px, hsl(var(--background)) 12px)',
-                        opacity: 0.8,
-                      }}
-                    />
-                  )}
-                  {/* Fill overlay when task is completed - smooth animation */}
-                  {task.completed && (
-                    <div
-                      key={`fill-${task.id}-${task.completed}`}
-                      className="absolute inset-0 bg-primary fill-animation"
-                      style={{
-                        zIndex: 1,
-                      }}
-                    />
-                  )}
-                </div>
-              );
-            }).filter(Boolean);
-            }).flat()}
-          </div>
+              }}
+              getSourceBadge={getSourceBadge}
+              onSourceShortcut={handleSourceShortcut}
+              onDragStart={handleDragStart}
+              isDragging={(task) => draggingTask?.id === task.id}
+              onEditTask={handleEditTask}
+            />
+          ))}
 
-          {/* Current Time Label - only show on today */}
-          {isToday && (() => {
-            // Check if current time matches any task time
-            const hasTaskAtCurrentTime = timelineItems.some(item => item.time === currentTimeStr);
-            if (hasTaskAtCurrentTime) return null;
+          {/* Free Time Segments - Rendered using algorithm */}
+          {freeTimeSegments.map((segment) => {
+            // Calculate position based on start percent (where the free time segment begins)
+            const topPx = (segment.startPercent / 100) * timelineHeight;
             
-            // Determine position based on current time relative to timeline range
-            let positionStyle: any = {};
+            // Find the corresponding task group to position free time below it
+            const correspondingGroup = taskGroups.find(group => {
+              if (segment.id.includes('wakeup')) {
+                // For wake up free time, find first group
+                return group.id === segment.id.split('-')[2];
+              } else if (segment.id.includes('sleep')) {
+                // For sleep free time, find last group
+                return group.id === segment.id.split('-')[1];
+              } else {
+                // For between tasks, find current group
+                const groupId = segment.id.split('-')[1];
+                return group.id === groupId;
+              }
+            });
             
-            // Calculate the position percentage based on current time
-            const currentPosition = ((currentMinutes - startMinutes) / (endMinutes - startMinutes)) * 100;
-            
-            // If current time is before wake up (start time) - show ABOVE timeline
-            if (currentMinutes < startMinutes) {
-              positionStyle = {
-                left: '-7rem',
-                top: '-40px', // Above the timeline
-              };
-            }
-            // If current time is after sleep (end time) - show BELOW timeline
-            else if (currentMinutes > endMinutes) {
-              positionStyle = {
-                left: '-7rem',
-                bottom: '-40px', // Below the timeline
-              };
-            }
-            // During active hours - show at current position based on time, not fill
-            else {
-              positionStyle = {
-                left: '-7rem',
-                top: `${currentPosition}%`,
-              };
-            }
+            // Use group's end percent if available, otherwise use start percent
+            const positionPercent = correspondingGroup 
+              ? (correspondingGroup.endPercent || correspondingGroup.startPercent)
+              : segment.startPercent;
+            const finalTopPx = (positionPercent / 100) * timelineHeight;
             
             return (
-              <div 
-                className="absolute z-50"
-                style={positionStyle}
+              <div
+                key={segment.id}
+                className="absolute"
+                style={{
+                  top: `${finalTopPx + 16}px`,
+                  left: '5rem',
+                  right: '0.5rem',
+                  zIndex: 10,
+                }}
               >
-                {/* Current time label */}
-                <div 
-                  className="text-sm sm:text-base font-mono font-bold text-foreground whitespace-nowrap text-right w-20 sm:w-24"
-                  style={{
-                    textShadow: '0 0 4px rgba(255, 255, 255, 0.9), 0 0 8px rgba(255, 255, 255, 0.7), 0 0 12px rgba(255, 255, 255, 0.5)',
-                    filter: 'drop-shadow(0 0 4px rgba(255, 255, 255, 0.8))',
-                  }}
-                >
-                  {currentTimeStr}
+                <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground flex-shrink-0" />
+                    <span className="text-xs sm:text-sm font-semibold text-foreground whitespace-nowrap">
+                      {segment.displayText} Free time
+                    </span>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-6 sm:h-7 text-[10px] sm:text-xs flex-shrink-0"
+                    onClick={() => {
+                      if (onAddTaskClick) {
+                        onAddTaskClick(segment.startTime);
+                      }
+                    }}
+                  >
+                    <Plus className="w-3 h-3 mr-1" />
+                    Add Task
+                  </Button>
                 </div>
               </div>
             );
-          })()}
+          })}
 
           {/* Drag Preview Time Indicator */}
           {draggingTask && dragPreviewTime && (() => {
             const previewMinutes = timeToMinutes(dragPreviewTime);
-            const previewPosition = ((previewMinutes - startMinutes) / (endMinutes - startMinutes)) * 100;
+            // Use adjusted timeline boundaries for positioning
+            const adjustedStartMins = timeToMinutes(adjustedStartTime);
+            const adjustedEndMins = timeToMinutes(adjustedEndTime);
+            // Extend preview area if dragging beyond current end
+            const previewEndMins = Math.max(adjustedEndMins, previewMinutes + 30);
+            const previewPosition = ((previewMinutes - adjustedStartMins) / (previewEndMins - adjustedStartMins)) * 100;
+            
+            // Clamp position to visible area
+            const clampedPosition = Math.max(0, Math.min(100, previewPosition));
             
             return (
               <div 
                 className="absolute z-50"
                 style={{
-                  left: '-7rem',
-                  top: `${previewPosition}%`,
+                  left: '-7.5rem',
+                  top: `${clampedPosition}%`,
                   transform: 'translateY(-50%)',
                 }}
               >
                 <div 
-                  className="text-sm sm:text-base font-mono font-bold text-foreground whitespace-nowrap text-right w-20 sm:w-24"
+                  className="text-sm sm:text-base font-sans font-bold text-foreground whitespace-nowrap text-right w-20 sm:w-24"
                 >
                   → {dragPreviewTime}
                 </div>
@@ -1622,1580 +1559,80 @@ export default function LiquidTimeline({ tasks, date, onToggleTask, onUpdateTask
 
           {/* Start dot if no wake-up time */}
           {!timelineItems.some(item => item.isWakeUp) && timelineItems.length > 0 && (() => {
-            // Check if all tasks at the first time slot are completed
             const firstItem = timelineItems[0];
-            const allCompleted = firstItem.tasks.length > 0 && firstItem.tasks.every(t => t.completed);
+            const firstTimeMinutes = timeToMinutes(firstItem.time);
+            
+            // Check if time has passed (only for today)
+            let hasPassed = false;
+            if (isToday) {
+              hasPassed = currentMinutes >= firstTimeMinutes;
+            } else if (isPastDate) {
+              hasPassed = true; // Always filled for past dates
+            }
+            
+            // Use exact same grey as timeline bar - 'hsl(var(--muted))'
+            const dotColor = hasPassed ? 'hsl(var(--primary))' : 'hsl(var(--muted))';
+            const timelineGrey = 'hsl(var(--muted))'; // Explicit timeline bar grey
+            
+            // Calculate first item position for extension line
+            const firstPosition = ((firstTimeMinutes - startMinutes) / (endMinutes - startMinutes)) * 100;
             
             return (
               <>
-                <div
+                {/* Extension line from start dot to first item - matches timeline bar grey */}
+                  <div
+                  className="absolute left-0 w-2"
+                    style={{
+                    top: '0%',
+                    height: `${Math.max(0, firstPosition + 1)}%`, // Extend to first item
+                    backgroundColor: hasPassed ? 'hsl(var(--primary))' : timelineGrey, // Same grey as timeline bar
+                    zIndex: 45,
+                  }}
+                />
+                      <div
                   className="absolute flex items-center z-40"
-                  style={{ 
+                          style={{ 
                     top: '0%',
                     left: '4px',
-                    transform: 'translateY(-50%)',
-                  }}
-                >
-                  <button className={`w-8 h-8 rounded-full border-2 flex items-center justify-center flex-shrink-0 -translate-x-1/2 shadow-sm hover:shadow-md transition-shadow ${
-                    allCompleted ? 'bg-primary border-primary shadow-lg' : 'bg-background border-primary'
-                  }`} />
-                </div>
-                <div 
-                  className="absolute z-40"
-                  style={{ 
-                    top: '0%',
-                    left: '-7rem',
-                    transform: 'translateY(-50%)',
-                  }}
-                >
-                  <div className="text-sm sm:text-base font-mono text-muted-foreground whitespace-nowrap text-right w-20 sm:w-24">
-                    {timelineItems[0].time}
-                  </div>
-                </div>
-              </>
-            );
-          })()}
-
-          {/* Timeline Items (Dots) */}
-          {timelineItems.map((item, index) => {
-            const isFirst = index === 0;
-            const isLast = index === timelineItems.length - 1;
-            const itemMinutes = timeToMinutes(item.time);
-            // Position based on actual time within the day
-            const position = ((itemMinutes - startMinutes) / (endMinutes - startMinutes)) * 100;
-            
-            // Calculate task duration and end position if endTime exists
-            const taskWithEndTime = item.tasks.find(t => t.endTime);
-            let taskDurationHeight = 0;
-            let taskDurationPx = 0;
-            let endPosition = position;
-            const isWinddownTask = taskWithEndTime?.source === 'winddown';
-            
-            // Calculate actual start position for tasks (especially for winddown/startup)
-            let taskStartPosition = position;
-            if (taskWithEndTime && (isWinddownTask || taskWithEndTime.source === 'startup')) {
-            const taskStartMinutes = taskWithEndTime.time ? timeToMinutes(taskWithEndTime.time) : 0;
-            taskStartPosition = ((taskStartMinutes - startMinutes) / (endMinutes - startMinutes)) * 100;
-            }
-            
-            if (taskWithEndTime?.endTime) {
-              const endTaskMinutes = timeToMinutes(taskWithEndTime.endTime);
-              endPosition = ((endTaskMinutes - startMinutes) / (endMinutes - startMinutes)) * 100;
-              
-              taskDurationHeight = endPosition - taskStartPosition;
-              
-              // Calculate actual pixel height with minimum 1 hour height for consistent spacing
-              const oneHourInPx = (60 / (endMinutes - startMinutes)) * timelineHeight;
-              taskDurationPx = Math.max((taskDurationHeight / 100) * timelineHeight, oneHourInPx);
-            }
-            
-            // Calculate free time to next actual task (skip reminders)
-            let nextTaskItem = null;
-            for (let i = index + 1; i < timelineItems.length; i++) {
-              if (timelineItems[i].tasks.length > 0) {
-                nextTaskItem = timelineItems[i];
-                break;
-              }
-            }
-            const freeTimeText = calculateFreeTime(item, nextTaskItem);
-            
-            const allCompleted = item.tasks.length > 0 && item.tasks.every(t => t.completed);
-            const hasIncompleteTasks = item.tasks.some(t => !t.completed);
-            
-            // Big dots for wake/sleep, regardless of position
-            const isBigDot = item.isWakeUp || item.isBedTime;
-            
-            // Combined emoji dot - but not if it's wake/sleep
-            const hasMultipleReminders = !isBigDot && [item.waterReminder, item.medicationReminder, item.stepReminder, item.meditationReminder, item.glucoseReminder].filter(Boolean).length > 1;
-            const hasAnyReminder = !isBigDot && (item.waterReminder || item.medicationReminder || item.stepReminder || item.meditationReminder || item.glucoseReminder);
-            
-            // Size: Big dots (48px) for wake/bed, Medium (40px) for reminders (single or combined), Regular (32px) for tasks
-            const dotSize = isBigDot ? 'w-12 h-12' : hasAnyReminder ? 'w-10 h-10' : 'w-8 h-8';
-            
-            // Check if water reminder is completed - use refreshKey to force re-check
-            const isWaterCompleted = (item.waterReminder && refreshKey >= 0) ? (() => {
-              const waterEntries = JSON.parse(localStorage.getItem('water_entries') || '[]');
-              return waterEntries.some((entry: any) => 
-                entry.date === viewingDate && entry.time === item.time
-              );
-            })() : false;
-
-            // Check if medication reminder is completed - use refreshKey to force re-check
-            const isMedicationCompleted = (item.medicationReminder && refreshKey >= 0) ? (() => {
-              const medications = JSON.parse(localStorage.getItem('medications') || '[]');
-              const takenEntry = `${viewingDate}_${item.time}`;
-              return medications.some((med: any) => 
-                med.times?.includes(item.time) && med.takenDates?.includes(takenEntry)
-              );
-            })() : false;
-
-            // Check if step reminder is completed - use refreshKey to force re-check
-            const isStepCompleted = (item.stepReminder && refreshKey >= 0) ? (() => {
-              const stepLogs = JSON.parse(localStorage.getItem('step_logs') || '[]');
-              return stepLogs.some((log: any) => 
-                log.date === viewingDate && log.timestamp.includes(item.time.substring(0, 2)) // Check if logged around this hour
-              );
-            })() : false;
-
-            // Check if meditation reminder is completed - use refreshKey to force re-check
-            const isMeditationCompleted = (item.meditationReminder && refreshKey >= 0) ? (() => {
-              const sessions = JSON.parse(localStorage.getItem('breathingSessions') || '[]');
-              return sessions.some((session: any) => 
-                session.date === viewingDate && session.reminderTime === item.time
-              );
-            })() : false;
-
-            // Check if glucose reminder is completed - use refreshKey to force re-check
-            const isGlucoseCompleted = (item.glucoseReminder && refreshKey >= 0) ? (() => {
-              const readings = JSON.parse(localStorage.getItem('glucose_readings') || '[]');
-              return readings.some((reading: any) => 
-                reading.date === viewingDate && reading.reminderTime === item.time
-              );
-            })() : false;
-
-            const isReminderCompleted = (item.waterReminder && isWaterCompleted) ||
-                                       (item.medicationReminder && isMedicationCompleted) ||
-                                       (item.stepReminder && isStepCompleted) ||
-                                       (item.meditationReminder && isMeditationCompleted) ||
-                                       (item.glucoseReminder && isGlucoseCompleted) ||
-                                       (hasMultipleReminders && isWaterCompleted && isMedicationCompleted && isStepCompleted && isMeditationCompleted && isGlucoseCompleted);
-            
-            // Check if this is the first actual task (not just a reminder or sleep)
-            const hasActualTask = item.tasks.length > 0 && item.tasks.some(t => 
-              t.source !== 'medication' && 
-              t.source !== 'water' && 
-              t.source !== 'steps' && 
-              t.source !== 'sleep'
-            );
-            
-            // Determine where to show affirmation - ONLY ONCE per timeline
-            let showAffirmation = false;
-            let affirmationNextToWakeup = false;
-            
-            // Only check on first iteration to avoid duplicates
-            if (index === 0) {
-              // Check if there are ANY actual tasks in the entire timeline
-              const hasAnyActualTasksInTimeline = timelineItems.some(item => 
-                item.tasks.some(t => 
-                  t.source !== 'medication' && 
-                  t.source !== 'water' && 
-                  t.source !== 'steps' && 
-                  t.source !== 'sleep'
-                )
-              );
-              
-              if (hasAnyActualTasksInTimeline) {
-                // There are actual tasks - show above first one
-                if (hasActualTask) {
-                  showAffirmation = true;
-                }
-              } else {
-                // No actual tasks - show next to wake up
-                if (item.isWakeUp) {
-                  showAffirmation = true;
-                  affirmationNextToWakeup = true;
-                }
-              }
-            } else if (!timelineItems.slice(0, index).some(item => 
-              item.tasks.some(t => 
-                t.source !== 'medication' && 
-                t.source !== 'water' && 
-                t.source !== 'steps' && 
-                t.source !== 'sleep'
-              )
-            )) {
-              // This is the first actual task after wake up and reminders
-              if (hasActualTask) {
-                showAffirmation = true;
-              }
-            }
-            
-            return (
-              <React.Fragment key={`timeline-${item.time}-${index}`}>
-                {/* Daily Affirmation Banner - shown above first task or next to wake up (only on current day) */}
-                {showAffirmation && isToday && affirmationSettings.enabled && affirmationSettings.showOnTimeline && (
-                  <div
-                    className="absolute z-50"
-                    style={{
-                      top: `${position}%`,
-                      left: '2rem',
-                      right: '0',
-                      transform: affirmationNextToWakeup 
-                        ? 'translateY(-50%)' // Align with wake up dot
-                        : 'translateY(calc(-100% - 2rem))', // Above first task
-                    }}
-                  >
-                    <div className={affirmationNextToWakeup ? "" : "mb-4"}>
-                      <div className="p-4 rounded-xl bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border border-primary/20 shadow-sm">
-                        <div className="flex items-center gap-2">
-                          <Sparkles className="w-4 h-4 text-primary flex-shrink-0" />
-                          <p className="text-sm leading-relaxed text-foreground font-medium">
-                            {getDailyAffirmationText()}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                
-                {/* Time Label - positioned separately */}
-                {(() => {
-                  // For tasks with duration, show time label at their start position
-                  // Otherwise show at the item's position
-                  const taskWithDuration = item.tasks.find(t => t.endTime && t.source !== 'medication' && t.source !== 'water' && t.source !== 'steps' && t.source !== 'sleep');
-                  const labelPosition = taskWithDuration ? (() => {
-                    const taskStartMinutes = timeToMinutes(taskWithDuration.time!);
-                    return ((taskStartMinutes - startMinutes) / (endMinutes - startMinutes)) * 100;
-                  })() : position;
-                  
-                  return (
-                    <div 
-                      className="absolute z-40"
-                      style={{ 
-                        top: `${labelPosition}%`,
-                        left: '-7rem',
-                        transform: 'translateY(-50%)',
-                      }}
-                    >
-                      <div className="text-sm sm:text-base font-mono text-muted-foreground whitespace-nowrap text-right w-20 sm:w-24">
-                        {item.time}
-                      </div>
-                    </div>
-                  );
-                })()}
-
-                {/* Task Duration Bars on Timeline - Show for all tasks with endTime */}
-                {/* Regular tasks (excluding startup/winddown) */}
-                {item.tasks.filter(t => t.endTime && t.time && t.source !== 'medication' && t.source !== 'water' && t.source !== 'steps' && t.source !== 'sleep' && !t.parentId && t.source !== 'startup' && t.source !== 'winddown').map((task, idx) => {
-                  const taskStartMinutes = timeToMinutes(task.time!);
-                  const taskEndMinutes = timeToMinutes(task.endTime!);
-                  const taskStartPos = ((taskStartMinutes - startMinutes) / (endMinutes - startMinutes)) * 100;
-                  const taskEndPos = ((taskEndMinutes - startMinutes) / (endMinutes - startMinutes)) * 100;
-                  
-                  // Calculate minimum height equivalent to 1 hour
-                  const oneHourHeight = (60 / (endMinutes - startMinutes)) * 100;
-                  const taskDurHeight = Math.max(taskEndPos - taskStartPos, oneHourHeight);
-                  
-                  return (
-                    <div key={`duration-${task.id}`}>
-                      {/* Duration bar */}
-                      <div
-                        className="absolute left-0 z-30 bg-primary/30 border-l-2 border-r-2 border-primary/50"
-                        style={{
-                          top: `${taskStartPos}%`,
-                          width: '8px',
-                          height: `${taskDurHeight}%`,
-                          minHeight: '20px',
-                          borderRadius: '4px',
-                        }}
-                      />
-                      
-                      {/* Start time label - only if different from item time */}
-                      {task.time !== item.time && (
-                        <div 
-                          className="absolute z-40"
-                          style={{ 
-                            top: `${taskStartPos}%`,
-                            left: '-7rem',
                             transform: 'translateY(-50%)',
                           }}
                         >
-                          <div className="text-sm sm:text-base font-mono text-muted-foreground whitespace-nowrap text-right w-20 sm:w-24">
-                            {task.time}
-                          </div>
-                        </div>
-                      )}
-                      
-                      {/* End time label - always show */}
-                      <div 
-                        className="absolute z-40"
-                        style={{ 
-                          top: `${taskDurHeight}%`,
-                          left: '-7rem',
-                          transform: 'translateY(-50%)',
-                        }}
-                      >
-                        <div className="text-sm sm:text-base font-mono text-muted-foreground whitespace-nowrap text-right w-20 sm:w-24">
-                          {task.endTime}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-
-                {/* Startup and Winddown Duration Bars - Use exact times (no minimum height) */}
-                {timelineItems.flatMap(i => i.tasks)
-                  .filter(t => t.endTime && t.time && (t.source === 'startup' || t.source === 'winddown'))
-                  .map((task) => {
-                  const taskStartMinutes = timeToMinutes(task.time!);
-                  const taskEndMinutes = timeToMinutes(task.endTime!);
-                  const taskStartPos = ((taskStartMinutes - startMinutes) / (endMinutes - startMinutes)) * 100;
-                  const taskEndPos = ((taskEndMinutes - startMinutes) / (endMinutes - startMinutes)) * 100;
-                  
-                    // Use exact duration - no minimum height enforcement
-                    const taskDurHeight = taskEndPos - taskStartPos;
-                    const taskDurPx = (taskDurHeight / 100) * timelineHeight;
-                  
-                  return (
-                    <div key={`duration-${task.id}`}>
-                        {/* Duration bar - exact time representation */}
-                      <div
-                        className="absolute left-0 z-30"
-                        style={{
-                          top: `${taskStartPos}%`,
-                          width: '8px',
-                            height: `${taskDurPx}px`,
-                            minHeight: '4px', // Very small minimum just for visibility
-                          borderRadius: '4px',
-                          backgroundColor: task.source === 'winddown' ? 'rgba(139, 92, 246, 0.3)' : 'rgba(245, 158, 11, 0.3)',
-                          borderLeft: '2px solid',
-                          borderRight: '2px solid',
-                          borderColor: task.source === 'winddown' ? 'rgba(139, 92, 246, 0.5)' : 'rgba(245, 158, 11, 0.5)',
-                        }}
-                      />
-                      
-                      {/* Start time label - always show for startup/winddown */}
-                      <div 
-                        className="absolute z-40"
-                        style={{ 
-                          top: `${taskStartPos}%`,
-                          left: '-7rem',
-                          transform: 'translateY(-50%)',
-                        }}
-                      >
-                        <div className={`text-sm sm:text-base font-mono whitespace-nowrap text-right w-20 sm:w-24 ${
-                          task.source === 'winddown' ? 'text-purple-600 font-medium' : 'text-amber-600 font-medium'
-                        }`}>
-                          {task.time}
-                        </div>
-                      </div>
-                      
-                      {/* End time label - always show */}
-                      <div 
-                        className="absolute z-40"
-                        style={{ 
-                            top: `${taskEndPos}%`,
-                          left: '-7rem',
-                          transform: 'translateY(-50%)',
-                        }}
-                      >
-                        <div className="text-sm sm:text-base font-mono text-muted-foreground whitespace-nowrap text-right w-20 sm:w-24">
-                          {task.endTime}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-
-                {/* Startup and Winddown Container Tasks - Render task cards with child tasks */}
-                {timelineItems.flatMap(i => i.tasks)
-                  .filter(t => (t.source === 'startup' || t.source === 'winddown') && t.time)
-                  .map((task) => {
-                    const taskStartMinutes = timeToMinutes(task.time!);
-                    const taskStartPos = ((taskStartMinutes - startMinutes) / (endMinutes - startMinutes)) * 100;
-                    
-                    // Calculate center position: if endTime exists, center between start and end; otherwise center at start
-                    let centerPos = taskStartPos;
-                    let taskDurPx = 100; // Default height if no endTime
-                    
-                    if (task.endTime) {
-                      const taskEndMinutes = timeToMinutes(task.endTime);
-                      const taskEndPos = ((taskEndMinutes - startMinutes) / (endMinutes - startMinutes)) * 100;
-                      // Center position between start and end
-                      centerPos = (taskStartPos + taskEndPos) / 2;
-                      // Use exact duration
-                      const taskDurHeight = taskEndPos - taskStartPos;
-                      taskDurPx = (taskDurHeight / 100) * timelineHeight;
-                    }
-                    
-                    // Find child tasks
-                    const childTasks = tasks.filter(t => t.parentId === task.id).sort((a, b) => (a.order || 0) - (b.order || 0));
-                    const badge = getSourceBadge?.(task.source || "manual");
-                    
-                    // Calculate max height to prevent overflow - use at least the calculated height or minimum
-                    const maxHeightPx = Math.max(taskDurPx, 100);
-                    
-                    return (
-                      <div 
-                        key={`container-${task.id}`}
-                        className="absolute"
-                        style={{
-                          top: `${centerPos}%`,
-                          left: '3rem',
-                          right: '1rem',
-                          maxHeight: `${maxHeightPx}px`,
-                          minHeight: '100px',
-                          maxWidth: 'calc(100% - 4rem)',
-                          transform: 'translateY(-50%)', // Center vertically
-                        }}
-                      >
+                  {/* Background blocker to prevent liquid fill overlap */}
                         <div 
-                          className="bg-card border border-border relative flex flex-col cursor-pointer hover:bg-muted/30 transition-colors w-full"
-                          style={{
-                            borderRadius: '8px',
-                            borderLeft: `4px solid ${task.source === 'winddown' ? 'rgba(139, 92, 246, 0.5)' : 'rgba(245, 158, 11, 0.5)'}`,
-                            maxHeight: '100%',
-                            overflow: 'hidden',
-                          }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleTaskToggle(task.id);
-                          }}
-                        >
-                          <div className="p-2 sm:p-3 relative overflow-y-auto" style={{ maxHeight: '100%' }}>
-                            <div className="flex items-start gap-2 sm:gap-3 w-full">
-                              {/* Emoji on the left */}
-                              <div className="flex-shrink-0">
-                                <div 
-                                  className="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-all"
-                                  style={{
-                                    backgroundColor: task.completed ? (task.color || 'hsl(var(--primary))') : 'transparent',
-                                    borderWidth: '2px',
-                                    borderStyle: 'solid',
-                                    borderColor: task.color ? `${task.color}${task.completed ? '' : '50'}` : (task.completed ? 'hsl(var(--primary))' : 'hsl(var(--primary) / 0.3)'),
-                                  }}
-                                >
-                                  <span className="text-xl sm:text-2xl">{task.emoji || '📝'}</span>
-                                </div>
-                              </div>
-                              
-                              {/* Content on the right */}
-                              <div className="flex-1 min-w-0">
-                                {/* Task Title and Badge */}
-                                <div className="mb-1">
-                                  <div className="flex items-center gap-1.5 flex-wrap">
-                                    <div className={`text-sm font-semibold break-words ${
-                                      task.completed ? 'line-through opacity-60' : ''
-                                    }`}>
-                                      {task.title}
-                                    </div>
-                                  </div>
-                                  {showTaskTags && badge && (
-                                    <Badge variant="secondary" className={`${badge.className} text-xs mt-1`}>
-                                      {badge.label}
-                                    </Badge>
-                                  )}
-                                </div>
-                                
-                                {/* Time display for winddown and startup tasks */}
-                                {task.time && task.endTime && (
-                                  <div className="text-xs text-muted-foreground mb-1.5 flex items-center gap-1.5">
-                                    <Clock className="w-3 h-3 flex-shrink-0" />
-                                    <span className="whitespace-nowrap">{task.time} - {task.endTime}</span>
-                                  </div>
-                                )}
-                                
-                                {/* Notes below title */}
-                                {task.notes && (
-                                  <div className="text-xs text-muted-foreground mb-2 italic break-words line-clamp-2">
-                                    {task.notes}
-                                  </div>
-                                )}
-                                
-                                {/* Child Tasks for Containers (Winddown/Startup) */}
-                                {childTasks.length > 0 && (
-                                  <div className="w-full mt-2 space-y-1.5">
-                                    <div className="text-xs text-muted-foreground mb-1">
-                                      {childTasks.filter(ct => ct.completed).length}/{childTasks.length} completed
-                                    </div>
-                                    <div className="space-y-1 max-h-32 overflow-y-auto">
-                                      {childTasks.map((childTask) => (
-                                        <div 
-                                          key={childTask.id}
-                                          className="flex items-center gap-1.5 text-xs p-1.5 rounded-md bg-muted/30 hover:bg-muted/50 transition-colors"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleTaskToggle(childTask.id);
-                                          }}
-                                        >
-                                          <button
-                                            className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                                              childTask.completed 
-                                                ? 'bg-success border-success' 
-                                                : 'border-muted-foreground'
-                                            }`}
-                                          >
-                                            {childTask.completed && (
-                                              <span className="text-[10px] text-white">✓</span>
-                                            )}
-                                          </button>
-                                          <span className={`flex-1 break-words text-xs ${childTask.completed ? 'line-through opacity-60' : ''}`}>
-                                            {childTask.title}
-                                          </span>
-                                          {childTask.journalPrompt && (
-                                            <Button
-                                              size="sm"
-                                              variant="ghost"
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                // Open journal dialog
-                                                window.dispatchEvent(new CustomEvent('openJournal', { 
-                                                  detail: { prompt: childTask.journalPrompt } 
-                                                }));
-                                              }}
-                                              className="h-5 px-1.5 text-[10px] flex-shrink-0"
-                                            >
-                                              📖
-                                            </Button>
-                                          )}
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
+                    className="absolute"
+                          style={{ 
+                      left: '-4px',
+                      width: '16px',
+                      height: '16px',
+                      backgroundColor: hasPassed ? dotColor : timelineGrey, // Match timeline bar grey exactly
+                      borderRadius: '50%',
+                      zIndex: -1,
+                    }}
+                  />
+                  <button className={`w-8 h-8 rounded-full border-2 flex items-center justify-center flex-shrink-0 -translate-x-1/2`} style={{
+                    backgroundColor: hasPassed ? dotColor : timelineGrey, // Match timeline bar grey exactly
+                    borderColor: hasPassed ? dotColor : timelineGrey, // Match timeline bar grey exactly
+                    boxShadow: 'none', // No shadow
+                  }} />
+                        </div>
+                      <div 
+                        className="absolute z-40"
+                        style={{ 
+                    top: '0%',
+                    left: '-7.5rem',
+                          transform: 'translateY(-50%)',
+                        }}
+                      >
+                  <div className="text-sm sm:text-base font-sans text-muted-foreground whitespace-nowrap text-right w-20 sm:w-24">
+                    {timelineItems[0].time}
                         </div>
                       </div>
-                    );
-                  })}
-
-                {/* Dot Container - Only show for: wake/sleep, reminders (NOT for tasks without end time) */}
-                {/* Don't show dots for winddown/startup tasks - they already have their own container */}
-                {(item.isWakeUp || item.isBedTime || hasAnyReminder) && !hasActualTask && (() => {
-                  // For bedtime/wakeup, check if there are tasks that end/start at this time
-                  let dotPosition = position;
-                  if (item.isBedTime) {
-                    // Check if there's a winddown task that ends at bedtime
-                    const winddownTask = timelineItems
-                      .flatMap(i => i.tasks)
-                      .find(t => t.source === 'winddown' && t.endTime === item.time);
-                    if (winddownTask) {
-                      // Position dot significantly after the task (add larger offset)
-                      dotPosition = position + 2; // Add 2% to position it clearly below
-                    }
-                  }
-                  if (item.isWakeUp) {
-                    // Check if there's a startup task that starts at wake time
-                    const startupTask = timelineItems
-                      .flatMap(i => i.tasks)
-                      .find(t => t.source === 'startup' && t.time === item.time);
-                    if (startupTask) {
-                      // Position dot significantly before the task (subtract larger offset)
-                      dotPosition = position - 2; // Subtract 2% to position it clearly above
-                    }
-                  }
-                  
-                  return (
-                    <div
-                      key={item.time}
-                      className="absolute flex items-center"
-                      style={{ 
-                        top: `${dotPosition}%`,
-                        left: '4px', // Center of 8px timeline (w-2 = 0.5rem = 8px, so center = 4px)
-                        transform: 'translateY(-50%)', // Only vertical centering
-                        zIndex: 50,
-                      }}
-                    >
-                    {/* Dot */}
-                    <button
-                  onClick={() => {
-                    // Check what's actually at this time slot
-                    const hasActualTask = item.tasks.length > 0 && 
-                                         item.tasks.some(t => t.source !== 'medication' && t.source !== 'water' && t.source !== 'steps');
-                    
-                    // Handle wake/sleep tasks first
-                    if (item.isWakeUp || item.isBedTime) {
-                      if (item.tasks && item.tasks.length > 0 && item.tasks[0]) {
-                        handleTaskToggle(item.tasks[0].id);
-                      }
-                      return;
-                    }
-                    
-                    // If there are reminders and NO actual tasks, handle reminders first
-                    if (!hasActualTask && hasMultipleReminders) {
-                      handleCombinedReminderClick(item.time);
-                    } else if (!hasActualTask && item.stepReminder) {
-                      handleStepReminderClick(item.time);
-                    } else if (!hasActualTask && item.medicationReminder) {
-                      handleMedicationReminderClick(item.time);
-                    } else if (!hasActualTask && item.meditationReminder) {
-                      handleMeditationReminderClick(item.time);
-                    } else if (!hasActualTask && item.glucoseReminder) {
-                      handleGlucoseReminderClick(item.time);
-                    } else if (!hasActualTask && item.waterReminder && onWaterReminderClick) {
-                      onWaterReminderClick(item.time);
-                    } else if (item.tasks.length > 0) {
-                      // Handle actual tasks (regular tasks)
-                      handleTaskToggle(item.tasks[0].id);
-                    }
-                  }}
-                  className={`${dotSize} rounded-full border-2 flex items-center justify-center flex-shrink-0 -translate-x-1/2
-                    ${allCompleted || isReminderCompleted
-                      ? 'bg-primary border-primary shadow-lg' 
-                      : hasIncompleteTasks
-                      ? 'bg-background border-primary'
-                      : hasAnyReminder
-                      ? 'bg-background border-primary'
-                      : 'bg-background border-border'
-                    }
-                    ${allCompleted || isReminderCompleted ? 'shadow-primary/50' : ''}
-                  `}
-                  style={{
-                    boxShadow: allCompleted || isReminderCompleted
-                      ? '0 0 16px hsl(var(--primary) / 0.5)' 
-                      : undefined,
-                  }}
-                >
-                  {/* Show emojis for wake/sleep/reminders, checkmark when completed */}
-                  {item.isWakeUp ? (
-                    <span className="text-lg">☀️</span>
-                  ) : item.isBedTime ? (
-                    <span className="text-lg">🌙</span>
-                  ) : hasAnyReminder ? (
-                    isReminderCompleted ? (
-                      <span className="text-lg text-primary-foreground font-bold">✓</span>
-                    ) : (
-                      <span className={hasMultipleReminders ? "text-base flex items-center gap-0.5" : "text-lg"}>
-                        {hasMultipleReminders ? (
-                          <>
-                            {item.waterReminder && <span className="text-sm">💧</span>}
-                            {item.medicationReminder && <span className="text-sm">{getMedicationEmojiForTime(item.time)}</span>}
-                            {item.stepReminder && <span className="text-sm">👟</span>}
-                            {item.meditationReminder && <span className="text-sm">🧘</span>}
-                            {item.glucoseReminder && <span className="text-sm">🩸</span>}
-                          </>
-                        ) : item.waterReminder ? (
-                          <span>💧</span>
-                        ) : item.medicationReminder ? (
-                          getMedicationEmojiForTime(item.time)
-                        ) : item.stepReminder ? (
-                          '👟'
-                        ) : item.meditationReminder ? (
-                          '🧘'
-                        ) : item.glucoseReminder ? (
-                          '🩸'
-                        ) : null}
-                      </span>
-                    )
-                  ) : allCompleted ? (
-                    <span className="text-lg text-primary-foreground font-bold">✓</span>
-                  ) : null}
-                  </button>
-                    </div>
-                  );
-                })()}
-
-                {/* Wake up / Sleep text label with time */}
-                {item.isWakeUp && (() => {
-                  // Calculate dot position (same logic as in dot rendering)
-                  let dotPosition = position;
-                  const startupTask = timelineItems
-                    .flatMap(i => i.tasks)
-                    .find(t => t.source === 'startup' && t.time === item.time);
-                  if (startupTask) {
-                    dotPosition -= 2;
-                  }
-                  
-                  return (
-                    <div 
-                      className="absolute z-40"
-                      style={{ 
-                        top: `${dotPosition}%`,
-                        left: '0',
-                        transform: 'translate(-50%, -250%)',
-                      }}
-                    >
-                      <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">
-                        Wake up {item.time}
-                      </span>
-                    </div>
-                  );
-                })()}
-                {item.isBedTime && (() => {
-                  // Calculate dot position (same logic as in dot rendering)
-                  let dotPosition = position;
-                  const winddownTask = timelineItems
-                    .flatMap(i => i.tasks)
-                    .find(t => t.source === 'winddown' && t.endTime === item.time);
-                  if (winddownTask) {
-                    dotPosition += 2;
-                  }
-                  
-                  return (
-                    <div 
-                      className="absolute z-40"
-                      style={{ 
-                        top: `${dotPosition}%`,
-                        left: '0',
-                        transform: 'translate(-50%, 150%)',
-                      }}
-                    >
-                      <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">
-                        Go to bed {item.time}
-                      </span>
-                    </div>
-                  );
-                })()}
-
-                {/* Task Info Container - Only show for actual tasks, not reminders/sleep */}
-                {/* Regular tasks - excludes winddown/startup (they're rendered separately) */}
-                {item.tasks.length > 0 && 
-                 item.tasks.some(t => t.source !== 'medication' && t.source !== 'sleep' && t.source !== 'water' && t.source !== 'steps' && t.source !== 'startup' && t.source !== 'winddown') && 
-                 !item.isWakeUp && 
-                 !item.isBedTime && (() => {
-                   // Filter out system tasks, child tasks, and startup/winddown (they're rendered separately)
-                   const actualTasks = item.tasks.filter(t => {
-                     return t.source !== 'medication' && 
-                            t.source !== 'sleep' && 
-                            t.source !== 'water' && 
-                            t.source !== 'steps' &&
-                            t.source !== 'startup' &&
-                            t.source !== 'winddown' &&
-                            !t.parentId;
-                   });
-                   
-                   // Check if any of these tasks overlap with ANY other task in the timeline
-                   const allTimelineTasks = tasks.filter(t => t.time && !t.allDay && t.endTime && 
-                     t.source !== 'medication' && 
-                     t.source !== 'sleep' && 
-                     t.source !== 'water' && 
-                     t.source !== 'steps' &&
-                     t.source !== 'startup' &&
-                     t.source !== 'winddown' &&
-                     !t.parentId);
-                   
-                   // Find overlapping group for the current task
-                   let overlappingGroup: Task[] = [];
-                   if (actualTasks.length > 0 && actualTasks[0].endTime && actualTasks[0].time) {
-                     const currentTask = actualTasks[0];
-                     const currentStart = timeToMinutes(currentTask.time as string);
-                     const currentEnd = timeToMinutes(currentTask.endTime as string);
-                     
-                     // Find all tasks that overlap with this task
-                     // But don't group startup and winddown tasks together even if they overlap
-                     overlappingGroup = allTimelineTasks.filter(t => {
-                       // Skip if it's the same task
-                       if (t.id === currentTask.id) return true;
-                       
-                       const tStart = timeToMinutes(t.time!);
-                       const tEnd = timeToMinutes(t.endTime!);
-                       const overlaps = (currentStart < tEnd && currentEnd > tStart);
-                       
-                       // Don't group startup with winddown
-                       if (currentTask.source === 'startup' && t.source === 'winddown') return false;
-                       if (currentTask.source === 'winddown' && t.source === 'startup') return false;
-                       
-                       return overlaps;
-                     });
-                     
-                     // Always include the current task in the group
-                     if (!overlappingGroup.find(t => t.id === currentTask.id)) {
-                       overlappingGroup.push(currentTask);
-                     }
-                   }
-                   
-                   const hasOverlap = overlappingGroup.length > 1;
-                   const sameTimeNoEnd = actualTasks.length > 1 && actualTasks.every(t => !t.endTime);
-                   
-                   // Don't show overlap warning for startup/winddown tasks themselves
-                   const isStartupWinddown = actualTasks.some(t => t.source === 'winddown' || t.source === 'startup');
-                   
-                   // For winddown/startup tasks, use the actual task start time for positioning instead of the item time
-                   // This ensures they render at their actual start time (e.g., 22:40 for winddown, 06:00 for startup) not at the sleep/wake time
-                   let actualPosition = position;
-                   const isStartupOrWinddown = actualTasks.some(t => t.source === 'winddown' || t.source === 'startup');
-                   if ((isWinddownTask || isStartupOrWinddown) && actualTasks[0]?.time) {
-                     const taskStartMinutes = timeToMinutes(actualTasks[0].time);
-                     actualPosition = ((taskStartMinutes - startMinutes) / (endMinutes - startMinutes)) * 100;
-                   }
-                   
-                   // Skip rendering if this task is not the earliest in its overlapping group
-                   if (hasOverlap && overlappingGroup.length > 1) {
-                     const sortedGroup = [...overlappingGroup].sort((a, b) => 
-                       timeToMinutes(a.time!) - timeToMinutes(b.time!)
-                     );
-                     // Only render at the earliest task's time
-                     // But if any task in the group is winddown or startup, always render
-                     const hasWinddownStartup = actualTasks.some(t => t.source === 'winddown' || t.source === 'startup');
-                     if (!hasWinddownStartup && sortedGroup[0].id !== actualTasks[0]?.id) {
-                       return null;
-                     }
-                   }
-                   
-                   // Calculate merged height for overlapping tasks FIRST
-                   let mergedContainerHeight = taskDurationHeight;
-                   let mergedContainerPx = taskDurationPx;
-                   
-                   // For ALL tasks with endTime, enforce minimum 1 hour height for consistent spacing
-                   if (actualTasks[0]?.endTime) {
-                     const taskStartMinutes = timeToMinutes(actualTasks[0].time!);
-                     const taskEndMinutes = timeToMinutes(actualTasks[0].endTime);
-                     const taskStartPos = ((taskStartMinutes - startMinutes) / (endMinutes - startMinutes)) * 100;
-                     const taskEndPos = ((taskEndMinutes - startMinutes) / (endMinutes - startMinutes)) * 100;
-                     
-                     // Calculate exact pixel height based on timeline
-                     const startPx = (taskStartPos / 100) * timelineHeight;
-                     const endPx = (taskEndPos / 100) * timelineHeight;
-                     let calculatedPx = endPx - startPx;
-                     
-                     // Enforce minimum height equivalent to 1 hour for consistent spacing
-                     const oneHourInPx = (60 / (endMinutes - startMinutes)) * timelineHeight;
-                     mergedContainerPx = Math.max(calculatedPx, oneHourInPx);
-                     mergedContainerHeight = taskEndPos - actualPosition;
-                   } else if (hasOverlap && overlappingGroup.length > 1 && !isStartupWinddown) {
-                     // Find the latest end time among all overlapping tasks
-                     const latestEndTime = Math.max(...overlappingGroup.map(t => timeToMinutes(t.endTime!)));
-                     const latestEndPosition = ((latestEndTime - startMinutes) / (endMinutes - startMinutes)) * 100;
-                     mergedContainerHeight = latestEndPosition - actualPosition;
-                     mergedContainerPx = (mergedContainerHeight / 100) * timelineHeight;
-                   }
-                   
-                                   // If overlapping, render all tasks in the group
-                   // Sort overlapping group by start time to ensure consistent rendering
-                   const tasksToRender = hasOverlap 
-                     ? [...overlappingGroup].sort((a, b) => timeToMinutes(a.time!) - timeToMinutes(b.time!))
-                     : actualTasks;
-                   
-                                      // Create border styling
-                   const taskColor = actualTasks[0]?.color || 'hsl(var(--primary))';
-                   const isMergedOverlap = hasOverlap && overlappingGroup.length >= 2 && mergedContainerHeight > 0;
-                   
-                   return (
-                  <>
-                    <div 
-                      className="absolute"
-                      style={{
-                        top: `${actualPosition}%`,
-                        // Don't center winddown/startup tasks or tasks with end time - they start at their start time
-                        // Only center tasks without end time
-                        transform: mergedContainerHeight > 0 || isWinddownTask || isStartupOrWinddown || actualTasks[0]?.endTime ? undefined : 'translateY(-50%)',
-                        left: '3rem',
-                        right: '0',
-                        height: mergedContainerHeight > 0 ? `${mergedContainerPx}px` : 'auto',
-                        minHeight: mergedContainerHeight > 0 ? '100px' : 'auto',
-                      }}
-                    >
-                    
-                    {/* Gradient border for merged tasks - simple overlay */}
-                    {isMergedOverlap && (
-                      <div
-                        className="absolute left-0 top-0 bottom-0 pointer-events-none z-10"
-                        style={{
-                          width: '4px',
-                          background: `linear-gradient(to bottom, ${overlappingGroup[0].color || '#8b5cf6'}, ${overlappingGroup[1].color || '#8b5cf6'})`,
-                          borderRadius: '16px 0 0 16px',
-                        }}
-                      />
-                    )}
-                    
-                    <div 
-                      className={`bg-card border border-border shadow-md relative ${
-                        sameTimeNoEnd ? 'flex flex-row gap-2' : 'flex flex-col'
-                      } overflow-hidden cursor-pointer hover:bg-muted/30 transition-colors ${
-                        taskDurationHeight > 0 ? 'h-full w-full' : 'w-full min-h-[80px]'
-                      }`}
-                      style={{
-                        borderRadius: hasOverlap ? '16px' : '8px',
-                        borderLeft: isMergedOverlap ? '4px solid transparent' : `4px solid ${taskColor}`,
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (tasksToRender.length > 0) {
-                          handleTaskToggle(tasksToRender[0].id);
-                        }
-                      }}
-                    >
-                        {tasksToRender.map((task, taskIndex) => {
-                        const badge = getSourceBadge?.(task.source || "manual");
-                        
-                        // Check if this is a container task (winddown/startup)
-                        const isContainer = task.isContainer && (task.source === 'winddown' || task.source === 'startup');
-                        
-                        // If container, find child tasks
-                        const childTasks = isContainer 
-                          ? tasks.filter(t => t.parentId === task.id).sort((a, b) => (a.order || 0) - (b.order || 0))
-                          : [];
-                        
-                        const subtasks = task.subtasks || [];
-                        const completedSubtasks = subtasks.filter((st: any) => st.completed).length;
-                        const isExpanded = expandedTasks.has(task.id);
-                        const hasMoreThan3Subtasks = subtasks.length > 3;
-                        const displayedSubtasks = isExpanded ? subtasks : subtasks.slice(0, 3);
-                        
-                        return (
-                          <div 
-                            key={task.id}
-                            className={`p-2 sm:p-3 md:p-4 relative ${taskIndex > 0 && !sameTimeNoEnd ? 'border-t' : ''} ${sameTimeNoEnd ? 'flex-1' : ''}`}
-                          >
-                            <div 
-                              className="flex items-center gap-1.5 sm:gap-2 w-full"
-                              onMouseDown={(e) => {
-                                if (!task.allDay && task.time) {
-                                  handleDragStart(task, e);
-                                }
-                              }}
-                              style={{
-                                cursor: !task.allDay && task.time && 
-                                  task.source !== 'water' && 
-                                  task.source !== 'medication' && 
-                                  task.source !== 'steps' && 
-                                  task.source !== 'sleep' &&
-                                  task.source !== 'work' &&
-                                  task.source !== 'school' &&
-                                  task.source !== 'workout' &&
-                                  task.source !== 'food' &&
-                                  task.source !== 'winddown' &&
-                                  task.source !== 'startup' &&
-                                  !task.isContainer 
-                                  ? (draggingTask?.id === task.id ? 'grabbing' : 'grab') 
-                                  : 'default',
-                                opacity: draggingTask?.id === task.id ? 0.7 : 1,
-                              }}
-                            >
-                              {/* Drag Indicator - visible on left for draggable tasks only */}
-                              {!task.allDay && task.time && 
-                               task.source !== 'water' && 
-                               task.source !== 'medication' && 
-                               task.source !== 'steps' && 
-                               task.source !== 'sleep' &&
-                               task.source !== 'work' &&
-                               task.source !== 'school' &&
-                               task.source !== 'workout' &&
-                               task.source !== 'food' &&
-                               task.source !== 'winddown' &&
-                               task.source !== 'startup' &&
-                               !task.isContainer && (
-                                <div className="flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors">
-                                  <GripVertical className="w-4 h-4 sm:w-5 sm:h-5" />
-                                </div>
-                              )}
-                              
-                              {/* Emoji on the left - big and rounded, centered vertically */}
-                              <div className="flex-shrink-0">
-                                <div 
-                                  className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center transition-all"
-                                  style={{
-                                    backgroundColor: task.completed ? (task.color || 'hsl(var(--primary))') : 'transparent',
-                                    borderWidth: '2px',
-                                    borderStyle: 'solid',
-                                    borderColor: task.color ? `${task.color}${task.completed ? '' : '50'}` : (task.completed ? 'hsl(var(--primary))' : 'hsl(var(--primary) / 0.3)'),
-                                  }}
-                                >
-                                  <span className="text-2xl sm:text-3xl md:text-4xl">{task.emoji || '📝'}</span>
-                                </div>
-                              </div>
-                              
-                              {/* Content on the right */}
-                              <div 
-                                className="flex-1 min-w-0 flex items-center gap-2"
-                              >
-                              <div className="flex-1 min-w-0"
-                              >
-                                {/* Task Title and Badge */}
-                                <div className="mb-1 sm:mb-2">
-                                  <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                                    <div className={`text-sm sm:text-base font-semibold break-words ${
-                                      task.completed ? 'line-through opacity-60' : ''
-                                    }`}>
-                                      {task.title}
-                                    </div>
-                                    {task.repeat && (
-                                      <div className="flex items-center gap-0.5 sm:gap-1 text-[10px] sm:text-xs text-muted-foreground">
-                                        {task.repeat === 'daily' && <Repeat className="w-3 h-3 sm:w-3.5 sm:h-3.5" />}
-                                        {task.repeat === 'weekly' && <Repeat1 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />}
-                                        {task.repeat === 'monthly' && <Calendar className="w-3 h-3 sm:w-3.5 sm:h-3.5" />}
-                                        {task.repeat === 'yearly' && <Repeat2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />}
-                                        {task.repeat === 'weekdays' && <Repeat className="w-3 h-3 sm:w-3.5 sm:h-3.5" />}
-                                        {task.repeat === 'custom' && <Repeat className="w-3 h-3 sm:w-3.5 sm:h-3.5" />}
-                                        <span className="capitalize">{task.repeat}</span>
-                                      </div>
-                                    )}
-                                  </div>
-                                  {showTaskTags && badge && (
-                                    <Badge variant="secondary" className={`${badge.className} text-xs mt-1`}>
-                                      {badge.label}
-                                    </Badge>
-                                  )}
-                                </div>
-                                
-                                {/* Time display for winddown and startup tasks */}
-                                {(task.source === 'winddown' || task.source === 'startup') && task.time && task.endTime && (
-                                  <div className="text-xs text-muted-foreground mb-2 flex items-center gap-2">
-                                    <Clock className="w-3 h-3" />
-                                    <span>{task.time} - {task.endTime}</span>
-                                  </div>
-                                )}
-                                
-                                {/* Break times for work tasks */}
-                                {task.source === 'work' && (task as any).breakTimes && (task as any).breakTimes.length > 0 && (
-                                  <div className="text-xs text-muted-foreground mb-2">
-                                    <span className="font-medium">Breaks: </span>
-                                    {(task as any).breakTimes.map((breakTime: { start: string; end: string }, idx: number) => (
-                                      <span key={idx}>
-                                        {breakTime.start}-{breakTime.end}
-                                        {idx < (task as any).breakTimes.length - 1 && ', '}
-                                      </span>
-                                    ))}
-                                  </div>
-                                )}
-                                
-                                {/* Notes below title */}
-                                {task.notes && (
-                                  <div className="text-xs sm:text-sm text-muted-foreground mb-2 sm:mb-3 italic break-words">
-                                    {task.notes}
-                                  </div>
-                                )}
-                                
-                                {/* Subtasks */}
-                                {subtasks.length > 0 && (
-                                  <div className="w-full">
-                                    <div className="text-xs text-muted-foreground mb-2">
-                                      {completedSubtasks}/{subtasks.length} completed
-                                    </div>
-                                    <div className="space-y-1.5">
-                                      {displayedSubtasks.map((subtask: any) => (
-                                        <div 
-                                          key={subtask.id}
-                                          className="flex items-center gap-2 text-sm p-1.5 rounded hover:bg-muted/50"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleToggleSubtaskInContainer(task.id, subtask.id, e);
-                                          }}
-                                        >
-                                          <button
-                                            className={`w-4 h-4 rounded-sm border flex items-center justify-center flex-shrink-0 ${
-                                              subtask.completed 
-                                                ? 'bg-primary/20 border-primary' 
-                                                : 'border-muted-foreground'
-                                            }`}
-                                          >
-                                            {subtask.completed && (
-                                              <span className="text-xs text-primary">✓</span>
-                                            )}
-                                          </button>
-                                          <span className={`cursor-pointer hover:text-primary flex-1 break-words ${subtask.completed ? 'line-through opacity-60' : ''}`}>
-                                            {subtask.title}
-                                          </span>
-                                        </div>
-                                      ))}
-                                    </div>
-                                    {hasMoreThan3Subtasks && (
-                                      <button
-                                        onClick={(e) => toggleTaskExpanded(task.id, e)}
-                                        className="text-xs text-primary hover:underline flex items-center gap-1 mt-2"
-                                      >
-                                        {isExpanded ? (
-                                          <>
-                                            <ChevronUp className="w-3 h-3" />
-                                            Show less
-                                          </>
-                                        ) : (
-                                          <>
-                                            <ChevronDown className="w-3 h-3" />
-                                            Show {subtasks.length - 3} more
-                                          </>
-                                        )}
-                                      </button>
-                                    )}
-                                  </div>
-                                )}
-                                
-                                {/* Child Tasks for Containers (Winddown/Startup) */}
-                                {isContainer && childTasks.length > 0 && (
-                                  <div className="w-full mt-3 space-y-2">
-                                    <div className="text-xs text-muted-foreground mb-2">
-                                      {childTasks.filter(ct => ct.completed).length}/{childTasks.length} tasks completed
-                                    </div>
-                                    {childTasks.map((childTask) => (
-                                      <div 
-                                        key={childTask.id}
-                                        className="flex items-center gap-2 text-sm p-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleTaskToggle(childTask.id);
-                                        }}
-                                      >
-                                        <button
-                                          className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                                            childTask.completed 
-                                              ? 'bg-success border-success' 
-                                              : 'border-muted-foreground'
-                                          }`}
-                                        >
-                                          {childTask.completed && (
-                                            <span className="text-xs text-white">✓</span>
-                                          )}
-                                        </button>
-                                        <span className={`flex-1 break-words ${childTask.completed ? 'line-through opacity-60' : ''}`}>
-                                          {childTask.title}
-                                        </span>
-                                        {childTask.journalPrompt && (
-                                          <Button
-                                            size="sm"
-                                            variant="ghost"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              // Open journal dialog
-                                              window.dispatchEvent(new CustomEvent('openJournal', { 
-                                                detail: { prompt: childTask.journalPrompt } 
-                                              }));
-                                            }}
-                                            className="h-6 text-xs"
-                                          >
-                                            📖 Open
-                                          </Button>
-                                        )}
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                              
-                              {/* External source shortcut icon - shown for tasks from other pages */}
-                              {!isContainer && task.source !== 'winddown' && task.source !== 'startup' && task.source && getSourcePage(task.source) && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleSourceShortcut(task.source);
-                                  }}
-                                  className="flex-shrink-0 p-1.5 sm:p-2 hover:bg-muted rounded-full transition-colors text-primary"
-                                  title={
-                                    task.source === 'work' ? 'Open Work Settings' :
-                                    task.source === 'school' ? 'Open Student Settings' :
-                                    task.source === 'water' || task.source === 'medication' || task.source === 'sleep' ? 'Go to Health' : 
-                                    task.source === 'food' ? 'Go to Food' : 'Go to Sport'
-                                  }
-                                >
-                                  <ExternalLink className="w-4 h-4 sm:w-5 sm:h-5" />
-                                </button>
-                              )}
-                              
-                              {/* Photo button - only visible when task has attachments */}
-                              {!isContainer && task.source !== 'winddown' && task.source !== 'startup' && task.attachments && task.attachments.length > 0 && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setImageViewerTask(task);
-                                    setImageViewerOpen(true);
-                                  }}
-                                  className="flex-shrink-0 p-1.5 sm:p-2 hover:bg-muted rounded-full transition-colors relative text-primary"
-                                  title={`${task.attachments.length} photo(s)`}
-                                >
-                                  <ImageIcon className="w-4 h-4 sm:w-5 sm:h-5" />
-                                  <span className="absolute -top-0.5 -right-0.5 bg-primary text-primary-foreground text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold">
-                                    {task.attachments.length}
-                                  </span>
-                                </button>
-                              )}
-                              
-                              {/* Edit button - inline with emoji in middle right */}
-                              {onUpdateTask && !isContainer && task.source !== 'winddown' && task.source !== 'startup' && task.source !== 'work' && task.source !== 'school' && task.source !== 'workout' && task.source !== 'food' && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleEditTask(task);
-                                  }}
-                                  className="flex-shrink-0 p-1.5 sm:p-2 hover:bg-muted rounded-full transition-colors"
-                                >
-                                  <Edit2 className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
-                                </button>
-                              )}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                        })}
-                    </div>
-                    </div>
-                    
-                    {/* Overlap warning - positioned below container */}
-                    {hasOverlap && mergedContainerHeight > 0 && !isStartupWinddown && (() => {
-                      const basePositionPx = (position / 100) * timelineHeight;
-                      const warningTopPx = basePositionPx + mergedContainerPx + 16;
-                      
-                      return (
-                        <div 
-                          className="absolute z-30"
-                          style={{
-                            top: `${warningTopPx}px`,
-                            left: '3rem',
-                            right: '0.5rem',
-                          }}
-                        >
-                          <div className="flex items-center gap-2 text-xs text-red-600 dark:text-red-400 px-2 py-1.5">
-                            <span className="flex-1 font-medium">⚠️ Tasks overlapping</span>
-                            <Button 
-                              size="sm" 
-                              variant="outline" 
-                              className="h-6 text-[10px] px-2 border-red-400 dark:border-red-600 hover:bg-red-50 dark:hover:bg-red-950/20"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (overlappingGroup[0]) handleEditTask(overlappingGroup[0]);
-                              }}
-                            >
-                              Reschedule
-                            </Button>
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </>
-                   );
-                 })()}
-              </React.Fragment>
-            );
-          })}
-
-          {/* End dot if no sleep time - positioned at last task's end time */}
-          {!timelineItems.some(item => item.isBedTime) && timelineItems.length > 0 && (() => {
-            // Find the last task with an end time
-            const lastTaskWithEndTime = [...timelineItems].reverse().find(item => 
-              item.tasks.some(t => t.endTime)
-            );
-            
-            if (!lastTaskWithEndTime) return null;
-            
-            const taskWithEndTime = lastTaskWithEndTime.tasks.find(t => t.endTime);
-            if (!taskWithEndTime || !taskWithEndTime.endTime) return null;
-            
-            const endTaskMinutes = timeToMinutes(taskWithEndTime.endTime);
-            const endPosition = ((endTaskMinutes - startMinutes) / (endMinutes - startMinutes)) * 100;
-            
-            // Check if the task with end time is completed
-            const allCompleted = taskWithEndTime.completed || false;
-            
-            return (
-              <>
-                <div
-                  className="absolute flex items-center z-40"
-                  style={{ 
-                    top: `${endPosition}%`,
-                    left: '4px',
-                    transform: 'translateY(-50%)',
-                  }}
-                >
-                  <button className={`w-8 h-8 rounded-full border-2 flex items-center justify-center flex-shrink-0 -translate-x-1/2 shadow-sm hover:shadow-md transition-shadow ${
-                    allCompleted ? 'bg-primary border-primary shadow-lg' : 'bg-background border-primary'
-                  }`} />
-                </div>
-                <div 
-                  className="absolute z-40"
-                  style={{ 
-                    top: `${endPosition}%`,
-                    left: '-7rem',
-                    transform: 'translateY(-50%)',
-                  }}
-                >
-                  <div className="text-sm sm:text-base font-mono text-muted-foreground whitespace-nowrap text-right w-20 sm:w-24">
-                    {taskWithEndTime.endTime}
-                  </div>
-                </div>
               </>
-            );
-          })()}
+                  );
+                })()}
 
-          {/* Free Time Indicators - Rendered separately to avoid overlapping */}
-          {timelineItems.map((item, index) => {
-            // Only show free time for actual tasks (not reminders)
-            if (item.tasks.length === 0) return null;
-            if (item.tasks.every(t => t.source === 'medication' || t.source === 'water' || t.source === 'sleep')) return null;
-            
-            // Calculate position and free time
-            const itemMinutes = timeToMinutes(item.time);
-            const position = ((itemMinutes - startMinutes) / (endMinutes - startMinutes)) * 100;
-            
-            const taskWithEndTime = item.tasks.find(t => t.endTime);
-            let endPosition = position;
-            let taskDurationPx = 0;
-            
-            if (taskWithEndTime?.endTime) {
-              const endTaskMinutes = timeToMinutes(taskWithEndTime.endTime);
-              endPosition = ((endTaskMinutes - startMinutes) / (endMinutes - startMinutes)) * 100;
-              const taskDurationHeight = endPosition - position;
-              taskDurationPx = (taskDurationHeight / 100) * timelineHeight;
-            }
-            
-            // Find next actual task
-            let nextTaskItem = null;
-            for (let i = index + 1; i < timelineItems.length; i++) {
-              if (timelineItems[i].tasks.length > 0) {
-                nextTaskItem = timelineItems[i];
-                break;
-              }
-            }
-            const freeTimeText = calculateFreeTime(item, nextTaskItem);
-            
-            if (!freeTimeText) return null;
-            
-            // Calculate pixel position - use end position if task has end time, otherwise use start position
-            const endPositionPx = taskWithEndTime?.endTime 
-              ? ((timeToMinutes(taskWithEndTime.endTime) - startMinutes) / (endMinutes - startMinutes)) * timelineHeight
-              : (position / 100) * timelineHeight;
-            
-            // Filter to get actual tasks for this time slot (excluding system tasks and child tasks)
-            const actualTasksAtTime = item.tasks.filter(t => 
-              t.source !== 'medication' && 
-              t.source !== 'sleep' && 
-              t.source !== 'water' && 
-              t.source !== 'steps' && 
-              !t.parentId // Exclude child tasks
-            );
-            
-            // Check for overlapping and calculate merged height
-            let finalContainerHeight = taskDurationPx;
-            if (actualTasksAtTime.length > 0 && actualTasksAtTime[0].endTime && actualTasksAtTime[0].time) {
-              const allTimelineTasks = tasks.filter(t => t.time && !t.allDay && t.endTime && 
-                t.source !== 'medication' && 
-                t.source !== 'sleep' && 
-                t.source !== 'water' && 
-                t.source !== 'steps' &&
-                !t.parentId);
-              
-              const currentTask = actualTasksAtTime[0];
-              const currentStart = timeToMinutes(currentTask.time as string);
-              const currentEnd = timeToMinutes(currentTask.endTime as string);
-              
-              const overlappingGroup = allTimelineTasks.filter(t => {
-                const tStart = timeToMinutes(t.time!);
-                const tEnd = timeToMinutes(t.endTime!);
-                return (currentStart < tEnd && currentEnd > tStart);
-              });
-              
-              if (overlappingGroup.length > 1) {
-                // Use merged height
-                const latestEndTime = Math.max(...overlappingGroup.map(t => timeToMinutes(t.endTime!)));
-                const latestEndPosition = ((latestEndTime - startMinutes) / (endMinutes - startMinutes)) * 100;
-                const mergedHeight = ((latestEndPosition - position) / 100) * timelineHeight;
-                finalContainerHeight = mergedHeight;
-              }
-            }
-            
-            const hasOverlapWarning = finalContainerHeight !== taskDurationPx;
-            const extraBufferForWarning = hasOverlapWarning ? 60 : 0; // Extra space if overlap warning is present
-            
-            // Calculate the actual rendered height of the container
-            // For tasks with end time, use calculated height
-            // For tasks without end time, we need to estimate based on content
-            let estimatedContainerHeight = 0;
-            if (finalContainerHeight > 0) {
-              estimatedContainerHeight = finalContainerHeight + extraBufferForWarning;
-            } else {
-              // For tasks without end time, estimate based on number of tasks and their content
-              const numTasks = actualTasksAtTime.length;
-              const baseTaskHeight = 120; // Base height per task
-              const subtaskHeight = actualTasksAtTime.reduce((sum, t) => {
-                const subtaskCount = (t.subtasks?.length || 0);
-                const childTaskCount = tasks.filter(ct => ct.parentId === t.id).length;
-                return sum + (subtaskCount * 30) + (childTaskCount * 40);
-              }, 0);
-              estimatedContainerHeight = (baseTaskHeight * numTasks) + subtaskHeight + 40; // Add padding
-            }
-            
-            // Use end position as base, then add container height plus spacing
-            const containerEndPx = endPositionPx + estimatedContainerHeight + 32; // 32px total spacing (16px container padding + 16px margin)
-            
-            return (
-              <div 
-                key={`free-${item.time}`}
-                className="absolute"
-                style={{ 
-                  top: `${containerEndPx + 16}px`, // 16px margin below container
-                  left: '3rem',
-                  right: '0.5rem',
-                }}
-              >
-                <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-                  <div className="flex items-center gap-1.5 sm:gap-2">
-                    <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground flex-shrink-0" />
-                    <span className="text-xs sm:text-sm font-semibold text-foreground whitespace-nowrap">
-                      {freeTimeText.hours > 0 && `${freeTimeText.hours}h`}
-                      {freeTimeText.hours > 0 && freeTimeText.minutes > 0 && ' '}
-                      {freeTimeText.minutes > 0 && `${freeTimeText.minutes}m`} Free time
-                    </span>
-                  </div>
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
-                    className="h-6 sm:h-7 text-[10px] sm:text-xs flex-shrink-0"
-                    onClick={() => {
-                      if (onAddTaskClick) {
-                        // Use end time if available, otherwise use start time
-                        const prefillTime = taskWithEndTime?.endTime || item.time;
-                        onAddTaskClick(prefillTime);
-                      }
-                    }}
-                  >
-                    <Plus className="w-3 h-3 mr-1" />
-                    Add Task
-                  </Button>
-                </div>
-              </div>
-            );
-          })}
+          {/* Timeline Items (Dots) - REMOVED: All rendering now handled by new modular components */}
 
-          {/* Free Time: Wake up to First Task */}
-          {(() => {
-            const wakeUpItem = timelineItems.find(item => item.isWakeUp);
-            const firstNonSleepTask = timelineItems.find(item => 
-              item.tasks.length > 0 && 
-              !item.isWakeUp && 
-              !item.isBedTime &&
-              item.tasks.some(t => 
-                t.source !== 'medication' && 
-                t.source !== 'water' && 
-                t.source !== 'steps' && 
-                t.source !== 'sleep' &&
-                t.source !== 'winddown' && 
-                t.source !== 'startup' && 
-                t.source !== 'menstrual'
-              )
-            );
-            
-            if (!wakeUpItem || !firstNonSleepTask) return null;
-            
-            const wakeUpMinutes = timeToMinutes(wakeUpItem.time);
-            const firstTaskMinutes = timeToMinutes(firstNonSleepTask.time);
-            const diffMinutes = firstTaskMinutes - wakeUpMinutes;
-            
-            if (diffMinutes < 30) return null;
-            
-            const hours = Math.floor(diffMinutes / 60);
-            const minutes = diffMinutes % 60;
-            
-            const wakeUpPosition = ((wakeUpMinutes - startMinutes) / (endMinutes - startMinutes)) * 100;
-            const wakeUpPx = (wakeUpPosition / 100) * timelineHeight;
-            
-            return (
-              <div 
-                key="free-wakeup"
-                className="absolute"
-                style={{ 
-                  top: `${wakeUpPx + 60}px`,
-                  left: '3rem',
-                  right: '0.5rem',
-                }}
-              >
-                <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-                  <div className="flex items-center gap-1.5 sm:gap-2">
-                    <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground flex-shrink-0" />
-                    <span className="text-xs sm:text-sm font-semibold text-foreground whitespace-nowrap">
-                      {hours > 0 && `${hours}h`}
-                      {hours > 0 && minutes > 0 && ' '}
-                      {minutes > 0 && `${minutes}m`} Free time
-                    </span>
-                  </div>
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
-                    className="h-6 sm:h-7 text-[10px] sm:text-xs flex-shrink-0"
-                    onClick={() => {
-                      if (onAddTaskClick) {
-                        onAddTaskClick(wakeUpItem.time);
-                      }
-                    }}
-                  >
-                    <Plus className="w-3 h-3 mr-1" />
-                    Add Task
-                  </Button>
-                </div>
-              </div>
-            );
-          })()}
-
-          {/* Free Time: Last Task to Sleep */}
-          {(() => {
-            const sleepItem = timelineItems.find(item => item.isBedTime);
-            const lastNonSleepTask = [...timelineItems].reverse().find(item => 
-              item.tasks.length > 0 && 
-              !item.isWakeUp && 
-              !item.isBedTime &&
-              item.tasks.some(t => 
-                t.source !== 'medication' && 
-                t.source !== 'water' && 
-                t.source !== 'steps' && 
-                t.source !== 'sleep' &&
-                t.source !== 'winddown' && 
-                t.source !== 'startup' && 
-                t.source !== 'menstrual'
-              )
-            );
-            
-            if (!sleepItem || !lastNonSleepTask) return null;
-            
-            const sleepMinutes = timeToMinutes(sleepItem.time);
-            
-            // Get end time of last task if it has one, otherwise use start time
-            const lastTaskWithEndTime = lastNonSleepTask.tasks.find(t => t.endTime);
-            const lastTaskEndTime = lastTaskWithEndTime?.endTime || lastNonSleepTask.time;
-            const lastTaskMinutes = timeToMinutes(lastTaskEndTime);
-            
-            const diffMinutes = sleepMinutes - lastTaskMinutes;
-            
-            if (diffMinutes < 30) return null;
-            
-            const hours = Math.floor(diffMinutes / 60);
-            const minutes = diffMinutes % 60;
-            
-            const lastTaskPosition = ((lastTaskMinutes - startMinutes) / (endMinutes - startMinutes)) * 100;
-            const lastTaskPx = (lastTaskPosition / 100) * timelineHeight;
-            
-            // Calculate the actual rendered height of the last task container
-            let lastTaskDurationPx = 0;
-            if (lastTaskWithEndTime?.endTime) {
-              const endTaskMinutes = timeToMinutes(lastTaskWithEndTime.endTime);
-              const endPosition = ((endTaskMinutes - startMinutes) / (endMinutes - startMinutes)) * 100;
-              const startPosition = ((timeToMinutes(lastNonSleepTask.time) - startMinutes) / (endMinutes - startMinutes)) * 100;
-              const taskDurationHeight = endPosition - startPosition;
-              lastTaskDurationPx = (taskDurationHeight / 100) * timelineHeight;
-            } else {
-              // Estimate based on task content
-              const lastTasks = lastNonSleepTask.tasks.filter(t => 
-                t.source !== 'medication' && 
-                t.source !== 'water' && 
-                t.source !== 'steps' && 
-                t.source !== 'sleep' &&
-                !t.parentId
-              );
-              const numTasks = lastTasks.length;
-              const baseTaskHeight = 120;
-              const subtaskHeight = lastTasks.reduce((sum, t) => {
-                const subtaskCount = (t.subtasks?.length || 0);
-                const childTaskCount = tasks.filter(ct => ct.parentId === t.id).length;
-                return sum + (subtaskCount * 30) + (childTaskCount * 40);
-              }, 0);
-              lastTaskDurationPx = (baseTaskHeight * numTasks) + subtaskHeight + 40;
-            }
-            
-            const containerEndPx = lastTaskPx + lastTaskDurationPx;
-            
-            return (
-              <div 
-                key="free-sleep"
-                className="absolute"
-                style={{ 
-                  top: `${containerEndPx + 16}px`,
-                  left: '3rem',
-                  right: '0.5rem',
-                }}
-              >
-                <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-                  <div className="flex items-center gap-1.5 sm:gap-2">
-                    <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground flex-shrink-0" />
-                    <span className="text-xs sm:text-sm font-semibold text-foreground whitespace-nowrap">
-                      {hours > 0 && `${hours}h`}
-                      {hours > 0 && minutes > 0 && ' '}
-                      {minutes > 0 && `${minutes}m`} Free time
-                    </span>
-                  </div>
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
-                    className="h-6 sm:h-7 text-[10px] sm:text-xs flex-shrink-0"
-                    onClick={() => {
-                      if (onAddTaskClick) {
-                        onAddTaskClick(lastTaskEndTime);
-                      }
-                    }}
-                  >
-                    <Plus className="w-3 h-3 mr-1" />
-                    Add Task
-                  </Button>
-                </div>
-              </div>
-            );
-          })()}
         </div>
       </div>
 
@@ -3801,7 +2238,9 @@ export default function LiquidTimeline({ tasks, date, onToggleTask, onUpdateTask
           <DialogHeader>
             <DialogTitle>💼 Work</DialogTitle>
           </DialogHeader>
+          <Suspense fallback={<div>Loading...</div>}>
           <Work />
+          </Suspense>
         </DialogContent>
       </Dialog>
     </div>
