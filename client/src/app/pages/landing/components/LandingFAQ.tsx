@@ -69,8 +69,8 @@ export function LandingFAQ({ showHelpText = true }: LandingFAQProps) {
   ];
 
   return (
-    <section id="faq" data-section="faq" className={`flex flex-col items-center justify-center relative bg-gray-50 dark:bg-gray-900 transition-colors duration-300 px-6 section-viewport ${styles.scrollSnapStart}`} style={{ zIndex: 10 }}>
-      <div className="container mx-auto px-6 w-full flex flex-col items-center relative z-30">
+    <section id="faq" data-section="faq" className={`flex flex-col items-center justify-center relative bg-gray-50 dark:bg-gray-900 transition-colors duration-300 px-6 section-viewport ${styles.scrollSnapStart}`} style={{ zIndex: 10, minHeight: 'calc(100vh - 80px)' }}>
+      <div className="container mx-auto px-6 w-full flex flex-col items-center justify-center relative z-30" style={{ minHeight: '100%' }}>
         <h2 className="text-2xl md:text-3xl font-bold text-center mb-8 md:mb-16 text-gray-900 dark:text-white">
           Frequently Asked Questions
         </h2>

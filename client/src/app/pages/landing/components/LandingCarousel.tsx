@@ -74,14 +74,13 @@ function LandingCarousel() {
     const x = e.clientX - rect.left;
     const direction = x < rect.width / 2 ? 'left' : 'right';
     
-    // Update direction immediately for responsive feel
+    // Update direction immediately (no delay) for real-time response
     if (direction !== cursorDirection) {
       if (cursorTimeoutRef.current) {
         clearTimeout(cursorTimeoutRef.current);
+        cursorTimeoutRef.current = null;
       }
-      cursorTimeoutRef.current = setTimeout(() => {
-        setCursorDirection(direction);
-      }, 30);
+      setCursorDirection(direction);
     }
     
     // Check if cursor should be visible
@@ -442,34 +441,36 @@ function LandingCarousel() {
         }
       } : undefined}
     >
-      {/* Custom Cursor - Rendered at section level so it works everywhere */}
-      <div 
-        className="fixed pointer-events-none z-[9999]"
-        style={{ 
-          left: `${cursorPosition.x}px`, 
-          top: `${cursorPosition.y}px`,
-          transform: 'translate(-50%, -50%)',
-          willChange: 'transform, opacity',
-          backfaceVisibility: 'hidden',
-          pointerEvents: 'none',
-          opacity: cursorPosition.show ? 1 : 0,
-          transition: 'opacity 0.3s ease-in-out'
-        }}
-      >
+      {/* Custom Cursor - Rendered at section level so it works everywhere - Hidden on mobile */}
+      {!isMobile && (
         <div 
-          className="w-12 h-12 rounded-full flex items-center justify-center"
+          className="fixed pointer-events-none z-[9999]"
           style={{ 
-            backgroundColor: colors.neutral.charcoal,
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5), 0 0 0 2px rgba(255, 255, 255, 0.2)'
+            left: `${cursorPosition.x}px`, 
+            top: `${cursorPosition.y}px`,
+            transform: 'translate(-50%, -50%)',
+            willChange: 'transform, opacity',
+            backfaceVisibility: 'hidden',
+            pointerEvents: 'none',
+            opacity: cursorPosition.show ? 1 : 0,
+            transition: 'opacity 0.3s ease-in-out'
           }}
         >
-          {cursorDirection === 'left' ? (
-            <ChevronLeft className="w-7 h-7 text-white" strokeWidth={3} />
-          ) : (
-            <ChevronRight className="w-7 h-7 text-white" strokeWidth={3} />
-          )}
+          <div 
+            className="w-12 h-12 rounded-full flex items-center justify-center"
+            style={{ 
+              backgroundColor: colors.neutral.charcoal,
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5), 0 0 0 2px rgba(255, 255, 255, 0.2)'
+            }}
+          >
+            {cursorDirection === 'left' ? (
+              <ChevronLeft className="w-7 h-7 text-white" strokeWidth={3} />
+            ) : (
+              <ChevronRight className="w-7 h-7 text-white" strokeWidth={3} />
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="w-full flex flex-col items-center justify-center" style={{ minHeight: '100%' }}>
         {/* Title */}
@@ -531,7 +532,7 @@ function LandingCarousel() {
         </div>
 
         {/* Mobile Carousel */}
-        <div className="md:hidden relative">
+        <div className="md:hidden relative w-full flex items-center justify-center">
           <div 
             ref={mobileCarouselRef}
             className="overflow-x-auto scrollbar-hide w-full"
@@ -544,33 +545,45 @@ function LandingCarousel() {
               willChange: 'scroll-position'
             }}
             onTouchStart={(e) => {
+              if (!mobileCarouselRef.current) return;
               const touch = e.touches[0];
               const startX = touch.clientX;
               const startY = touch.clientY;
+              const startScrollLeft = mobileCarouselRef.current.scrollLeft;
+              
+              let isDragging = false;
               
               const handleTouchMove = (moveEvent: TouchEvent) => {
+                if (!mobileCarouselRef.current) return;
                 const moveTouch = moveEvent.touches[0];
-                const deltaX = Math.abs(moveTouch.clientX - startX);
+                const deltaX = moveTouch.clientX - startX;
                 const deltaY = Math.abs(moveTouch.clientY - startY);
                 
-                // If horizontal movement is greater, prevent vertical scroll
-                if (deltaX > deltaY && deltaX > 10) {
+                // If horizontal movement is dominant, enable dragging
+                if (Math.abs(deltaX) > deltaY && Math.abs(deltaX) > 10) {
+                  isDragging = true;
                   moveEvent.preventDefault();
+                  moveEvent.stopPropagation();
+                  // Smooth scroll based on drag distance
+                  mobileCarouselRef.current.scrollLeft = startScrollLeft - deltaX;
                 }
               };
               
               const handleTouchEnd = () => {
-                document.removeEventListener('touchmove', handleTouchMove);
+                document.removeEventListener('touchmove', handleTouchMove, { passive: false } as any);
                 document.removeEventListener('touchend', handleTouchEnd);
+                isDragging = false;
               };
               
               document.addEventListener('touchmove', handleTouchMove, { passive: false });
               document.addEventListener('touchend', handleTouchEnd);
             }}
           >
-            <div className="flex gap-6 pb-6" style={{ 
+            <div className="flex gap-6 pb-6 justify-center" style={{ 
               paddingLeft: 'calc(50vw - 140px)',
-              paddingRight: 'calc(50vw - 140px)'
+              paddingRight: 'calc(50vw - 140px)',
+              width: 'max-content',
+              margin: '0 auto'
             }}>
               {Array.from({ length: 10 }).flatMap(() => CAROUSEL_FEATURES).map((feature, idx) => {
                 const IconComponent = feature.icon;
@@ -597,9 +610,14 @@ function LandingCarousel() {
             </div>
           </div>
           
-          {/* Horizontal Scroll Indicator */}
-          <CarouselScrollIndicator />
         </div>
+        
+        {/* Horizontal Scroll Indicator - Below carousel on mobile */}
+        {isMobile && (
+          <div className="w-full flex justify-center mt-4">
+            <CarouselScrollIndicator />
+          </div>
+        )}
       </div>
 
       <style>{`

@@ -15,7 +15,8 @@ import {
   Twitter,
   User,
   Edit,
-  Moon
+  Moon,
+  Bell
 } from "lucide-react";
 import { Button } from "@/app/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/app/components/ui/dialog";
@@ -38,7 +39,7 @@ const themes = [
   { id: "custom", name: "Custom", primary: "", primaryDark: "" },
 ];
 
-type Section = 'main' | 'profile' | 'general' | 'sleep' | 'fun' | 'styling' | 'todo' | 'calendar' | 'support' | 'about';
+type Section = 'main' | 'profile' | 'general' | 'reminders' | 'sleep' | 'fun' | 'styling' | 'todo' | 'calendar' | 'support' | 'about';
 
 interface SettingsProps {
   open?: boolean;
@@ -282,6 +283,7 @@ export default function Settings({ open, onOpenChange }: SettingsProps) {
 
   const sections = [
     { id: 'general' as Section, label: 'General', icon: Globe, description: 'Notifications, customization & preferences' },
+    { id: 'reminders' as Section, label: 'Reminders', icon: Bell, description: 'Reminder settings & integrations' },
     { id: 'sleep' as Section, label: 'Sleep Schedule', icon: Moon, description: 'Wind down & start up routines' },
     { id: 'fun' as Section, label: 'Fun', icon: Sparkles, description: 'Quotes, affirmations & celebrations' },
     { id: 'styling' as Section, label: 'Styling', icon: Palette, description: 'Colors, theme & appearance' },
@@ -623,6 +625,37 @@ export default function Settings({ open, onOpenChange }: SettingsProps) {
     </div>
   );
 
+  const renderRemindersSection = () => (
+    <div className="space-y-6">
+      <Button variant="ghost" className="gap-2 -ml-2" onClick={() => handleSectionChange('main')}>
+        <ChevronRight className="w-4 h-4 rotate-180" />
+        Back
+      </Button>
+
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <Bell className="w-5 h-5" />
+          <h2 className="text-lg font-semibold">Reminders</h2>
+        </div>
+        
+        <p className="text-sm text-muted-foreground">
+          Manage your reminders and connect external task services.
+        </p>
+
+        <Button 
+          className="w-full" 
+          onClick={() => {
+            window.location.href = '/app/reminders';
+            onOpenChange?.(false);
+          }}
+        >
+          <Bell className="w-4 h-4 mr-2" />
+          Open Reminders
+        </Button>
+      </div>
+    </div>
+  );
+
   const renderTodoSection = () => (
     <div className="space-y-6">
       <Button variant="ghost" className="gap-2 -ml-2" onClick={() => handleSectionChange('main')}>
@@ -853,6 +886,8 @@ export default function Settings({ open, onOpenChange }: SettingsProps) {
         return renderProfileSection();
       case 'general':
         return renderGeneralSection();
+      case 'reminders':
+        return renderRemindersSection();
       case 'sleep':
         return renderSleepSection();
       case 'fun':

@@ -5,7 +5,7 @@ import { Label } from "@/app/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/app/components/ui/select";
 import { UniversalDialog } from "@/app/components/shared";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/app/components/ui/dialog";
-import { Plus, Play, Pause, RotateCcw, Timer, Eye, ArrowUpDown, User2, Clock, Settings } from "lucide-react";
+import { Plus, Play, Pause, RotateCcw, Timer, Eye, ArrowUpDown, User2, Clock, Settings, X } from "lucide-react";
 import { Checkbox } from "@/app/components/ui/checkbox";
 import { Switch } from "@/app/components/ui/switch";
 
@@ -119,23 +119,40 @@ export default function Work({ isOpen = false, onClose }: WorkProps) {
       return;
     }
     
-    for (let month = 0; month < 12; month++) {
-      const date = new Date();
-      date.setMonth(date.getMonth() + month);
+    // Create salary tasks for past 12 months and next 12 months (24 months total)
+    const today = new Date();
+    const existingSalaryDates = new Set<string>();
+    
+    for (let monthOffset = -12; monthOffset <= 12; monthOffset++) {
+      const date = new Date(today);
+      date.setMonth(date.getMonth() + monthOffset);
       date.setDate(settings.salaryDate);
       
+      // Ensure date is valid (handles cases like Feb 31)
+      if (date.getDate() !== settings.salaryDate) {
+        // If date was adjusted (e.g., Feb 31 -> Mar 3), set to last day of month
+        date.setDate(0); // Go to last day of previous month
+      }
+      
+      const dateStr = date.toISOString().split('T')[0];
+      
+      // Avoid duplicates
+      if (!existingSalaryDates.has(dateStr)) {
+        existingSalaryDates.add(dateStr);
+      
       const salaryTask = {
-        id: `salary-${date.toISOString().split('T')[0]}`,
+          id: `salary-${dateStr}`,
         title: '💰 Salary Day',
         emoji: '💰',
         completed: false,
         source: 'salary' as const,
-        dueDate: date.toISOString(),
+          dueDate: dateStr,
         allDay: true,
         isEditable: false,
       };
       
       filteredTodos.push(salaryTask);
+      }
     }
     
     localStorage.setItem('todos', JSON.stringify(filteredTodos));
@@ -148,14 +165,10 @@ export default function Work({ isOpen = false, onClose }: WorkProps) {
     // Remove old work schedule tasks
     const filteredTodos = todos.filter((t: any) => t.source !== 'work');
     
-    // Add work tasks for next 30 days on configured work days
-    const dayMap: { [key: string]: number } = {
-      'monday': 1, 'tuesday': 2, 'wednesday': 3, 'thursday': 4,
-      'friday': 5, 'saturday': 6, 'sunday': 0
-    };
-    
-    for (let i = 0; i < 30; i++) {
-      const date = new Date();
+    // Add work tasks for past 30 days and next 335 days (365 total) on configured work days
+    const today = new Date();
+    for (let i = -30; i < 335; i++) {
+      const date = new Date(today);
       date.setDate(date.getDate() + i);
       const dayName = date.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
       
@@ -168,7 +181,7 @@ export default function Work({ isOpen = false, onClose }: WorkProps) {
           endTime: settings.workSchedule.endTime,
           completed: false,
           source: 'work' as const,
-          dueDate: date.toISOString(),
+          dueDate: date.toISOString().split('T')[0], // Use date string format for consistency
           color: settings.workSchedule.color || getThemeColor(),
           breakTimes: settings.workSchedule.breakTimes,
         };
@@ -189,6 +202,15 @@ export default function Work({ isOpen = false, onClose }: WorkProps) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings]);
+
+  // Sync when dialog opens to ensure tasks are up to date
+  useEffect(() => {
+    if (isOpen && settings.isSetupComplete) {
+      syncSalaryDate();
+      syncWorkScheduleToTimeline();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -222,6 +244,76 @@ export default function Work({ isOpen = false, onClose }: WorkProps) {
     
     setSettings(newSettings);
     setIsSetupOpen(false);
+    
+    // Immediately sync tasks when setup completes using new settings
+    setTimeout(() => {
+      // Sync salary
+      const todos = JSON.parse(localStorage.getItem('todos') || '[]');
+      const filteredTodos = todos.filter((t: any) => t.source !== 'salary');
+      
+      if (newSettings.salaryDateEnabled && newSettings.salaryDate) {
+        const today = new Date();
+        const existingSalaryDates = new Set<string>();
+        
+        for (let monthOffset = -12; monthOffset <= 12; monthOffset++) {
+          const date = new Date(today);
+          date.setMonth(date.getMonth() + monthOffset);
+          date.setDate(newSettings.salaryDate);
+          
+          if (date.getDate() !== newSettings.salaryDate) {
+            date.setDate(0);
+          }
+          
+          const dateStr = date.toISOString().split('T')[0];
+          
+          if (!existingSalaryDates.has(dateStr)) {
+            existingSalaryDates.add(dateStr);
+            
+            const salaryTask = {
+              id: `salary-${dateStr}`,
+              title: '💰 Salary Day',
+              emoji: '💰',
+              completed: false,
+              source: 'salary' as const,
+              dueDate: dateStr,
+              allDay: true,
+              isEditable: false,
+            };
+            
+            filteredTodos.push(salaryTask);
+          }
+        }
+      }
+      
+      // Sync work schedule
+      const workFilteredTodos = filteredTodos.filter((t: any) => t.source !== 'work');
+      const today = new Date();
+      for (let i = -30; i < 335; i++) {
+        const date = new Date(today);
+        date.setDate(date.getDate() + i);
+        const dayName = date.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+        
+        if (newSettings.workSchedule.workDays.includes(dayName)) {
+          const workTask = {
+            id: `work-${date.toISOString().split('T')[0]}`,
+            title: 'Work',
+            emoji: '💼',
+            time: newSettings.workSchedule.startTime,
+            endTime: newSettings.workSchedule.endTime,
+            completed: false,
+            source: 'work' as const,
+            dueDate: date.toISOString().split('T')[0],
+            color: newSettings.workSchedule.color || getThemeColor(),
+            breakTimes: newSettings.workSchedule.breakTimes,
+          };
+          
+          workFilteredTodos.push(workTask);
+        }
+      }
+      
+      localStorage.setItem('todos', JSON.stringify(workFilteredTodos));
+      window.dispatchEvent(new Event('todosUpdated'));
+    }, 100);
   };
 
   const toggleWorkDay = (day: string) => {
@@ -274,29 +366,44 @@ export default function Work({ isOpen = false, onClose }: WorkProps) {
 
   if (!settings.isSetupComplete) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 space-y-4">
-        <div className="text-6xl mb-4">💼</div>
-        <h3 className="text-lg font-semibold">Set Up Work Schedule</h3>
-        <p className="text-sm text-muted-foreground text-center max-w-md">
-          Configure your work hours, salary date, and productivity tools
-        </p>
-        <Button
-          size="lg"
-          className="rounded-full w-14 h-14 p-0"
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto p-0 [&>button]:hidden">
+          {!isSetupOpen && (
+            <div className="flex flex-col items-center justify-center p-8 min-h-[400px] text-center">
+              <div className="w-16 h-16 mb-4 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center">
+                <Clock className="w-8 h-8 text-blue-600" />
+              </div>
+              <h3 className="text-lg font-semibold mb-2 text-blue-600">Set up your Work Schedule</h3>
+              <button
           onClick={() => setIsSetupOpen(true)}
+                className="mt-4 w-12 h-12 rounded-full backdrop-blur-md bg-white/30 hover:bg-white/40 border border-white/30 flex items-center justify-center transition-all shadow-lg hover:scale-110"
+                style={{ color: '#3b82f6' }}
         >
           <Plus className="w-6 h-6" />
-        </Button>
+              </button>
+            </div>
+          )}
 
-        <UniversalDialog
-          open={isSetupOpen}
-          onOpenChange={setIsSetupOpen}
-          title="Work Schedule Setup"
-          onSave={handleSetupComplete}
-          saveLabel="Complete Setup"
-          onCancel={() => setIsSetupOpen(false)}
-        >
-          <div className="space-y-6">
+          {isSetupOpen && (
+            <div className="px-6 pb-6 animate-in fade-in duration-300">
+              <div className="px-6 pt-6 pb-4 border-b">
+                <div className="flex items-center justify-between">
+                  <DialogTitle className="flex items-center gap-2">
+                    <Clock className="w-5 h-5 text-blue-600" />
+                    Work Schedule Setup
+                  </DialogTitle>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setIsSetupOpen(false)}
+                    aria-label="Close"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              <div className="space-y-6 pt-6">
             <div>
               <Label className="text-base font-semibold mb-3 block">Work Hours</Label>
               <div className="grid grid-cols-2 gap-4">
@@ -307,7 +414,7 @@ export default function Work({ isOpen = false, onClose }: WorkProps) {
                     type="time"
                     value={setupStartTime}
                     onChange={(e) => setSetupStartTime(e.target.value)}
-                    className="mt-2"
+                    className="mt-2 rounded-full"
                   />
                 </div>
                 <div>
@@ -317,7 +424,7 @@ export default function Work({ isOpen = false, onClose }: WorkProps) {
                     type="time"
                     value={setupEndTime}
                     onChange={(e) => setSetupEndTime(e.target.value)}
-                    className="mt-2"
+                    className="mt-2 rounded-full"
                   />
                 </div>
               </div>
@@ -415,7 +522,7 @@ export default function Work({ isOpen = false, onClose }: WorkProps) {
               <Label className="text-base font-semibold mb-3 block">Break Times (Optional)</Label>
               <div className="space-y-4">
                 {/* Add break form */}
-                <div className="p-3 border rounded-lg space-y-3">
+                    <div className="p-3 border rounded-2xl space-y-3">
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <Label htmlFor="break-start" className="text-sm">Start</Label>
@@ -424,6 +531,7 @@ export default function Work({ isOpen = false, onClose }: WorkProps) {
                         type="time"
                         value={newBreakStart}
                         onChange={(e) => setNewBreakStart(e.target.value)}
+                            className="rounded-full"
                       />
                     </div>
                     <div>
@@ -433,6 +541,7 @@ export default function Work({ isOpen = false, onClose }: WorkProps) {
                         type="time"
                         value={newBreakEnd}
                         onChange={(e) => setNewBreakEnd(e.target.value)}
+                            className="rounded-full"
                       />
                     </div>
                   </div>
@@ -458,7 +567,7 @@ export default function Work({ isOpen = false, onClose }: WorkProps) {
                   <div className="space-y-2">
                     <Label className="text-sm">Added Breaks</Label>
                     {setupBreakTimes.map((breakTime, index) => (
-                      <div key={index} className="flex items-center justify-between p-2 border rounded-lg">
+                          <div key={index} className="flex items-center justify-between p-2 border rounded-2xl">
                         <span className="text-sm">{breakTime.start} - {breakTime.end}</span>
                         <Button
                           size="sm"
@@ -473,9 +582,21 @@ export default function Work({ isOpen = false, onClose }: WorkProps) {
                 )}
               </div>
             </div>
+                
+                {/* Complete Setup Button */}
+                <div className="pt-4 flex flex-col items-center">
+                  <Button 
+                    className="rounded-full px-8" 
+                    onClick={handleSetupComplete}
+                  >
+                    Complete Setup
+                  </Button>
+                </div>
           </div>
-        </UniversalDialog>
       </div>
+            )}
+          </DialogContent>
+        </Dialog>
     );
   }
 
@@ -483,13 +604,18 @@ export default function Work({ isOpen = false, onClose }: WorkProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose?.()}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0 [&>button]:hidden">
+        <div className="px-6 pt-6 pb-4 border-b">
         <DialogHeader>
-          <DialogTitle>Work & Productivity</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Clock className="w-5 h-5 text-primary" />
+              Work & Productivity
+            </DialogTitle>
         </DialogHeader>
-        <div className="space-y-6">
+        </div>
+        <div className="px-6 py-6 space-y-6">
       {/* Work Schedule Info */}
-      <div className="p-4 rounded-lg border bg-muted/20">
+      <div className="p-4 rounded-2xl border bg-muted/20">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 text-primary" />
@@ -572,7 +698,7 @@ export default function Work({ isOpen = false, onClose }: WorkProps) {
         </Button>
       </div>
 
-      <div className="p-4 rounded-lg border bg-muted/20 space-y-2">
+      <div className="p-4 rounded-2xl border bg-muted/20 space-y-2">
         <div className="flex items-center gap-2 text-sm">
           <Clock className="w-4 h-4 text-muted-foreground" />
           <span className="font-medium">{settings.workSchedule.startTime} - {settings.workSchedule.endTime}</span>
@@ -624,7 +750,7 @@ export default function Work({ isOpen = false, onClose }: WorkProps) {
         <div className="space-y-6">
           <div>
             <Label className="text-base font-semibold mb-3 block">Work Schedule</Label>
-            <div className="p-4 rounded-lg border bg-muted/20 space-y-3">
+            <div className="p-4 rounded-2xl border bg-muted/20 space-y-3">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Hours:</span>
                 <span className="font-medium">{settings.workSchedule.startTime} - {settings.workSchedule.endTime}</span>
@@ -673,7 +799,7 @@ export default function Work({ isOpen = false, onClose }: WorkProps) {
                       setPomodoroTime(value * 60);
                     }
                   }}
-                  className="mt-2"
+                  className="mt-2 rounded-full"
                 />
               </div>
               <div>
@@ -685,7 +811,7 @@ export default function Work({ isOpen = false, onClose }: WorkProps) {
                   max="30"
                   value={settings.pomodoroBreak}
                   onChange={(e) => setSettings({ ...settings, pomodoroBreak: parseInt(e.target.value) || 5 })}
-                  className="mt-2"
+                  className="mt-2 rounded-full"
                 />
               </div>
               <div>
@@ -697,7 +823,7 @@ export default function Work({ isOpen = false, onClose }: WorkProps) {
                   max="60"
                   value={settings.pomodoroLongBreak}
                   onChange={(e) => setSettings({ ...settings, pomodoroLongBreak: parseInt(e.target.value) || 15 })}
-                  className="mt-2"
+                  className="mt-2 rounded-full"
                 />
               </div>
             </div>

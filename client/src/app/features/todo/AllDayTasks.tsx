@@ -25,7 +25,6 @@ export default function AllDayTasks({ tasks, onToggleTask, onEditTask, onDeleteT
 
   return (
     <div className="space-y-3 w-full max-w-lg mx-auto">
-      <h3 className="text-sm font-medium text-muted-foreground text-center">All Day / Anytime</h3>
       <div className="flex gap-2 overflow-x-auto pb-2 justify-center">
         {tasks.map(task => {
           const badge = getSourceBadge(task.source || "manual");
@@ -46,6 +45,15 @@ export default function AllDayTasks({ tasks, onToggleTask, onEditTask, onDeleteT
                 >
                   {task.emoji || ""}
                 </button>
+                {/* Completion time - top right of circle */}
+                {task.completed && task.completedAt && (
+                  <div 
+                    className="absolute -top-0.5 -right-0.5 px-2 py-0.5 rounded-full text-[10px] font-semibold text-white shadow-md z-10 whitespace-nowrap"
+                    style={task.color ? { backgroundColor: task.color } : { backgroundColor: 'hsl(var(--primary))' }}
+                  >
+                    {formatCompletionTime(task.completedAt)}
+                  </div>
+                )}
                 {/* Photo icon if task has attachments */}
                 {task.attachments && task.attachments.length > 0 && (
                   <button
@@ -53,7 +61,7 @@ export default function AllDayTasks({ tasks, onToggleTask, onEditTask, onDeleteT
                       e.stopPropagation();
                       setImageViewerTask(task);
                     }}
-                    className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-md hover:scale-110 transition-transform"
+                    className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-md hover:scale-110 transition-transform z-10"
                     title={`${task.attachments.length} photo(s)`}
                   >
                     <ImageIcon className="w-3.5 h-3.5" />
@@ -63,14 +71,6 @@ export default function AllDayTasks({ tasks, onToggleTask, onEditTask, onDeleteT
               <p className={`text-xs font-medium text-center max-w-24 truncate ${task.completed ? "line-through opacity-60" : ""}`}>
                 {task.title}
               </p>
-              {task.completed && task.completedAt && (
-                <p 
-                  className="text-xs font-medium"
-                  style={task.color ? { color: task.color } : { color: 'hsl(var(--primary))' }}
-                >
-                  {formatCompletionTime(task.completedAt)}
-                </p>
-              )}
               {badge && <Badge variant="secondary" className={badge.className}>{badge.label}</Badge>}
               <div className="flex items-center gap-1">
                 {/* For salary tasks, show only shortcut to open Work dialog */}

@@ -44,11 +44,14 @@ export default function WaterAmountDialog({ isOpen, onClose, onConfirm, unit }: 
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setLocation('/food')}
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent('openFeature', { detail: { featureId: 'water' } }));
+                onClose();
+              }}
               className="flex items-center gap-2"
             >
               <ExternalLink className="h-4 w-4" />
-              Go to Food
+              Water Settings
             </Button>
           </DialogTitle>
         </DialogHeader>
@@ -96,13 +99,18 @@ export default function WaterAmountDialog({ isOpen, onClose, onConfirm, unit }: 
             >
               Cancel
             </Button>
+            {(() => {
+              const isValid = amount && parseFloat(amount) > 0;
+              return (
             <Button 
               type="submit" 
-              className="flex-1"
-              disabled={isSubmitting || !amount || parseFloat(amount) <= 0}
+                  className="flex-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
+                  disabled={isSubmitting || !isValid}
             >
               {isSubmitting ? "Adding..." : "Add Water"}
             </Button>
+              );
+            })()}
           </div>
         </form>
       </DialogContent>

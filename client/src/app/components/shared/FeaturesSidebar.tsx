@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/app/components/ui/button";
 import { Card } from "@/app/components/ui/card";
-import { X, Moon, Heart, Pill, Droplets, Briefcase, GraduationCap, BookOpen, Dumbbell, BarChart3, Settings, Sun } from "lucide-react";
+import { X, Moon, Heart, Pill, Droplets, Briefcase, GraduationCap, BookOpen, Dumbbell, BarChart3, Settings, Sun, Bell, Utensils } from "lucide-react";
 import { colors } from "@/lib/designSystem";
 
 interface FeaturesSidebarProps {
@@ -33,6 +33,12 @@ const features = [
     name: 'Medication',
     icon: Pill,
     color: colors.features.medication
+  },
+  {
+    id: 'food',
+    name: 'Food Tracker',
+    icon: Utensils,
+    color: colors.features.food || '#f59e0b'
   },
   {
     id: 'menstrual',

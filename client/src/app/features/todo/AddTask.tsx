@@ -7,7 +7,9 @@ import { Switch } from "@/app/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/app/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/app/components/ui/popover";
 import { Textarea } from "@/app/components/ui/textarea";
-import { Plus, X, Bell, Image as ImageIcon, Zap } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/app/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/app/components/ui/dialog";
+import { Plus, X, Bell, Image as ImageIcon, Zap, Trash2 } from "lucide-react";
 import { Task, Subtask } from "@/app/types/types";
 import { EmojiPicker } from "@/app/components/shared/EmojiPicker";
 import { colors } from "@/lib/designSystem";
@@ -78,8 +80,13 @@ export default function AddTask({ onAddTask, prefillTime, externalOpen, onOpenCh
   const [newAlertTime, setNewAlertTime] = useState("");
   const [overlappingTasks, setOverlappingTasks] = useState<string[]>([]);
   const [attachments, setAttachments] = useState<string[]>([]);
-  const [showQuickTasks, setShowQuickTasks] = useState(false);
-  const [quickTasks, setQuickTasks] = useState<Array<{id: string; title: string; emoji: string; time?: string; allDay?: boolean}>>(() => {
+  const [activeTab, setActiveTab] = useState<'new' | 'quick'>('new');
+  const [showDateDialog, setShowDateDialog] = useState(false);
+  const [selectedQuickTask, setSelectedQuickTask] = useState<any>(null);
+  const [quickTaskDate, setQuickTaskDate] = useState(() => {
+    return selectedDate ? selectedDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+  });
+  const [quickTasks, setQuickTasks] = useState<Array<{id: string; title: string; emoji: string; time?: string; allDay?: boolean; notes?: string; color?: string; endTime?: string}>>(() => {
     const saved = localStorage.getItem('quick_tasks');
     return saved ? JSON.parse(saved) : [];
   });
@@ -178,6 +185,11 @@ export default function AddTask({ onAddTask, prefillTime, externalOpen, onOpenCh
     const overlaps: string[] = [];
 
     tasksOnDate.forEach((task: any) => {
+      // Exclude water intake tasks from overlap detection
+      if (task.source === 'water' || (task as any).waterReminder) {
+        return;
+      }
+      
       const taskStartMinutes = timeToMinutes(task.time);
       const taskEndMinutes = task.endTime ? timeToMinutes(task.endTime) : taskStartMinutes + 60;
 
@@ -309,6 +321,9 @@ export default function AddTask({ onAddTask, prefillTime, externalOpen, onOpenCh
       localStorage.setItem('quick_tasks', JSON.stringify(updated));
     }
     
+    // Reset tab to new after creating task
+    setActiveTab('new');
+    
     // Add all tasks
     tasksToAdd.forEach(task => onAddTask(task));
     
@@ -335,14 +350,32 @@ export default function AddTask({ onAddTask, prefillTime, externalOpen, onOpenCh
   };
 
   const handleUseQuickTask = (quickTask: any) => {
-    setTitle(quickTask.title);
-    setEmoji(quickTask.emoji);
-    setIsAllDayMode(quickTask.isAllDay !== false);
-    setTime(quickTask.time || "");
-    setEndTime(quickTask.endTime || "");
-    setNotes(quickTask.notes || "");
-    setColor(quickTask.color || getThemeColor());
-    setShowQuickTasks(false);
+    setSelectedQuickTask(quickTask);
+    setQuickTaskDate(selectedDate ? selectedDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
+    setShowDateDialog(true);
+  };
+
+  const handleConfirmQuickTask = () => {
+    if (!selectedQuickTask) return;
+    
+    const quickTask = selectedQuickTask;
+    const taskToAdd: Omit<Task, "id"> = {
+      title: quickTask.title.trim(),
+      completed: false,
+      source: "manual",
+      emoji: quickTask.emoji,
+      allDay: quickTask.allDay !== false,
+      time: quickTask.allDay === false ? quickTask.time : undefined,
+      endTime: quickTask.allDay === false && quickTask.endTime ? quickTask.endTime : undefined,
+      dueDate: new Date(quickTaskDate),
+      notes: quickTask.notes?.trim() || undefined,
+      color: quickTask.color || undefined,
+    };
+    
+    onAddTask(taskToAdd);
+    setShowDateDialog(false);
+    setSelectedQuickTask(null);
+    handleOpenChange(false);
   };
 
   const removeQuickTask = (id: string) => {
@@ -358,54 +391,14 @@ export default function AddTask({ onAddTask, prefillTime, externalOpen, onOpenCh
       title="Add New Task"
       hideDefaultFooter
     >
-      <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Quick Tasks Button */}
-          {quickTasks.length > 0 && (
-            <div className="pb-4 border-b">
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full"
-                onClick={() => setShowQuickTasks(!showQuickTasks)}
-              >
-                <Zap className="w-4 h-4 mr-2" />
-                Quick Tasks ({quickTasks.length})
-              </Button>
-              
-              {showQuickTasks && (
-                <div className="mt-3 space-y-2 max-h-48 overflow-y-auto">
-                  {quickTasks.map(qt => (
-                    <div
-                      key={qt.id}
-                      className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors"
-                      onClick={() => handleUseQuickTask(qt)}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="text-2xl">{qt.emoji}</span>
-                        <div>
-                          <p className="text-sm font-medium">{qt.title}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {qt.allDay ? 'All day' : qt.time || 'Timed task'}
-                          </p>
-                        </div>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          removeQuickTask(qt.id);
-                        }}
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'new' | 'quick')} className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="new">Add New Task</TabsTrigger>
+          <TabsTrigger value="quick">Quick Add</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="new" className="mt-4">
+          <form onSubmit={handleSubmit} className="space-y-5">
 
           {/* 1. Title & Emoji */}
           <div className="space-y-3">
@@ -603,6 +596,7 @@ export default function AddTask({ onAddTask, prefillTime, externalOpen, onOpenCh
                   size="sm"
                   onClick={addAlert}
                   disabled={!newAlertTime}
+                  className="disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
                 >
                   <Plus className="w-4 h-4" />
                 </Button>
@@ -657,7 +651,8 @@ export default function AddTask({ onAddTask, prefillTime, externalOpen, onOpenCh
             </div>
           </div>
 
-          {/* 7. Subtasks */}
+          {/* 7. Subtasks - Hide for all-day tasks */}
+          {!isAllDayMode && (
           <div className="p-3 rounded-lg border bg-muted/20 space-y-3">
             <Label className="text-sm font-semibold">✓ Subtasks</Label>
             <div className="space-y-2">
@@ -693,6 +688,7 @@ export default function AddTask({ onAddTask, prefillTime, externalOpen, onOpenCh
                   size="sm"
                   onClick={addSubtask}
                   disabled={!newSubtaskText.trim()}
+                  className="disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
                 >
                   <Plus className="w-4 h-4" />
                 </Button>
@@ -702,8 +698,10 @@ export default function AddTask({ onAddTask, prefillTime, externalOpen, onOpenCh
               )}
             </div>
           </div>
+          )}
 
-          {/* 8. Notes */}
+          {/* 8. Notes - Hide for all-day tasks */}
+          {!isAllDayMode && (
           <div>
             <Label htmlFor="notes">📝 Notes (Optional)</Label>
             <Textarea
@@ -715,6 +713,7 @@ export default function AddTask({ onAddTask, prefillTime, externalOpen, onOpenCh
               className="mt-2"
             />
           </div>
+          )}
 
           {/* 9. Task Color */}
           <div>
@@ -743,31 +742,129 @@ export default function AddTask({ onAddTask, prefillTime, externalOpen, onOpenCh
             </div>
           </div>
 
-          {/* 10. Quick Add Checkbox */}
-          {scheduleType === "once" && (
-            <div className="flex items-center gap-2 p-3 rounded-lg border bg-muted/20">
-              <input
-                type="checkbox"
-                id="save-quick-add"
-                checked={saveToQuickAdd}
-                onChange={(e) => setSaveToQuickAdd(e.target.checked)}
-                className="w-4 h-4 rounded border-gray-300"
-              />
-              <Label htmlFor="save-quick-add" className="cursor-pointer text-sm flex-1">
-                ⚡ Save to Quick Add (for faster task creation next time)
-              </Label>
-            </div>
-          )}
+            {/* 10. Quick Add Checkbox */}
+            {scheduleType === "once" && (
+              <div className="flex items-center gap-2 p-3 rounded-lg border bg-muted/20">
+                <input
+                  type="checkbox"
+                  id="save-quick-add"
+                  checked={saveToQuickAdd}
+                  onChange={(e) => setSaveToQuickAdd(e.target.checked)}
+                  className="w-4 h-4 rounded border-gray-300"
+                />
+                <Label htmlFor="save-quick-add" className="cursor-pointer text-sm flex-1">
+                  ⚡ Save to Quick Add (for faster task creation next time)
+                </Label>
+              </div>
+            )}
 
-          <div className="flex gap-2 pt-4 border-t">
-            <Button type="button" variant="outline" onClick={() => handleOpenChange(false)} className="flex-1">
-              Cancel
-            </Button>
-            <Button type="submit" className="flex-1">
-              Add Task
-            </Button>
+            <div className="flex gap-2 pt-4 border-t">
+              <Button type="button" variant="outline" onClick={() => handleOpenChange(false)} className="flex-1">
+                Cancel
+              </Button>
+              {(() => {
+                const isValid = title.trim() && (isAllDayMode || time);
+                return (
+                  <Button 
+                    type="submit" 
+                    className="flex-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
+                    disabled={!isValid}
+                  >
+                Add Task
+              </Button>
+                );
+              })()}
+            </div>
+          </form>
+        </TabsContent>
+        
+        <TabsContent value="quick" className="mt-4">
+          <div className="space-y-3">
+            {quickTasks.length > 0 ? (
+              <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+                {quickTasks.map(qt => (
+                  <div
+                    key={qt.id}
+                    className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors"
+                    onClick={() => handleUseQuickTask(qt)}
+                  >
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <span className="text-2xl flex-shrink-0">{qt.emoji}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{qt.title}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {qt.allDay ? 'All day' : qt.time ? `${qt.time}${qt.endTime ? ` - ${qt.endTime}` : ''}` : 'Timed task'}
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0 flex-shrink-0"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeQuickTask(qt.id);
+                      }}
+                      title="Remove from Quick Add"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-sm text-muted-foreground">
+                <Zap className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                <p className="font-medium mb-1">No quick tasks yet</p>
+                <p className="text-xs">Save tasks with ⚡ to add them here</p>
+              </div>
+            )}
           </div>
-        </form>
+        </TabsContent>
+      </Tabs>
+
+      {/* Date Selection Dialog for Quick Tasks */}
+      <Dialog open={showDateDialog} onOpenChange={setShowDateDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Select Date</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label htmlFor="quick-task-date">Date</Label>
+              <Input
+                id="quick-task-date"
+                type="date"
+                value={quickTaskDate}
+                onChange={(e) => setQuickTaskDate(e.target.value)}
+                className="mt-2"
+                required
+              />
+            </div>
+            <div className="flex gap-2 pt-4 border-t">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => {
+                  setShowDateDialog(false);
+                  setSelectedQuickTask(null);
+                }} 
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="button" 
+                onClick={handleConfirmQuickTask}
+                className="flex-1"
+              >
+                Add Task
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </UniversalDialog>
   );
 }

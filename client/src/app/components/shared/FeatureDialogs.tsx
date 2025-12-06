@@ -3,6 +3,7 @@ import SleepScheduleFeature from "@/app/features/reminders/SleepScheduleFeature"
 import MenstrualCycleTracker from "@/app/features/reminders/MenstrualCycleTracker";
 import MedicationTracker from "@/app/features/reminders/MedicationTracker";
 import WaterIntakeFeature from "@/app/features/reminders/WaterIntakeFeature";
+import FoodTrackerFeature from "@/app/features/reminders/FoodTrackerFeature";
 import WorkFeature from "@/app/features/reminders/WorkFeature";
 import SchoolFeature from "@/app/features/reminders/SchoolFeature";
 import JournalFeature from "@/app/features/reminders/JournalFeature";
@@ -12,6 +13,7 @@ export function FeatureDialogs() {
   const [showMenstrualFeature, setShowMenstrualFeature] = useState(false);
   const [showMedicationFeature, setShowMedicationFeature] = useState(false);
   const [showWaterFeature, setShowWaterFeature] = useState(false);
+  const [showFoodFeature, setShowFoodFeature] = useState(false);
   const [showWorkFeature, setShowWorkFeature] = useState(false);
   const [showSchoolFeature, setShowSchoolFeature] = useState(false);
   const [showJournalFeature, setShowJournalFeature] = useState(false);
@@ -35,6 +37,9 @@ export function FeatureDialogs() {
         case 'water':
           setShowWaterFeature(true);
           break;
+        case 'food':
+          setShowFoodFeature(true);
+          break;
         case 'work':
           setShowWorkFeature(true);
           break;
@@ -57,6 +62,7 @@ export function FeatureDialogs() {
       <MenstrualCycleTracker isOpen={showMenstrualFeature} onClose={() => setShowMenstrualFeature(false)} />
       <MedicationTracker isOpen={showMedicationFeature} onClose={() => setShowMedicationFeature(false)} />
       <WaterIntakeFeature isOpen={showWaterFeature} onClose={() => setShowWaterFeature(false)} />
+      <FoodTrackerFeature isOpen={showFoodFeature} onClose={() => setShowFoodFeature(false)} />
       <WorkFeature isOpen={showWorkFeature} onClose={() => setShowWorkFeature(false)} />
       <SchoolFeature isOpen={showSchoolFeature} onClose={() => setShowSchoolFeature(false)} />
       <JournalFeature isOpen={showJournalFeature} onClose={() => setShowJournalFeature(false)} />
